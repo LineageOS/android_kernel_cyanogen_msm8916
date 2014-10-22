@@ -22,6 +22,7 @@ cirrus	Cirrus Logic, Inc.
 cortina	Cortina Systems, Inc.
 dallas	Maxim Integrated Products (formerly Dallas Semiconductor)
 denx	Denx Software Engineering
+di	Dyna Image Corporation
 emmicro	EM Microelectronic
 epson	Seiko Epson Corp.
 est	ESTeem Wireless Modems
@@ -40,6 +41,7 @@ invn	InvenSense Inc.
 jdi	Japan Display Inc.
 lattice	Lattice Semiconductor.
 linux	Linux-specific binding
+liteon	Lite-On Technology Corporation
 kionix	Kionix Inc.
 marvell	Marvell Technology Group Ltd.
 maxim	Maxim Integrated Products
