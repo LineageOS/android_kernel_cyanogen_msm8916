@@ -589,6 +589,12 @@ config YL_BQ24157_CHARGER
 	help
 	  Say Y here to enable the fan5405 sm charge driver
 
+config THUNDERCHARGE_CONTROL
+     bool "Enable ThunderCharge Current Controlling mechanism"
+     depends on YL_BQ24157_CHARGER
+     help
+       Say Y here to enable ability to adjust charger current
+
 config CHARGE_CONFIG_MICROMAX
 	bool "Use Micromax config for Yulong BQ24157 charger"
 	depends on YL_BQ24157_CHARGER
