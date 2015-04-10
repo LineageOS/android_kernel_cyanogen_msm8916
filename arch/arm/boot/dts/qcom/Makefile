@@ -78,7 +78,9 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	apq8009-mtp-wcd9326-refboard.dtb \
 	apq8009-512mb-mtp-wcd9326-refboard.dtb
 
-ifeq ($(CONFIG_MACH_LONGCHEER_MSM8916),y)
+ifeq ($(CONFIG_MACH_CKT_MSM8939),y)
+dtb-$(CONFIG_ARCH_MSM8916) += msm8939-spirit.dtb
+else ifeq ($(CONFIG_MACH_LONGCHEER_MSM8916),y)
 dtb-$(CONFIG_ARCH_MSM8916) += msm8916-qrd-l8150.dtb
 else
 dtb-$(CONFIG_ARCH_MSM8916) += msm8916-cdp.dtb \
