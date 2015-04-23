@@ -5478,10 +5478,6 @@ static int smb1360_resume(struct device *dev)
 		pr_err("Couldn't set batt_empty voltage rc=%d\n", rc);
 #endif
 
-#ifdef CONFIG_MACH_T86519A1
-	power_supply_changed(&chip->batt_psy);
-#endif
-
 	/* Restore the IRQ config */
 	for (i = 0; i < 3; i++) {
 		rc = smb1360_write(chip, IRQ_CFG_REG + i,
