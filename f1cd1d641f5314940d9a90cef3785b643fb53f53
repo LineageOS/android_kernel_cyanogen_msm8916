@@ -16,6 +16,24 @@
       "revId": "f1cd1d641f5314940d9a90cef3785b643fb53f53",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_61c8d075",
+        "filename": "drivers/leds/leds-aw2013.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 196,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-05-27T12:32:40Z",
+      "side": 1,
+      "message": "I intentionally didn\u0027t do that since there isn\u0027t support for GPIO power up when doing aw2013_power_init(led, false). In fact, this function is only ever called to power things on.",
+      "parentUuid": "7a8ec9b2_c1be04d4",
+      "revId": "f1cd1d641f5314940d9a90cef3785b643fb53f53",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
