@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_c1be04d4",
+        "filename": "drivers/leds/leds-aw2013.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 196,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-05-27T12:21:17Z",
+      "side": 1,
+      "message": "Looks like this is needed in the !on case as well.",
+      "revId": "f1cd1d641f5314940d9a90cef3785b643fb53f53",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
