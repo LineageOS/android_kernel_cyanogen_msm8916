@@ -379,6 +379,8 @@
 		vdd-supply = <&pm8916_l17>;
 		vio-supply = <&pm8916_l6>;
 		ap3426,irq-gpio= <&msm_gpio 113 0x2002>;
+		di,ps-thdl = <200>;
+		di,ps-thdh = <300>;
 	};
 
 	tps65132@3e {
