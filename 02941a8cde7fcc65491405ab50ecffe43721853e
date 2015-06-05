@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_4fb92fe9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-05T10:35:57Z",
+      "side": 1,
+      "message": "Confusing commit title for people who are not already familiar with what you are talking about.",
+      "revId": "02941a8cde7fcc65491405ab50ecffe43721853e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_2fb4e3f0",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-05T10:35:57Z",
+      "side": 1,
+      "message": "This isn\u0027t really a useful comment, this sort of thing would be more suitable for review comments rather than commit message.",
+      "revId": "02941a8cde7fcc65491405ab50ecffe43721853e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
