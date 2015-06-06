@@ -22,6 +22,30 @@
       "revId": "5b29bd16e95d3415627330672f573b700c1fed71",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_75dddc6f",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-06T10:28:49Z",
+      "side": 1,
+      "message": "ap3426  has an optional heart sensor capability (probably a specific skew has this capability) so the flag is added in, in case we need to turn it on for the support in the future.",
+      "parentUuid": "7a8ec9b2_f2174252",
+      "range": {
+        "startLine": 116,
+        "startChar": 7,
+        "endLine": 116,
+        "endChar": 37
+      },
+      "revId": "5b29bd16e95d3415627330672f573b700c1fed71",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
