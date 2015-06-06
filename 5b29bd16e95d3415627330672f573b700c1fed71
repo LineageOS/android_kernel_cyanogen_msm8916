@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_f2174252",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-06T09:33:05Z",
+      "side": 1,
+      "message": "What functionality is HEARTBEAT sensor providing?\nEven with LSC_DGB asserted I didn\u0027t see any changed behavior.",
+      "range": {
+        "startLine": 116,
+        "startChar": 7,
+        "endLine": 116,
+        "endChar": 37
+      },
+      "revId": "5b29bd16e95d3415627330672f573b700c1fed71",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
