@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_f262e215",
+        "filename": "drivers/input/touchscreen/touchscreen_yl.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 972,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-06-06T08:41:32Z",
+      "side": 1,
+      "message": "I know this probably matches the rest of the file, but you should probably use printk(KERN_INFO...) (or dev_dbg better yet)",
+      "revId": "4e1fb0346b0985531c3dc5c448a37762b5eaa64b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
