@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a8ec9b2_92c7de44",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 447,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-06T06:50:17Z",
+      "side": 1,
+      "message": "remove the this?",
+      "revId": "b5898cbd545ca48b65bff2119d74ad5b7806195b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_b2c4da40",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 449,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-06T06:50:17Z",
+      "side": 1,
+      "message": "same",
+      "revId": "b5898cbd545ca48b65bff2119d74ad5b7806195b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_f2dca21a",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1258,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-06T06:50:17Z",
+      "side": 1,
+      "message": "space between parameters",
+      "revId": "b5898cbd545ca48b65bff2119d74ad5b7806195b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_d2c16630",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1279,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-06T06:50:17Z",
+      "side": 1,
+      "message": "better to add space between two parameters",
+      "revId": "b5898cbd545ca48b65bff2119d74ad5b7806195b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a8ec9b2_12e2eed5",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1380,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-06T06:50:17Z",
+      "side": 1,
+      "message": "this is for future use?\nlight sensor is not interrupt driven, is it?",
+      "revId": "b5898cbd545ca48b65bff2119d74ad5b7806195b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
