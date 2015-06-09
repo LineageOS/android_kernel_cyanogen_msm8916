@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba5201f7_90fef403",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 384,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-06-09T21:45:02Z",
+      "side": 1,
+      "message": "FYI, this was updated to 500 recently, for https://jira.cyngn.com/browse/LETTUCE-595\n\nhttps://github.com/CyanogenMod/android_kernel_cyanogen_msm8916/commit/fb2d38e6bf1dd8adacb514b4971f9b11ecebf314",
+      "range": {
+        "startLine": 384,
+        "startChar": 2,
+        "endLine": 384,
+        "endChar": 28
+      },
+      "revId": "18a970dd0253e81b76969babad0c07b32fc7c824",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
