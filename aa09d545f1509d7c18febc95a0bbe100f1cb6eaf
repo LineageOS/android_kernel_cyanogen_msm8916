@@ -71,6 +71,23 @@
     },
     {
       "key": {
+        "uuid": "ba5201f7_16967c94",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 445,
+      "author": {
+        "id": 13409
+      },
+      "writtenOn": "2015-06-10T11:54:30Z",
+      "side": 1,
+      "message": "Couldn\u0027t this block just be written:\n\nap3426_get_object(ps_data-\u003eclient);\ndistance \u003d 1;\n\nThat makes it more obvious that we\u0027re just discarding whatever is returned from the ap3426_get_object call.",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ba5201f7_900434c7",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 9
