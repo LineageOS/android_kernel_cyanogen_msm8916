@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "ba5201f7_d0e6bce7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T05:33:39Z",
+      "side": 1,
+      "message": "ap3426 proximity sensor while in hysteresis mode (default for all devices this oss driver currently supports), nothing is triggered while object is in between hi and low.",
+      "parentUuid": "ba5201f7_10e76413",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ba5201f7_905d14ef",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 9
@@ -98,6 +116,24 @@
       "writtenOn": "2015-06-10T04:40:39Z",
       "side": 1,
       "message": "please remove c++ style comments unless it is from vendor?",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_10d124fc",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 479,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T05:33:39Z",
+      "side": 1,
+      "message": "accidentally left over, will remove",
+      "parentUuid": "ba5201f7_f0e10000",
       "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
