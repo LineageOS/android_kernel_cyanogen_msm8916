@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "ba5201f7_10e76413",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 13409
+      },
+      "writtenOn": "2015-06-10T04:52:57Z",
+      "side": 1,
+      "message": "What is the behaviour for PX_HIGH_THRESHOLD \u003c object distance \u003c PX_LOW_THRESHOLD?",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ba5201f7_905d14ef",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 9
