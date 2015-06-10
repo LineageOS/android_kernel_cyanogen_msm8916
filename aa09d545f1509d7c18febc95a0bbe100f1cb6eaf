@@ -1,0 +1,174 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba5201f7_905d14ef",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "Fallback default values in case they cannot be located in dtsi",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_b06218ac",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "heartbeat sensor is an optional feature, wrapping related code in CONFIG in case we need it in the future",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_900434c7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 448,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "wake_lock_timeout is needed for at least 200ms per Androids\u0027s documentation for wake sensors (proximity in this case) https://source.android.com/devices/sensors/suspend-mode.html",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_b00938e0",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 452,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "proximity sensor will rely on interrupt mode only. the timer is kept for debug purposes",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_f013c00b",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 480,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "Removed toggling of irq as it breaks proximity sensor\u0027s interrupt on this shared line.",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_10f924c9",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1326,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "new helper functions to set proximity high and low thresholds",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_30f628d8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1349,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "data-\u003eps_thd_l and data-\u003eps_thd_h values are read from dtsi",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_5003acb8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1510,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "proximity auto calibration threshold is read from dtsi",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_902b5433",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1627,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "the old implementation mis-used request_threaded_irq(IRQF_ONESHOT), and here it\u0027s been corrected (eliminated having to schedule a workqueue in thread handler) and made ap3426_irq into hard irq and (renamed) ap3426_thread_handler into thread handler in process context.",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba5201f7_b03058a0",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1700,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-10T04:03:34Z",
+      "side": 1,
+      "message": "Fixed all the goto error cleanups",
+      "revId": "aa09d545f1509d7c18febc95a0bbe100f1cb6eaf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
