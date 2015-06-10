@@ -86,7 +86,9 @@
 
 #define DI_AUTO_CAL
 #ifdef DI_AUTO_CAL
-       #define DI_PS_CAL_THR 500
+       #define DI_PS_CAL_THR_MAX 500
+       #define DI_PS_CAL_THR_EXPECTED 150
+       #define DI_PS_CAL_THR_MIN 0
 #endif
 
 static void pl_timer_callback(unsigned long pl_data);
@@ -792,12 +794,18 @@ int AP3xx6_Calibration(struct i2c_client *client)
        u16 data = 0;
 	if(Calibration_Flag == 0)
 	{
-		for(i=0; i<4; i++)
+		AP3xx6_set_pcrosstalk(client, ps_data);
+		for(i=0; i<8; i++)
 		{
 			data = ap3426_get_px_value(client);
 
 			printk("AP3426 ps =%d \n",data);
-			if((data) > pdata->ps_calibration)
+			if((data) > pdata->ps_calibration_max)
+			{
+				Calibration_Flag = 0;
+				goto err_out;
+			}
+			if((data) < pdata->ps_calibration_min)
 			{
 				Calibration_Flag = 0;
 				goto err_out;
@@ -806,17 +814,20 @@ int AP3xx6_Calibration(struct i2c_client *client)
 			{
 				ps_data += data;
 			}
-			msleep(100);
+			msleep(50);
 		}
 		Calibration_Flag =1;
 		printk("AP3426 ps_data1 =%d \n",ps_data);
-		ps_data = ps_data/4;
+		ps_data = ps_data/8;
 		printk("AP3426 ps_data2 =%d \n",ps_data);
-		AP3xx6_set_pcrosstalk(client,ps_data); 
+		AP3xx6_set_pcrosstalk(client,ps_data);
 	}
 	return 1;
 err_out:
-	printk("AP3xx6_read_ps fail\n");
+	ps_data = pdata->ps_calibration_expected;
+	printk("%s: Failed to compute a good calibration;\n", __func__);
+	printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ps_data);
+	AP3xx6_set_pcrosstalk(client, ps_data);
 	return -1;	
 }
 #endif 
@@ -1510,13 +1521,31 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     }
 
 #ifdef DI_AUTO_CAL
-    rc = of_property_read_u32(dt, "di,ps-calibration", &temp_val);
+    rc = of_property_read_u32(dt, "di,ps-calibration_min", &temp_val);
     if (!rc) {
-        pdata->ps_calibration = (u16)temp_val;
-        LDBG("ps-calibration %d\n", pdata->ps_calibration);
+        pdata->ps_calibration_min = (u16)temp_val;
+        LDBG("ps-calibration_min %d\n", pdata->ps_calibration_min);
     } else {
-        pdata->ps_calibration = DI_PS_CAL_THR;
-        dev_err(dev, "Unable to read ps-calibration, use default %d\n", pdata->ps_calibration);
+        pdata->ps_calibration_min = DI_PS_CAL_THR_MIN;
+        dev_err(dev, "Unable to read ps-calibration_min, use default %d\n", pdata->ps_calibration_min);
+    }
+
+    rc = of_property_read_u32(dt, "di,ps-calibration_expected", &temp_val);
+    if (!rc) {
+        pdata->ps_calibration_expected = (u16)temp_val;
+        LDBG("ps-calibration_expected %d\n", pdata->ps_calibration_expected);
+    } else {
+        pdata->ps_calibration_expected = DI_PS_CAL_THR_EXPECTED;
+        dev_err(dev, "Unable to read ps-calibration_expected, use default %d\n", pdata->ps_calibration_expected);
+    }
+
+    rc = of_property_read_u32(dt, "di,ps-calibration_max", &temp_val);
+    if (!rc) {
+        pdata->ps_calibration_max = (u16)temp_val;
+        LDBG("ps-calibration_max %d\n", pdata->ps_calibration_max);
+    } else {
+        pdata->ps_calibration_max = DI_PS_CAL_THR_MAX;
+        dev_err(dev, "Unable to read ps-calibration_max, use default %d\n", pdata->ps_calibration_max);
     }
 #endif
 
