@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a57fde8_d27b227a",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 796,
+      "author": {
+        "id": 13256
+      },
+      "writtenOn": "2015-06-11T10:11:05Z",
+      "side": 1,
+      "message": "I need to clear the calibration constant here.",
+      "range": {
+        "startLine": 796,
+        "startChar": 1,
+        "endLine": 796,
+        "endChar": 2
+      },
+      "revId": "b5d09b4743d95173f858d18b733e97104f4ac5f7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
