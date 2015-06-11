@@ -16,6 +16,24 @@
       "revId": "c303efca23c396718926398b34f4f7185d29b2e8",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_32f62ed8",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 6
+      },
+      "lineNbr": 383,
+      "author": {
+        "id": 13256
+      },
+      "writtenOn": "2015-06-11T11:47:22Z",
+      "side": 1,
+      "message": "Yep, I ment to be the same as:\n          ap3426.irq-qpio\n\nwithout the di. Sorry I missed that. I\u0027\u0027l fix it now.\n\n-piet",
+      "parentUuid": "9a57fde8_b2093ee0",
+      "revId": "c303efca23c396718926398b34f4f7185d29b2e8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
