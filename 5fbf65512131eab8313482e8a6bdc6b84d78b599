@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a57fde8_52e73240",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 5
+      },
+      "lineNbr": 384,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-11T10:42:25Z",
+      "side": 1,
+      "message": "seems like the convention for dtsi key naming is to use \"-\" is it better to do so eg. \n\"ps-calibration-expected\"\n\"ps-calibration-min\"\n\"ps-calibration-max\"",
+      "revId": "5fbf65512131eab8313482e8a6bdc6b84d78b599",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
