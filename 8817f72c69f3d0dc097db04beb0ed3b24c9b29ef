@@ -16,6 +16,24 @@
       "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_1295aa3f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 7
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-11T12:39:35Z",
+      "side": 1,
+      "message": "Same comment holds for the following patch. Generally speaking you want to  provide context for your commits.",
+      "parentUuid": "9a57fde8_b2a5beb6",
+      "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
