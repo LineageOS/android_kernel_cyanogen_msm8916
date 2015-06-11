@@ -16,6 +16,24 @@
       "revId": "5fbf65512131eab8313482e8a6bdc6b84d78b599",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_32c1ce81",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 5
+      },
+      "lineNbr": 384,
+      "author": {
+        "id": 13256
+      },
+      "writtenOn": "2015-06-11T10:58:11Z",
+      "side": 1,
+      "message": "Ok, lets go with ap3426,*-*-* syntax for ap3426 values.",
+      "parentUuid": "9a57fde8_52e73240",
+      "revId": "5fbf65512131eab8313482e8a6bdc6b84d78b599",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
