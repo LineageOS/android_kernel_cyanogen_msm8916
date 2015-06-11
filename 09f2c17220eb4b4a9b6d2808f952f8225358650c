@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a57fde8_cf0b7d7c",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 439,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-11T07:30:48Z",
+      "side": 1,
+      "message": "Put msleep(50) back as according to the spec there\u0027s a \"conversion time\" (ie sampling time) of 5ms for ps sensor.",
+      "revId": "09f2c17220eb4b4a9b6d2808f952f8225358650c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_6f1d31bd",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 448,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-11T07:30:48Z",
+      "side": 1,
+      "message": "Report 1 (far) initial distance value to frameworks since ps is in interrupt mode now. (Though testing indicates frameworks largely ignore reported distance values before the return of ps_enable)",
+      "revId": "09f2c17220eb4b4a9b6d2808f952f8225358650c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_ef1041ab",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 481,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-11T07:30:48Z",
+      "side": 1,
+      "message": "Put msleep(50) back as there\u0027s a \"conversion time\" (ie sampling time) of 100ms for ps sensor. Vendor may have left in here for a reason.",
+      "revId": "09f2c17220eb4b4a9b6d2808f952f8225358650c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
