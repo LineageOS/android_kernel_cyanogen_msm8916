@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a57fde8_b2a5beb6",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 7
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-06-11T12:38:52Z",
+      "side": 1,
+      "message": "You should be specific about which device you are doing this for. Typically we follow what seems to be the standard format for DTS commit titles to signify that.\n\nARM: dts: \u003cdevice code\u003e: \u003cdescription\u003e",
+      "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
