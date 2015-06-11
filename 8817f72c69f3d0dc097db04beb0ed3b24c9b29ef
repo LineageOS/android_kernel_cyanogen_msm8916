@@ -34,6 +34,42 @@
       "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_729c366a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 7
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 13256
+      },
+      "writtenOn": "2015-06-11T13:06:33Z",
+      "side": 1,
+      "message": "I\u0027ll make the Lettuce context more clear in both patches.\n\n-piet",
+      "parentUuid": "9a57fde8_1295aa3f",
+      "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a57fde8_529f325f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 7
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 13256
+      },
+      "writtenOn": "2015-06-11T13:06:33Z",
+      "side": 1,
+      "message": "Sure, I find the association between devices and DTS files to be a bit weak. I\u0027ll add it.",
+      "parentUuid": "9a57fde8_b2a5beb6",
+      "revId": "8817f72c69f3d0dc097db04beb0ed3b24c9b29ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
