@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a57fde8_b2093ee0",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 6
+      },
+      "lineNbr": 383,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-11T11:41:28Z",
+      "side": 1,
+      "message": "did you mean to name it \"ap3426di\" or \"ap3426\"",
+      "revId": "c303efca23c396718926398b34f4f7185d29b2e8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
