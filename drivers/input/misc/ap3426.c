@@ -424,16 +424,55 @@ static int ap3426_get_px_value(struct i2c_client *client)
     return (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
 }
 
-static int ap3426_ps_enable(struct ap3426_data *ps_data,int enable)
+
+static inline void ap3426_disable_ps_and_als_interrupts(struct i2c_client *client)
+{
+   i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, 0);
+}
+
+static inline void ap3426_disable_ps_interrupts(struct i2c_client *client)
+{
+   int val;;
+
+   val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
+
+   val &= ~0x80;
+
+   i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+}
+
+static inline void ap3426_enable_ps_interrupts(struct i2c_client *client)
+{
+    int val;
+
+    val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
+
+    val |= 0x80;
+
+    i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+}
+
+static int ap3426_ps_enable(struct ap3426_data *ps_data, int enable)
 {
     int32_t ret;
     int pxvalue;
     int distance;
+
+    LDBG("Entry(ps_data:%p, enable:%d)\n", ps_data, enable);
+
     if(misc_ps_opened == enable)
-                return 0;
+        return 0;
+
+    if (enable)
+        ap3426_enable_ps_interrupts(ps_data->client);
+    else
+        ap3426_disable_ps_interrupts(ps_data->client);
+
     misc_ps_opened = enable;
+
     ret = __ap3426_write_reg(ps_data->client,
         AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, enable);
+
     if (ret < 0) {
         printk("ps enable error!!!!!!\n");
     }
@@ -459,6 +498,7 @@ static int ap3426_ps_enable(struct ap3426_data *ps_data,int enable)
 
     return ret;
 }
+
 static int ap3426_ls_enable(struct ap3426_data *ps_data,int enable)
 {
     	int32_t ret;
@@ -1346,6 +1386,9 @@ static int32_t di_ap3426_set_ps_thd_h(struct ap3426_data *ps_data, uint16_t thd_
     return i2c_smbus_write_word_data(ps_data->client, 0x2C, thd_h);
 }
 
+
+
+
 static int ap3426_init_client(struct i2c_client *client)
 {
     struct ap3426_data *data = i2c_get_clientdata(client);
@@ -1373,8 +1416,9 @@ static int ap3426_init_client(struct i2c_client *client)
     /* set defaults */
     ap3426_set_range(client, AP3426_ALS_RANGE_0);
     ap3426_set_mode(client, AP3426_SYS_DEV_DOWN);
-    //disable als interrupt mode
-    i2c_smbus_write_byte_data(client, 0x02, 0x80);
+
+    ap3426_disable_ps_and_als_interrupts(client);
+
     //ps/IR integrated time as 9T,for sensitivity
     // PS mean time default = 0x00 (1 converseion time = 5ms)
     // 5 + 0x08 x 0.0627 = 5.5 ms (ADC photodiode sample period)
@@ -1816,20 +1860,22 @@ static struct of_device_id ap3426_match_table[] =
 #define ap3426_match_table NULL
 #endif
 
+
 static int ap3426_suspend(struct device *dev)
 {
-	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+    struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
-	if(misc_ls_opened == 1)
-	{
-		ap3426_ls_enable(ps_data,false);
-		ps_data->rels_enable = 1;
-	}
+    if(misc_ls_opened == 1)
+    {
+	ap3426_ls_enable(ps_data,false);
+	ps_data->rels_enable = 1;
+    }
     // Removed it because it may cause system can't wake up
     //ap3426_power_init(ps_data,false);
     //power off when ps is disabled
     if (misc_ps_opened==0)
     {
+        ap3426_disable_ps_interrupts(ps_data->client);
         ap3426_power_ctl(ps_data,false);
     }
     return 0;
@@ -1837,9 +1883,10 @@ static int ap3426_suspend(struct device *dev)
 
 static int ap3426_resume(struct device *dev)
 {
-	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+    struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
-    printk("%s: rels_enable=%d", __func__, ps_data ->rels_enable);
+    printk("%s(dev:%p): rels_enable=%d", __func__, dev, ps_data->rels_enable);
+
     // Removed it because it may cause system can't wake up
     //ap3426_power_init(ps_data,true);
     // power on when ps is disable
@@ -1851,6 +1898,10 @@ static int ap3426_resume(struct device *dev)
     if (ps_data ->rels_enable == 1)
     {
         ap3426_init_client(ps_data->client);
+
+	if (misc_ps_opened)
+            ap3426_enable_ps_interrupts(ps_data->client);
+
         ap3426_ls_enable(ps_data,true);
     }
 
@@ -1876,7 +1927,7 @@ static int __init ap3426_init(void)
     int ret;
 
     ret = i2c_add_driver(&ap3426_driver);
-    return ret;	
+    return ret;
 
 }
 
