@@ -77,6 +77,11 @@
 #define AP3426_VIO_MIN_UV	1750000
 #define AP3426_VIO_MAX_UV	1950000
 
+#ifndef CONFIG_DYNAMIC_DEBUG
+// #undef pr_debug				/*  Uncomment to  use pr_debug() locally. */
+// #define pr_debug(args...) printk(args)	/*	"	"	"	"	" */
+#endif
+
 //#define LSC_DBG
 #ifdef LSC_DBG
 #define LDBG(s,args...)	{printk("LDBG: func [%s], line [%d], ",__func__,__LINE__); printk(s,## args);}
@@ -808,69 +813,125 @@ static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev,
 } 
 
 #ifdef DI_AUTO_CAL
-u8 Calibration_Flag = 0;
+static u8 calibrated = 0;
 
-static int AP3xx6_set_pcrosstalk(struct i2c_client *client, int val)
+static inline void swap_at(u16 *x, u16 *y)
+{
+    u8 temp = *x;
+
+    *x = *y;
+    *y = temp;
+}
+
+static inline void ap3426_sort(u16 *sample_data, int ArySize)
+{
+    int i, j;
+
+    for (i = 0; i < ArySize - 1; i++) {
+        for (j = i+1; j < ArySize; j++) {
+            if (sample_data[i] > sample_data[j]) {
+                 swap_at(&sample_data[i], &sample_data[j]);
+            }
+        }
+    }
+    printk("%s: Sorted sample_data[ ", __func__);
+    for(i = 0; i < ArySize; i++) {
+        printk("%d ", sample_data[i]);
+    }
+    printk("]\n");
+}
+
+
+static int ap3426_set_pcrosstalk(struct i2c_client *client, int val)
 {
     int lsb, msb, err;
 
-	msb = val >> 8;
-	lsb = val & 0xFF;
-    err = __ap3426_write_reg(client, 0x28,
-            0xFF, 0x00, lsb);
-	     
-    err =__ap3426_write_reg(client, 0x29,
-            0xFF, 0x00, msb);
-          
-	return err;
+    msb = val >> 8;
+    lsb = val & 0xFF;
+    err = __ap3426_write_reg(client, 0x28, 0xFF, 0x00, lsb);
+
+    err =__ap3426_write_reg(client, 0x29, 0xFF, 0x00, msb);
+
+    printk("%s: Calibration Register = %d.\n", __func__, val);
+
+    return err;
 }
 
-int AP3xx6_Calibration(struct i2c_client *client)
+#define CAL_SAMPLES 9
+/*
+ * Try to get 5 samples to set the calibration register.
+ * Discard the 1st sample to two (as done on Tomato).
+ * Discard any samples that are not in the expected range.
+ * Samples taken just after changing the calibration
+ * register haven't changed yet.
+ */
+int ap3426_calibration(struct i2c_client *client)
 {
-      // int err;
     struct ap3426_data *pdata = i2c_get_clientdata(client);
-	int i = 0;
-	u16 ps_data = 0;
-       u16 data = 0;
-	if(Calibration_Flag == 0)
-	{
-		AP3xx6_set_pcrosstalk(client, ps_data);
-		for(i=0; i<8; i++)
-		{
-			data = ap3426_get_px_value(client);
+    int i;
+    u16 ave;
+    u16 sample;
+    u16 sample_data[CAL_SAMPLES];
+    int samples = 0;
 
-			printk("AP3426 ps =%d \n",data);
-			if((data) > pdata->ps_calibration_max)
-			{
-				Calibration_Flag = 0;
-				goto err_out;
-			}
-			if((data) < pdata->ps_calibration_min)
-			{
-				Calibration_Flag = 0;
-				goto err_out;
-			}
-			else
-			{
-				ps_data += data;
-			}
-			msleep(50);
-		}
-		Calibration_Flag =1;
-		printk("AP3426 ps_data1 =%d \n",ps_data);
-		ps_data = ps_data/8;
-		printk("AP3426 ps_data2 =%d \n",ps_data);
-		AP3xx6_set_pcrosstalk(client,ps_data);
-	}
-	return 1;
-err_out:
-	ps_data = pdata->ps_calibration_expected;
-	printk("%s: Failed to compute a good calibration;\n", __func__);
-	printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ps_data);
-	AP3xx6_set_pcrosstalk(client, ps_data);
-	return -1;	
+    if (!calibrated) {
+        ap3426_set_pcrosstalk(client, 0);
+
+        for(i=0; i<CAL_SAMPLES; i++) {
+            msleep(40);
+
+            sample = sample_data[samples] = ap3426_get_px_value(client);
+
+            pr_debug("%s: sample_data[samples:%d] = %d\n", __func__,
+			  samples, sample);
+
+            if (sample > pdata->ps_calibration_max) continue;
+            if (sample < pdata->ps_calibration_min) continue;
+
+            samples++;
+       }
+       if (samples >= CAL_SAMPLES/2) {
+	    u16 total = 0;
+	    int mid_point = (samples/2);
+	    int start_point = mid_point - (samples/4);
+	    int end_point = mid_point + (samples/4);
+
+	    ap3426_sort(sample_data, samples);
+
+	    /* Use median values of sorted data */
+            samples = 0;
+	    for (i = start_point; i < end_point; i++) {
+                pr_debug("%s: total:%d += sample_data[i:%d]:%d;\n", __func__,
+                              total,   i, sample_data[i]);
+
+                total += sample_data[i];
+		samples++;
+            }
+            ave = total/samples;
+            pr_debug("%s: ave = %d \n", __func__, ave);
+            ap3426_set_pcrosstalk(client, ave);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            pr_debug("%s: sample = %d\n", __func__, sample);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            pr_debug("%s: sample = %d\n", __func__, sample);
+	    calibrated = 1;
+            return 1;
+        } else {
+            ave = pdata->ps_calibration_expected;
+            printk("%s: Failed to compute a good calibration;\n", __func__);
+            printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ave);
+            ap3426_set_pcrosstalk(client, ave);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            pr_debug("%s: sample = %d\n", __func__, sample);
+            return -1;
+        }
+    }
+    return 0;
 }
-#endif 
+#endif
 
 
 static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
@@ -883,7 +944,7 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
    err = ap3426_ps_enable(ps_data, enabled);
 
 #ifdef DI_AUTO_CAL
-    if(enabled == 1 && Calibration_Flag == 0) {
+    if(enabled == 1 && !calibrated) {
 	struct i2c_client *client = ps_data->client;
 
 	/*
@@ -897,7 +958,7 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
 	 * race.
 	 */
         ap3426_disable_ps_interrupts(client);
-        AP3xx6_Calibration(client);
+        ap3426_calibration(client);
         ap3426_enable_ps_interrupts(client);
     }
 #endif
@@ -1778,16 +1839,22 @@ static int ap3426_probe(struct i2c_client *client,
 
     dev_info(&client->dev, "Driver version %s enabled\n", DRIVER_VERSION);
 
-	#ifdef DI_AUTO_CAL
-	 __ap3426_write_reg(data->client,
-        AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 1);
-	 
-	msleep(100);	
-       AP3xx6_Calibration(data->client);
-	   
-	 __ap3426_write_reg(data->client,
-        AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 0);
-	#endif   
+#ifdef DI_AUTO_CAL
+    /* Power on PS+IR Part of chip */
+     __ap3426_write_reg(data->client,
+                AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 1);
+
+    /*
+     * Try to calibrate now;
+     * if PS is covered try again later when PS is used.
+     */
+    msleep(100);
+    ap3426_calibration(data->client);
+
+    /* Power off PS+IR */
+     __ap3426_write_reg(data->client,
+                AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 0);
+#endif
    
     return 0;
 
