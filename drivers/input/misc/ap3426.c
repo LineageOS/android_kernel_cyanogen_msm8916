@@ -30,8 +30,8 @@
  * Modification History:
  * Date     By       Summary
  * -------- -------- -------------------------------------------------------
- * 02/02/12 YC       1. Modify irq function to seperate two interrupt routine. 
- *					 2. Fix the index of reg array error in em write. 
+ * 02/02/12 YC       1. Modify irq function to seperate two interrupt routine.
+ *					 2. Fix the index of reg array error in em write.
  * 02/22/12 YC       3. Merge AP3426 and AP3216C into the same driver. (ver 1.8)
  * 03/01/12 YC       Add AP3212C into the driver. (ver 1.8)
  * 07/25/14 John	  Ver.2.1 , ported for Nexus 7
@@ -133,42 +133,42 @@ bool power_enabled;
 /*
 fixed for msm8916 kevindang20141010
 */
-static struct sensors_classdev sensors_light_cdev = { 
-	.name = "light", 
-	.vendor = "DI", 
-	.version = 1, 
-	.handle = SENSORS_LIGHT_HANDLE, 
-	.type = SENSOR_TYPE_LIGHT, 
-	.max_range = "6500", 
-	.resolution = "0.0625", 
-	.sensor_power = "0.09", 
-	.min_delay = 0,	/* us */ 
-	.fifo_reserved_event_count = 0, 
-	.fifo_max_event_count = 0, 
-	.enabled = 0, 
-	.delay_msec = 200, 
-	.sensors_enable = NULL, 
-	.sensors_poll_delay = NULL, 
-}; 
+static struct sensors_classdev sensors_light_cdev = {
+	.name = "light",
+	.vendor = "DI",
+	.version = 1,
+	.handle = SENSORS_LIGHT_HANDLE,
+	.type = SENSOR_TYPE_LIGHT,
+	.max_range = "6500",
+	.resolution = "0.0625",
+	.sensor_power = "0.09",
+	.min_delay = 0,	/* us */
+	.fifo_reserved_event_count = 0,
+	.fifo_max_event_count = 0,
+	.enabled = 0,
+	.delay_msec = 200,
+	.sensors_enable = NULL,
+	.sensors_poll_delay = NULL,
+};
 
 
-static struct sensors_classdev sensors_proximity_cdev = { 
-	.name = "proximity", 
-	.vendor = "DI", 
-	.version = 1, 
-	.handle = SENSORS_PROXIMITY_HANDLE, 
-	.type = SENSOR_TYPE_PROXIMITY, 
-	.max_range = "5.0", 
-	.resolution = "5.0", 
-	.sensor_power = "0.1", 
-	.min_delay = 0, 
-	.fifo_reserved_event_count = 0, 
-	.fifo_max_event_count = 0, 
-	.enabled = 0, 
-	.delay_msec = 200, 
-	.sensors_enable = NULL, 
-	.sensors_poll_delay = NULL, 
-}; 
+static struct sensors_classdev sensors_proximity_cdev = {
+	.name = "proximity",
+	.vendor = "DI",
+	.version = 1,
+	.handle = SENSORS_PROXIMITY_HANDLE,
+	.type = SENSOR_TYPE_PROXIMITY,
+	.max_range = "5.0",
+	.resolution = "5.0",
+	.sensor_power = "0.1",
+	.min_delay = 0,
+	.fifo_reserved_event_count = 0,
+	.fifo_max_event_count = 0,
+	.enabled = 0,
+	.delay_msec = 200,
+	.sensors_enable = NULL,
+	.sensors_poll_delay = NULL,
+};
 
 static int __ap3426_read_reg(struct i2c_client *client,
 	u32 reg, u8 mask, u8 shift)
@@ -204,7 +204,7 @@ static int __ap3426_write_reg(struct i2c_client *client,
 static int ap3426_get_range(struct i2c_client *client)
 {
     u8 idx = __ap3426_read_reg(client, AP3426_REG_ALS_CONF,
-	    AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT); 
+	    AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT);
     return range[idx];
 }
 
@@ -732,40 +732,40 @@ static ssize_t ap3426_store_range(struct device *dev,
 
 //kevindang for msm8916 20141010
 static int ap3426_als_enable_set(struct sensors_classdev *sensors_cdev,
-						unsigned int enabled) 
-{ 
-	struct ap3426_data *als_data = container_of(sensors_cdev, 
-						struct ap3426_data, als_cdev); 
-	int err; 
+						unsigned int enabled)
+{
+	struct ap3426_data *als_data = container_of(sensors_cdev,
+						struct ap3426_data, als_cdev);
+	int err;
 
 	err = ap3426_ls_enable(als_data,enabled);
 
 
-	if (err < 0) 
-		return err; 
-	return 0; 
-} 
+	if (err < 0)
+		return err;
+	return 0;
+}
 
 static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev,
-					   unsigned int delay_msec) 
-{ 
-   struct ap3426_data *als_data = container_of(sensors_cdev, 
-					   struct ap3426_data, als_cdev); 
+					   unsigned int delay_msec)
+{
+   struct ap3426_data *als_data = container_of(sensors_cdev,
+					   struct ap3426_data, als_cdev);
 
 	int ret;
-	
+
    if(delay_msec < MIN_ALS_POLL_DELAY_MS)
    {
 		ret = mod_timer(&als_data->pl_timer, jiffies + msecs_to_jiffies(MIN_ALS_POLL_DELAY_MS));
    }
-   
+
    if(delay_msec > PL_TIMER_DELAY)
    {
 		ret = mod_timer(&als_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
    }
 
-   return 0; 
-} 
+   return 0;
+}
 
 #ifdef DI_AUTO_CAL
 u8 Calibration_Flag = 0;
@@ -778,10 +778,10 @@ static int AP3xx6_set_pcrosstalk(struct i2c_client *client, int val)
 	lsb = val & 0xFF;
     err = __ap3426_write_reg(client, 0x28,
             0xFF, 0x00, lsb);
-	     
+
     err =__ap3426_write_reg(client, 0x29,
             0xFF, 0x00, msb);
-          
+
 	return err;
 }
 
@@ -828,17 +828,17 @@ err_out:
 	printk("%s: Failed to compute a good calibration;\n", __func__);
 	printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ps_data);
 	AP3xx6_set_pcrosstalk(client, ps_data);
-	return -1;	
+	return -1;
 }
-#endif 
+#endif
 
 
 static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
-					   unsigned int enabled) 
-{ 
-   struct ap3426_data *ps_data = container_of(sensors_cdev, 
-					   struct ap3426_data, ps_cdev); 
-   int err; 
+					   unsigned int enabled)
+{
+   struct ap3426_data *ps_data = container_of(sensors_cdev,
+					   struct ap3426_data, ps_cdev);
+   int err;
 
    err = ap3426_ps_enable(ps_data,enabled);
 
@@ -849,9 +849,9 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
 	}
 	#endif
 
-   if (err < 0) 
-	   return err; 
-   return 0; 
+   if (err < 0)
+	   return err;
+   return 0;
 }
 
 
@@ -904,7 +904,7 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 		}
 
 		ret = regulator_enable(data->vio);
-		if (ret) 
+		if (ret)
 		{
 			dev_err(&data->client->dev,
 				"Regulator vio enable failed ret=%d\n", ret);
@@ -914,7 +914,7 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 
 		data->power_enabled = on;
 		printk(KERN_INFO "%s: enable ap3426 power", __func__);
-	} 
+	}
 	else
 	{
 		dev_warn(&data->client->dev,
@@ -962,7 +962,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 			ret = regulator_set_voltage(data->vdd,
 					AP3426_VDD_MIN_UV,
 					AP3426_VDD_MAX_UV);
-			if (ret) 
+			if (ret)
 			{
 				dev_err(&data->client->dev,
 					"Regulator set failed vdd ret=%d\n",
@@ -972,7 +972,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 		}
 
 		data->vio = regulator_get(&data->client->dev, "vio");
-		if (IS_ERR(data->vio)) 
+		if (IS_ERR(data->vio))
 		{
 			ret = PTR_ERR(data->vio);
 			dev_err(&data->client->dev,
@@ -985,7 +985,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 			ret = regulator_set_voltage(data->vio,
 					AP3426_VIO_MIN_UV,
 					AP3426_VIO_MAX_UV);
-			if (ret) 
+			if (ret)
 			{
 				dev_err(&data->client->dev,
 				"Regulator set failed vio ret=%d\n", ret);
@@ -1038,7 +1038,7 @@ static ssize_t ap3426_store_mode(struct device *dev,
     LDBG("Starting timer to fire in 200ms (%ld)\n", jiffies );
     ret = mod_timer(&data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 
-    if(ret) 
+    if(ret)
 	LDBG("Timer Error\n");
     return count;
 }
@@ -1230,7 +1230,7 @@ static ssize_t ap3426_store_calibration_state(struct device *dev,
 {
     struct input_dev *input = to_input_dev(dev);
     struct ap3426_data *data = input_get_drvdata(input);
-    int stdls, lux; 
+    int stdls, lux;
     char tmp[10];
 
     LDBG("DEBUG ap3426_store_calibration_state..\n");
@@ -1420,7 +1420,7 @@ static void psensor_work_handler(struct work_struct *w)
 
     distance = ap3426_get_object(data->client);
 	pxvalue = ap3426_get_px_value(data->client); //test
-	
+
     input_report_abs(data->psensor_input_dev, ABS_DISTANCE, distance);
     input_sync(data->psensor_input_dev);
     LDBG("distance %d value %d\n", distance, pxvalue);
@@ -1719,14 +1719,14 @@ static int ap3426_probe(struct i2c_client *client,
 	#ifdef DI_AUTO_CAL
 	 __ap3426_write_reg(data->client,
         AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 1);
-	 
-	msleep(100);	
+
+	msleep(100);
        AP3xx6_Calibration(data->client);
-	   
+
 	 __ap3426_write_reg(data->client,
         AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 0);
-	#endif   
-   
+	#endif
+
     return 0;
 
 err_sensors_classdev_register_ps:
@@ -1876,7 +1876,7 @@ static int __init ap3426_init(void)
     int ret;
 
     ret = i2c_add_driver(&ap3426_driver);
-    return ret;	
+    return ret;
 
 }
 

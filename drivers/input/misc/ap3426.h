@@ -28,7 +28,7 @@
  * Date     By       Summary
  * -------- -------- -------------------------------------------------------
  * 06/03/14 John		 Original Creation (Test version:1.0)
- * 
+ *
  */
 
 /*
@@ -71,7 +71,7 @@
 /* ap3426 data registers */
 #define AP3426_REG_IR_DATA_LOW     0x0A
 #define AP3426_REG_IR_DATA_LOW_SHIFT     (0)
-#define AP3426_REG_IR_DATA_LOW_MASK 0xFF     
+#define AP3426_REG_IR_DATA_LOW_MASK 0xFF
 
 #define AP3426_REG_IR_DATA_HIGH    0x0B
 #define AP3426_REG_IR_DATA_HIGH_SHIFT    (0)
@@ -111,11 +111,11 @@
 /*----------------------------------------------------------------------------*/
 /* ap3426 PS CONFIG registers */
 #define AP3426_REG_PS_CONF         0x20 /*PS GAIN*/
-#define AP3426_REG_PS_CONF_SHIFT         (2) 
-#define AP3426_REG_PS_CONF_MASK         0x0C 
+#define AP3426_REG_PS_CONF_SHIFT         (2)
+#define AP3426_REG_PS_CONF_MASK         0x0C
 
 #define AP3426_REG_PS_LEDD         0x21 /*PS LED DRIVER*/
-#define AP3426_REG_PS_LEDD_SHIFT         (0) 
+#define AP3426_REG_PS_LEDD_SHIFT         (0)
 #define AP3426_REG_PS_LEDD_MASK         0x03
 
 #define AP3426_REG_PS_IFORM        0x22 /* PS INT Mode*/
@@ -211,10 +211,10 @@ struct ap3426_data {
     u8 power_state_before_suspend;
     uint32_t int_pin;
     uint32_t irq_flags;
-    
+
     struct sensors_classdev als_cdev;  //for msm8916  kevindang20141010
     struct sensors_classdev ps_cdev; //for msm8916
-    
+
     struct input_dev    *psensor_input_dev;
     struct input_dev    *lsensor_input_dev;
     struct input_dev    *hsensor_input_dev;
