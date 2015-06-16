@@ -99,6 +99,42 @@
       "revId": "96ee190b4b299526a2f68183cb061467de53907b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_8a788bfa",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1478,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T06:26:07Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "fa31d9ce_caafe37b",
+      "revId": "96ee190b4b299526a2f68183cb061467de53907b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_aa646f49",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1478,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T06:26:07Z",
+      "side": 1,
+      "message": "If the interrupt was caused by PS the 1st fragment processed the interrupt at lines 1451...1457. If the LS caused the interrupt the code at lines 1466...1471 processed the interrupt. I\u0027ll read over the literature and look at PS and LS clearing semantics.",
+      "parentUuid": "fa31d9ce_cafd2370",
+      "revId": "96ee190b4b299526a2f68183cb061467de53907b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
