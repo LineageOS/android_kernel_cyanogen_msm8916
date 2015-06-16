@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "fa31d9ce_4ac4d33f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T06:14:38Z",
+      "side": 1,
+      "message": "I suppose your implying adding \n     \"input: ap3426\"\non the 1st line as in  100836. \n\nSure.\n\nhttp://review.cyanogenmod.org/#/c/100836/",
+      "parentUuid": "3a461143_f2b820e8",
+      "range": {
+        "startLine": 7,
+        "startChar": 8,
+        "endLine": 7,
+        "endChar": 12
+      },
+      "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa31d9ce_6ac5175a",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 1
@@ -36,6 +60,24 @@
       "writtenOn": "2015-06-16T05:29:52Z",
       "side": 1,
       "message": "We should create a PSC_DBG to wrap proximity sensor related print outs as there are quite a bit added in this.",
+      "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_0a3f3b26",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T06:14:38Z",
+      "side": 1,
+      "message": "Interesting. I didn\u0027t realize that LSC was an\nacronym for Light Sensor. Seems sensible and many\nof the LSC_DEBUG statements are in the Light Sensor\npolling.\n\nIt\u0027s currently unusual to have part of the driver supported by\none class of printk\u0027s and other by another class. For\nexample the Tomato driver breaks down the category by\ndebug/log/err categories.\n\nFor the socket code I\u0027ve done both, having a debug/log level\nand a category. For the socket code for example I had\nSOCK_DEBUG() for socket functions and for Socket Buffer\nfunctions I used SKB_DEBUG().\n\nI used pr_debug() as it seems to be common these days,\ncan, and recently was, enabled via the Lettuce .config file,\nand is ifdef\u0027d out of the code when not enabled.\n\nHow about I play with the idea a bit and see how it feels.\nMight be a good time to switch to a more useful tracing syntax for the LSC_DEBUG() I find just the just the function name optimal. Indenting based on function dept is also nice for large subsystems maybe later when it\u0027s practical.\n\n-piet",
+      "parentUuid": "fa31d9ce_6ac5175a",
       "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
