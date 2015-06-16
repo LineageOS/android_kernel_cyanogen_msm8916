@@ -56,6 +56,7 @@
 #include "ap3426.h"
 #include <linux/regulator/consumer.h>
 #include <linux/ioctl.h>
+#include <linux/atomic.h>
 
 #define AP3426_DRV_NAME		"ap3426"
 #define DRIVER_VERSION		"1.0"
@@ -77,14 +78,111 @@
 #define AP3426_VIO_MIN_UV	1750000
 #define AP3426_VIO_MAX_UV	1950000
 
-//#define LSC_DBG
-#ifdef LSC_DBG
-#define LDBG(s,args...)	{printk("LDBG: func [%s], line [%d], ",__func__,__LINE__); printk(s,## args);}
-#else
-#define LDBG(s,args...) {}
+/*
+ * Uncomment the 3 lines within the #ifndef...#endif to enable pr_debug()
+ * locally. pr_debug() is used by DBG macros; ex: ALS_DBG() and PS_DB().
+ */
+#ifndef CONFIG_DYNAMIC_DEBUG
+// #define CONFIG_DYNAMIC_DEBUG
+// #undef pr_debug
+// #define pr_debug(args...) printk(args)
 #endif
 
+// #define PS_POLLING_DEBUG 1           /* Uncomment to enable polling PS debug; ... */
+                                        /* ... normally PS is only interrupt driven */
+
+// #define ALS_DEBUG                    /* Uncomment for additioal ALS Debug */
+
+/*
+ * DEBUG, INFO and ERR Logging are normally defined below and enabled.
+ * pr_debug() is enabled above or if the kernel configs CONFIG_DYNAMIC_DEBUG.
+ *
+ * Since pr_debug() is by default a null function the gcc optimizer will normally remove the
+ *       {if ... pr_debug}
+ * fragments in production builds.
+ *
+ * The indent logic is ifdef's out if CONFIG_DYNAMIC_DEBUG isn't defined.
+ *
+ * Keeping this driver similar to the Tomato proximity driver;
+ *     See: drivers/sensors/alsprox/pa12200001/pa12200001.c
+ * where it appears the debug code is enabked for a CONFIG_DYNAMIC_DEBUG kernel.
+ *
+ * These can be disabled below to disable logging.
+ */
+#define PS_debug        1
+#define PS_info         1
+#define PS_err          1
+
+#define ALS_debug       1
+#define ALS_info        1
+#define ALS_err         1
+
+#if defined(CONFIG_DYNAMIC_DEBUG)
+static atomic_t indent = ATOMIC_INIT(0);	/* Log Indent */
+
+static inline void ind(void)    { pr_debug("%*s",  (int) 2 * indent.counter, " "); }
+static inline void inc(void)    { atomic_inc(&indent); }
+static inline void dec(void)    { atomic_dec_if_positive(&indent); }
+#else
+#define ind()
+#define inc()
+#define dec()
+#endif
+
+/*
+ * Intent Logging:
+ *
+ *    fun1(args) {
+ *        fun2(args) {
+ *            return(rv);
+ *        }
+ *    }
+ */
+#define ENTRY(fmt, args...)   {                      \
+        ind();                                       \
+        pr_debug("%s(",   __func__);                 \
+        pr_debug(fmt"): {\n", args);                 \
+        inc();                                       \
+}
+
+#define RETURN(fmt, args...) {                       \
+        ind();                                       \
+        pr_debug("%s: Return(",   __func__);         \
+        pr_debug(fmt");\n", args);                   \
+        dec();                                       \
+        ind();                                       \
+        pr_debug("}\n");                             \
+}
+#define RETURN_VOID() {                              \
+        dec();                                       \
+        ind();                                       \
+        pr_debug("}\n");                             \
+}
+
+#define DBG(args...)    { ind();  pr_debug("%s: ",  __func__);  pr_debug(args); }
+#define ERR(args...)    { ind();    pr_err("%s: ",  __func__);  pr_err(args);   }
+#define INFO(args...)   { ind();   pr_info("%s: ",  __func__);  pr_info(args);  }
+
+
+/* Proximity Sensor Logging */
+#define PS_ENTRY(args...)         { if (PS_debug)  ENTRY(args);     }
+#define PS_RETURN(args...)        { if (PS_debug)  RETURN(args);    }
+#define PS_RETURN_VOID()          { if (PS_debug)  RETURN_VOID();   }
+#define PS_DBG(args...)           { if (PS_debug)  DBG(args);       }
+#define PS_ERR(args...)           { if (PS_err)    ERR(args);       }
+#define PS_INFO(args...)          { if (PS_info)   INFO(args);      }
+
+/* Light Sensor Logging */
+#define ALS_ENTRY(args...)        { if (ALS_debug) ENTRY(args);     }
+#define ALS_RETURN(args...)       { if (ALS_debug) RETURN(args);    }
+#define ALS_RETURN_VOID()         { if (ALS_debug) RETURN_VOID();   }
+#define ALS_DBG(args...)          { if (ALS_debug) DBG(args);       }
+#define ALS_ERR(args...)          { if (ALS_err)   ERR(args);       }
+#define ALS_INFO(args...)         { if (ALS_info)  INFO(args);      }
+
+
 #define DI_AUTO_CAL
+
 #ifdef DI_AUTO_CAL
        #define DI_PS_CAL_THR_MAX 500
        #define DI_PS_CAL_THR_EXPECTED 150
@@ -356,43 +454,67 @@ static int ap3426_set_phthres(struct i2c_client *client, int val)
 static int ap3426_get_adc_value(struct i2c_client *client)
 {
     unsigned int lsb, msb, val;
-#ifdef LSC_DBG
-    unsigned int tmp,range;
+#ifdef ALS_DEBUG
+    unsigned int tmp, tmp2, range;
 #endif
+
+    ALS_ENTRY("client:%p", client);
 
     lsb = i2c_smbus_read_byte_data(client, AP3426_REG_ALS_DATA_LOW);
 
     if (lsb < 0) {
-	return lsb;
+	ALS_ERR("lsb:%d < 0\n", lsb);
+	val = lsb;
+        goto done;
     }
 
     msb = i2c_smbus_read_byte_data(client, AP3426_REG_ALS_DATA_HIGH);
 
-    if (msb < 0)
+    if (msb < 0) {
+	ALS_ERR("msb:%d < 0\n", msb);
+	val = msb;
 	return msb;
+    }
 
-#ifdef LSC_DBG
+#ifdef ALS_DEBUG
     range = ap3426_get_range(client);
     tmp = (((msb << 8) | lsb) * range) >> 16;
-    tmp = tmp * cali / 100;
-    LDBG("ALS val=%d lux\n",tmp);
+    ALS_DBG("tmp:%d = (((msb:%d << 8) | lsb:%d) * range:%d) >> 16;\n",
+             tmp,        msb,           lsb,      range);
+
+    tmp2 = tmp * cali / 100;
+    ALS_DBG("tmp2:%d = tmp:%d * cali:%d\n",
+             tmp2,     tmp,     cali);
 #endif
-    val = msb << 8 | lsb;
+
+    val = (msb << 8) | lsb;
+
+done:
+    ALS_RETURN("val:0x%x:%d = (msb:%x << 8) || lsb:%x",
+                val, val,      msb,            lsb);
 
     return val;
 }
 
-
+/* Get PS Distance: Near:0 or Far:1 */
 static int ap3426_get_object(struct i2c_client *client)
 {
     int val;
+    int rv;
+
+    PS_ENTRY("client:%p", client);
 
     val = i2c_smbus_read_byte_data(client, AP3426_OBJ_COMMAND);
-    LDBG("val=%x\n", val);
+
+    PS_DBG("val:0X%x &= AP3426_OBJ_MASK:0x%x\n", val, AP3426_OBJ_MASK);
     val &= AP3426_OBJ_MASK;
 
-//    return val >> AP3426_OBJ_SHIFT;
-	return !(val >> AP3426_OBJ_SHIFT);
+    rv = !(val >> AP3426_OBJ_SHIFT);
+    PS_DBG("rv = 0x%x = !(val:0x%x >> AP3426_OBJ_SHIFT):%d;\n",
+             rv,          val,        AP3426_OBJ_SHIFT);
+
+    PS_RETURN("rv:%d", rv);
+    return(rv);
 }
 
 static int ap3426_get_intstat(struct i2c_client *client)
@@ -408,20 +530,31 @@ static int ap3426_get_intstat(struct i2c_client *client)
 static int ap3426_get_px_value(struct i2c_client *client)
 {
     int lsb, msb;
+    int rv;
+
+    PS_ENTRY("client:%p", client);
 
     lsb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_LOW);
 
-    if (lsb < 0)
-	return lsb;
-
-    LDBG("%s, IR = %d\n", __func__, (u32)(lsb));
+    if (lsb < 0) {
+	PS_ERR("lsb < 0");
+	rv = lsb;
+        goto done;
+    }
+    PS_DBG("IR = 0X%x = lsb\n", (u32)(lsb));
     msb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_HIGH);
 
-    if (msb < 0)
-	return msb;
+    if (msb < 0) {
+	PS_ERR("msb < 0");
+	rv = msb;
+	goto done;
+    }
+    PS_DBG("IR = 0X%x = msb\n", (u32)(msb));
+    rv = (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
 
-    LDBG("%s, IR = %d\n", __func__, (u32)(msb));
-    return (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
+done:
+    RETURN("rv:0X%x:%d", rv, rv);
+    return(rv);
 }
 
 
@@ -477,54 +610,58 @@ static int ap3426_ps_enable(struct ap3426_data *ps_data, int enable)
     int pxvalue;
     int distance;
 
-    LDBG("Entry(ps_data:%p, enable:%d)\n", ps_data, enable);
+    PS_ENTRY("ps_data:%p, enable:%d", ps_data, enable);
 
-    if(misc_ps_opened == enable)
-        return 0;
-
+    if (misc_ps_opened == enable) {
+        PS_DBG("misc_ps_opened == enable\n");
+        ret = 0;
+        goto done;
+    }
     if (enable) {
-	ret = ap3426_power_on_ps(ps_data->client);
-	if (ret >= 0) {
+        ret = ap3426_power_on_ps(ps_data->client);
+        if (ret >= 0) {
             ap3426_enable_ps_interrupts(ps_data->client);
-	}
+        }
     } else {
         ap3426_disable_ps_interrupts(ps_data->client);
         ret = ap3426_power_off_ps(ps_data->client);
     }
-
     if (ret < 0) {
-        printk("ps enable error!!!!!!\n");
+        PS_ERR("ret:%d = ap3426_power_on/off_ps(); Error\n", ret);
     } else {
-	misc_ps_opened = enable;
+        misc_ps_opened = enable;
     }
 
     // Ensure psensor wakeup the system
     msleep(50);
-    if (enable)
+    if (misc_ps_opened)
     {
         distance = ap3426_get_object(ps_data->client);
-#ifdef LSC_DBG
         if (distance != 1) {
-            LDBG(KERN_ERR "Unexpected distance %d upon enable\n", distance);
+            PS_ERR("Unexpected distance:%d upon enable\n", distance);
         }
-#endif
         input_report_abs(ps_data->psensor_input_dev, ABS_DISTANCE, 1);
         input_sync(ps_data->psensor_input_dev);
         wake_lock_timeout(&ps_data->ps_wakelock, 2*HZ);
         pxvalue = ap3426_get_px_value(ps_data->client);
-        LDBG(KERN_ERR "zhang %s pxvalue=%d distance=%d\n",__func__,pxvalue,distance);
-#ifdef LSC_DBG
+        PS_DBG("pxvalue:%d, distance:%d\n", pxvalue, distance);
+
+#ifdef PS_POLLING_DEBUG
          ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 #endif
     }
 
+done:
+    PS_RETURN("ret:%d", ret);
     return ret;
 }
 
 static int ap3426_ls_enable(struct ap3426_data *ps_data,int enable)
 {
     	int32_t ret;
-    LDBG("%s, misc_ls_opened = %d, enable=%d\n", __func__, misc_ls_opened, enable);
+
+        ALS_DBG("misc_ls_opened = %d, enable=%d\n", misc_ls_opened, enable);
+
 	if(ps_data->rels_enable == 1)
 	{
 //it will be judge the status when resume kevindang20140925
@@ -546,7 +683,7 @@ static int ap3426_ls_enable(struct ap3426_data *ps_data,int enable)
     if (misc_ls_opened) {
         ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
     } else {
-#ifndef LSC_DBG
+#ifndef PS_POLLING_DEBUG
         ret = del_timer_sync(&ps_data->pl_timer);
 #endif
     }
@@ -566,18 +703,17 @@ static ssize_t ls_enable_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t ls_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
-        struct ap3426_data *ps_data =  dev_get_drvdata(dev);
-        uint8_t en;
-        if (sysfs_streq(buf, "1"))
-                en = 1;
-        else if (sysfs_streq(buf, "0"))
-                en = 0;
-        else
-        {
-                printk(KERN_ERR "%s, invalid value %d\n", __func__, *buf);
-                return -EINVAL;
-        }
-	LDBG("%s, en = %d\n", __func__, (u32)(en));
+    struct ap3426_data *ps_data =  dev_get_drvdata(dev);
+    uint8_t en;
+    if (sysfs_streq(buf, "1"))
+            en = 1;
+    else if (sysfs_streq(buf, "0"))
+            en = 0;
+    else {
+            printk(KERN_ERR "invalid value %d\n",  *buf);
+            return -EINVAL;
+    }
+    ALS_DBG("en = %d\n", (u32)(en));
     ap3426_ls_enable(ps_data, en);
     return size;
 }
@@ -599,7 +735,7 @@ static int ap3426_register_lsensor_device(struct i2c_client *client, struct ap34
     struct input_dev *input_dev;
     int rc;
 
-    LDBG("allocating input device lsensor\n");
+    ALS_DBG("allocating input device lsensor\n");
     input_dev = input_allocate_device();
     if (!input_dev) {
 	dev_err(&client->dev,"%s: could not allocate input device for lsensor\n", __FUNCTION__);
@@ -637,7 +773,8 @@ static int ap3426_register_heartbeat_sensor_device(struct i2c_client *client, st
     struct input_dev *input_dev;
     int rc;
 
-    LDBG("allocating input device heartbeat sensor\n");
+    ALS_ENTRY("client:%pm data:%p", client, data);
+
     input_dev = input_allocate_device();
     if (!input_dev) {
 	dev_err(&client->dev,"%s: could not allocate input device for heartbeat sensor\n", __FUNCTION__);
@@ -657,6 +794,7 @@ static int ap3426_register_heartbeat_sensor_device(struct i2c_client *client, st
 	goto done;
     }
 done:
+    ALS_RETURN("rc:%d", rc):
     return rc;
 }
 
@@ -688,10 +826,10 @@ static ssize_t ps_enable_store(struct device *dev, struct device_attribute *attr
                 en = 0;
         else
         {
-                printk(KERN_ERR "%s, invalid value %d\n", __func__, *buf);
+                printk(KERN_ERR "invalid value %d\n", *buf);
                 return -EINVAL;
         }
-		LDBG("%s, en = %d\n", __func__, (u32)(en));
+		ALS_DBG("en = %d\n", (u32)(en));
         ap3426_ps_enable(ps_data, en);
         return size;
 }
@@ -713,8 +851,11 @@ static int ap3426_register_psensor_device(struct i2c_client *client, struct ap34
     struct input_dev *input_dev;
     int rc;
 
-    LDBG("allocating input device psensor\n");
+    PS_ENTRY("(client:%p, data:%p)", client, data);
+
     input_dev = input_allocate_device();
+    PS_DBG("input_dev = %p = input_allocate_device();\n", input_dev);
+
     if (!input_dev) {
 	dev_err(&client->dev,"%s: could not allocate input device for psensor\n", __FUNCTION__);
 	rc = -ENOMEM;
@@ -729,13 +870,18 @@ static int ap3426_register_psensor_device(struct i2c_client *client, struct ap34
 
     rc = input_register_device(input_dev);
     if (rc < 0) {
-	pr_err("%s: could not register input device for psensor\n", __FUNCTION__);
+	PS_ERR("Could not register input device for psensor; rc:%d\n", rc);
 	goto done;
     }
 
-    rc = sysfs_create_group(&input_dev->dev.kobj, &ap3426_ps_attribute_group);// every devices register his own devices
+    // every devices register his own devices
+    rc = sysfs_create_group(&input_dev->dev.kobj, &ap3426_ps_attribute_group);
+    if (rc < 0) {
+        PS_ERR(" rc = %d = sysfs_create_group(...);\n", rc);
+    }
 
 done:
+    PS_RETURN("rc:%d", rc);
     return rc;
 }
 
@@ -833,65 +979,122 @@ static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev,
 #ifdef DI_AUTO_CAL
 static u8 ps_calibrated = 0;
 
-static int AP3xx6_set_pcrosstalk(struct i2c_client *client, int val)
+static inline void swap_at(u16 *x, u16 *y)
+{
+    u8 temp = *x;
+
+    *x = *y;
+    *y = temp;
+}
+
+static inline void ap3426_sort(u16 *sample_data, int ArySize)
+{
+    int i, j;
+
+    for (i = 0; i < ArySize - 1; i++) {
+        for (j = i+1; j < ArySize; j++) {
+            if (sample_data[i] > sample_data[j]) {
+                 swap_at(&sample_data[i], &sample_data[j]);
+            }
+        }
+    }
+    if (PS_info) {
+        printk("%s: Sorted sample_data[ ", __func__);
+        for(i = 0; i < ArySize; i++) {
+            printk("%d ", sample_data[i]);
+        }
+        printk("]\n");
+    }
+}
+
+
+static int ap3426_set_crosstalk_calibration(struct i2c_client *client, int val)
 {
     int lsb, msb, err;
 
-	msb = val >> 8;
-	lsb = val & 0xFF;
-    err = __ap3426_write_reg(client, 0x28,
-            0xFF, 0x00, lsb);
+    msb = val >> 8;
+    lsb = val & 0xFF;
+    err = __ap3426_write_reg(client, 0x28, 0xFF, 0x00, lsb);
 
-    err =__ap3426_write_reg(client, 0x29,
-            0xFF, 0x00, msb);
+    err =__ap3426_write_reg(client, 0x29, 0xFF, 0x00, msb);
 
-	return err;
+    printk("%s: Calibration Register = %d.\n", __func__, val);
+
+    return err;
 }
 
+#define CAL_SAMPLES 9
+/*
+ * Try to get 5 samples to set the calibration register.
+ * Discard the 1st sample to two (as done on Tomato).
+ * Discard any samples that are not in the expected range.
+ * Samples taken just after changing the calibration
+ * register haven't changed yet.
+ */
 int ap3426_calibration(struct i2c_client *client)
 {
-      // int err;
     struct ap3426_data *pdata = i2c_get_clientdata(client);
-    int i = 0;
-    u16 ps_data = 0;
-    u16 data = 0;
-    if (!ps_calibrated)
-	{
-		AP3xx6_set_pcrosstalk(client, ps_data);
-		for(i=0; i<8; i++)
-		{
-			data = ap3426_get_px_value(client);
+    int i;
+    u16 ave;
+    u16 sample;
+    u16 sample_data[CAL_SAMPLES];
+    int samples = 0;
 
-			printk("AP3426 ps =%d \n",data);
-			if((data) > pdata->ps_calibration_max)
-			{
-				ps_calibrated = 0;
-				goto err_out;
-			}
-			if((data) < pdata->ps_calibration_min)
-			{
-				ps_calibrated = 0;
-				goto err_out;
-			}
-			else
-			{
-				ps_data += data;
-			}
-			msleep(50);
-		}
-		ps_calibrated = 1;
-		printk("AP3426 ps_data1 =%d \n",ps_data);
-		ps_data = ps_data/8;
-		printk("AP3426 ps_data2 =%d \n",ps_data);
-		AP3xx6_set_pcrosstalk(client,ps_data);
-	}
-	return 1;
-err_out:
-	ps_data = pdata->ps_calibration_expected;
-	printk("%s: Failed to compute a good calibration;\n", __func__);
-	printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ps_data);
-	AP3xx6_set_pcrosstalk(client, ps_data);
-	return -1;
+    if (!ps_calibrated) {
+        ap3426_set_crosstalk_calibration(client, 0);
+
+        for(i=0; i<CAL_SAMPLES; i++) {
+            msleep(40);
+
+            sample = sample_data[samples] = ap3426_get_px_value(client);
+
+            PS_DBG("sample_data[samples:%d] = %d\n", samples, sample);
+
+            if (sample > pdata->ps_calibration_max) continue;
+            if (sample < pdata->ps_calibration_min) continue;
+
+            samples++;
+       }
+       if (samples >= CAL_SAMPLES/2) {
+	    u16 total = 0;
+	    int mid_point = (samples/2);
+	    int start_point = mid_point - (samples/4);
+	    int end_point = mid_point + (samples/4);
+
+	    ap3426_sort(sample_data, samples);
+
+	    /* Use median values of sorted data */
+            samples = 0;
+	    for (i = start_point; i < end_point; i++) {
+                PS_DBG("total:%d += sample_data[i:%d]:%d;\n",
+                        total,   i, sample_data[i]);
+
+                total += sample_data[i];
+		samples++;
+            }
+            ave = total/samples;
+            PS_DBG("ave = %d \n", ave);
+            ap3426_set_crosstalk_calibration(client, ave);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            PS_DBG("sample = %d\n", sample);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            PS_DBG("sample = %d\n", sample);
+	    ps_calibrated = 1;
+            return 1;
+        } else {
+            ave = pdata->ps_calibration_expected;
+            printk("%s: Failed to compute a good calibration;\n", __func__);
+            printk("%s: Using device's expected calibration value: %d for now.\n", __func__, ave);
+            ap3426_set_crosstalk_calibration(client, ave);
+            msleep(50);
+            sample = ap3426_get_px_value(client);
+            PS_DBG("sample = %d\n", sample);
+            return -1;
+        }
+    }
+    return 0;
 }
 #endif
 
@@ -906,7 +1109,7 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
    err = ap3426_ps_enable(ps_data, enabled);
 
 #ifdef DI_AUTO_CAL
-    if(enabled == 1 && !ps_calibrated) {
+    if (enabled == 1 && !ps_calibrated) {
 	struct i2c_client *client = ps_data->client;
 
 	/*
@@ -966,7 +1169,7 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 		}
 
 		data->power_enabled = on;
-		printk(KERN_INFO "%s: disable ap3426 power", __func__);
+		printk(KERN_INFO "%s: disable ap3426 power\n", __func__);
 		dev_dbg(&data->client->dev, "ap3426_power_ctl on=%d\n",
 				on);
 	}
@@ -1005,6 +1208,8 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 static int ap3426_power_init(struct ap3426_data*data, bool on)
 {
 	int ret;
+
+	ENTRY("data:%p, on:%d)", data, on);
 
 	if (!on)
 	{
@@ -1071,7 +1276,8 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 		}
 	}
 
-	return 0;
+	ret = 0;			/* Return(0); */
+	goto done;
 
 reg_vio_put:
 	regulator_put(data->vio);
@@ -1080,6 +1286,9 @@ reg_vdd_set:
 		regulator_set_voltage(data->vdd, 0, AP3426_VDD_MAX_UV);
 reg_vdd_put:
 	regulator_put(data->vdd);
+
+done:
+	RETURN("ret:%d", ret);
 	return ret;
 }
 
@@ -1112,11 +1321,12 @@ static ssize_t ap3426_store_mode(struct device *dev,
 
     if (ret < 0)
 	return ret;
-    LDBG("Starting timer to fire in 200ms (%ld)\n", jiffies );
+    ALS_DBG("Starting timer to fire in 200ms (%ld)\n", jiffies );
     ret = mod_timer(&data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 
-    if(ret)
-	LDBG("Timer Error\n");
+    if(ret) {
+	ALS_DBG("ret = %d = mod_timer(...); [Timer Error?] \n", ret);
+    }
     return count;
 }
 
@@ -1309,14 +1519,16 @@ static ssize_t ap3426_store_calibration_state(struct device *dev,
     struct ap3426_data *data = input_get_drvdata(input);
     int stdls, lux;
     char tmp[10];
+    ssize_t rv = 0;
 
-    LDBG("DEBUG ap3426_store_calibration_state..\n");
+    ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
 
     /* No LUX data if not operational */
     if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN)
     {
 	printk("Please power up first!");
-	return -EINVAL;
+	rv = -EINVAL;
+	goto done;
     }
 
     cali = 100;
@@ -1325,26 +1537,33 @@ static ssize_t ap3426_store_calibration_state(struct device *dev,
     if (!strncmp(tmp, "-setcv", 6))
     {
 	cali = stdls;
-	return -EBUSY;
+	rv = -EBUSY;
+	goto done;
     }
 
     if (stdls < 0)
     {
 	printk("Std light source: [%d] < 0 !!!\nCheck again, please.\n\
 		Set calibration factor to 100.\n", stdls);
-	return -EBUSY;
+
+	rv = -EBUSY;
+	goto done;
     }
 
     lux = ap3426_get_adc_value(data->client);
     cali = stdls * 100 / lux;
 
-    return -EBUSY;
+    rv = -EBUSY;		/* WHY? */
+
+done:
+    RETURN("rv:%zd", rv);
+    return(rv);
 }
 
 static DEVICE_ATTR(calibration, S_IWUSR | S_IRUGO,
 	ap3426_show_calibration_state, ap3426_store_calibration_state);
 
-#ifdef LSC_DBG
+#ifdef ALS_DEBUG
 /* engineer mode */
 static ssize_t ap3426_em_read(struct device *dev,
 	struct device_attribute *attr,
@@ -1355,7 +1574,7 @@ static ssize_t ap3426_em_read(struct device *dev,
     int i;
     u8 tmp;
 
-    LDBG("DEBUG ap3426_em_read..\n");
+    ALS_DBG("DEBUG ap3426_em_read..\n");
 
     for (i = 0; i < AP3426_NUM_CACHABLE_REGS; i++)
     {
@@ -1376,7 +1595,7 @@ static ssize_t ap3426_em_write(struct device *dev,
     u32 addr,val;
     int ret = 0;
 
-    LDBG("DEBUG ap3426_em_write..\n");
+    ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
 
     sscanf(buf, "%x%x", &addr, &val);
 
@@ -1386,6 +1605,7 @@ static ssize_t ap3426_em_write(struct device *dev,
     if (!ret)
 	    data->reg_cache[ap3426_reg_to_idx_array[addr]] = val;
 
+    RETURN("count:%zd", count);
     return count;
 }
 static DEVICE_ATTR(em, S_IWUSR |S_IRUGO,
@@ -1403,7 +1623,7 @@ static struct attribute *ap3426_attributes[] = {
     &dev_attr_plthres.attr,
     &dev_attr_phthres.attr,
     &dev_attr_calibration.attr,
-#ifdef LSC_DBG
+#ifdef ALS_DEBUG
     &dev_attr_em.attr,
 #endif
     NULL
@@ -1429,9 +1649,11 @@ static int32_t di_ap3426_set_ps_thd_h(struct ap3426_data *ps_data, uint16_t thd_
 static int ap3426_init_client(struct i2c_client *client)
 {
     struct ap3426_data *data = i2c_get_clientdata(client);
+    int rv = 0;
     int i;
 
-    LDBG("DEBUG ap3426_init_client..\n");
+    ENTRY("client:%p", client);
+
 		/*lsensor high low thread*/
     i2c_smbus_write_byte_data(client, 0x1A, 0);
     i2c_smbus_write_byte_data(client, 0x1B, 0);
@@ -1446,8 +1668,10 @@ static int ap3426_init_client(struct i2c_client *client)
      * if one of the reads fails, we consider the init failed */
     for (i = 0; i < AP3426_NUM_CACHABLE_REGS; i++) {
 	int v = i2c_smbus_read_byte_data(client, reg_array[i]);
-	if (v < 0)
-	    return -ENODEV;
+	if (v < 0) {
+	    rv = -ENODEV;
+	    goto done;
+	}
 	data->reg_cache[i] = v;
     }
     /* set defaults */
@@ -1461,19 +1685,25 @@ static int ap3426_init_client(struct i2c_client *client)
     // 5 + 0x08 x 0.0627 = 5.5 ms (ADC photodiode sample period)
     i2c_smbus_write_byte_data(client, 0x25, 0x08);
 
-    return 0;
+done:
+    RETURN("rv:%d", rv);
+    return rv;;
 }
 
 static int ap3426_check_id(struct ap3426_data *data)
 {
 		return 0;
 }
+
 void pl_timer_callback(unsigned long pl_data)
 {
     struct ap3426_data *data;
-    int ret =0;
+    int ret = 0;
     data = private_pl_data;
-#ifdef LSC_DBG
+
+    ALS_ENTRY("pl_data:0X%lx", pl_data);
+
+#ifdef PS_POLLING_DEBUG
     if (1 == misc_ps_opened) {
         queue_work(data->psensor_wq, &data->psensor_work);
         ret = mod_timer(&private_pl_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
@@ -1486,10 +1716,11 @@ void pl_timer_callback(unsigned long pl_data)
         ret = mod_timer(&private_pl_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
     }
 
-    if(ret)
-    {
-    	LDBG("Timer Error\n");
+    if (ret) {
+        ALS_DBG("ret = %d = mod_timer(...); ret, [Timer Error?]\n", ret);
     }
+    ALS_RETURN_VOID();
+    return;
 }
 
 static void psensor_work_handler(struct work_struct *w)
@@ -1500,11 +1731,11 @@ static void psensor_work_handler(struct work_struct *w)
     int distance,pxvalue;
 
     distance = ap3426_get_object(data->client);
-	pxvalue = ap3426_get_px_value(data->client); //test
+    pxvalue = ap3426_get_px_value(data->client); //test
 
     input_report_abs(data->psensor_input_dev, ABS_DISTANCE, distance);
     input_sync(data->psensor_input_dev);
-    LDBG("distance %d value %d\n", distance, pxvalue);
+    ALS_DBG("distance:%d, value:%d\n", distance, pxvalue);
 }
 
 static void lsensor_work_handler(struct work_struct *w)
@@ -1513,10 +1744,16 @@ static void lsensor_work_handler(struct work_struct *w)
     struct ap3426_data *data =
 	container_of(w, struct ap3426_data, lsensor_work);
     int value;
+
+    ALS_ENTRY("w:%p", w);
+
     value = ap3426_get_adc_value(data->client);
     value = value * cali / 100;
     input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
     input_sync(data->lsensor_input_dev);
+
+    ALS_RETURN_VOID();
+    return;
 }
 
 static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
@@ -1529,6 +1766,8 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
     int als_value;
     int als_intr_cleared = 0;
     int_stat = ap3426_get_intstat(data->client);
+
+    PS_ENTRY("irg:%d, client_data:%p", irq, client_data);
 
     if((1 == misc_ps_opened) && (int_stat & AP3426_REG_SYS_INT_PMASK))
     {
@@ -1563,9 +1802,10 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
         als_value = ap3426_get_adc_value(data->client);
     }
     ps_value = ap3426_get_px_value(data->client);
-    LDBG("ps_value:%d, als_value:%d, distance:%d;\n",
-          ps_value,    als_value,    distance);
+    PS_DBG("ps_value:%d, als_value:%d, distance:%d;\n",
+            ps_value,    als_value,    distance);
 
+    PS_RETURN("IRQ_HANDLED:%d", IRQ_HANDLED);
     return IRQ_HANDLED;
 }
 
@@ -1582,9 +1822,11 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     u32 temp_val;
     int rc;
 
+    ENTRY("dev:%p, pdata:%p", dev, pdata);
+
     if (pdata == NULL)
     {
-	LDBG("%s: pdata is NULL\n", __func__);
+	ALS_DBG("pdata is NULL\n");
 	return -EINVAL;
     }
     pdata->int_pin = of_get_named_gpio_flags(dt, "ap3426,irq-gpio",
@@ -1597,7 +1839,7 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     rc = of_property_read_u32(dt, "ap3426,ps-thdl", &temp_val);
     if (!rc) {
 	pdata->ps_thd_l = (u16)temp_val;
-        LDBG("ps-thdl %d\n", pdata->ps_thd_l);
+        ALS_DBG("ps-thdl %d\n", pdata->ps_thd_l);
     } else {
         pdata->ps_thd_l = PX_LOW_THRESHOLD;
         dev_err(dev, "Unable to read ps-thdl, using default %d\n", pdata->ps_thd_l);
@@ -1606,7 +1848,7 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     rc = of_property_read_u32(dt, "ap3426,ps-thdh", &temp_val);
     if (!rc) {
         pdata->ps_thd_h= (u16)temp_val;
-        LDBG("ps-thdh %d\n", pdata->ps_thd_h);
+        ALS_DBG("ps-thdh %d\n", pdata->ps_thd_h);
     } else {
         pdata->ps_thd_h = PX_HIGH_THRESHOLD;
         dev_err(dev, "Unable to read ps-thdh, using default %d\n", pdata->ps_thd_h);
@@ -1616,7 +1858,7 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     rc = of_property_read_u32(dt, "ap3426,ps-calibration-min", &temp_val);
     if (!rc) {
         pdata->ps_calibration_min = (u16)temp_val;
-        LDBG("ps-calibration-min %d\n", pdata->ps_calibration_min);
+        ALS_DBG("ps-calibration-min %d\n", pdata->ps_calibration_min);
     } else {
         pdata->ps_calibration_min = DI_PS_CAL_THR_MIN;
         dev_err(dev, "Unable to read ps-calibration-min, using default %d\n", pdata->ps_calibration_min);
@@ -1625,7 +1867,7 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     rc = of_property_read_u32(dt, "ap3426,ps-calibration-expected", &temp_val);
     if (!rc) {
         pdata->ps_calibration_expected = (u16)temp_val;
-        LDBG("ps-calibration_expected %d\n", pdata->ps_calibration_expected);
+        ALS_DBG("ps-calibration_expected %d\n", pdata->ps_calibration_expected);
     } else {
         pdata->ps_calibration_expected = DI_PS_CAL_THR_EXPECTED;
         dev_err(dev, "Unable to read ps-calibration-expected, using default %d\n", pdata->ps_calibration_expected);
@@ -1634,13 +1876,14 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
     rc = of_property_read_u32(dt, "ap3426,ps-calibration-max", &temp_val);
     if (!rc) {
         pdata->ps_calibration_max = (u16)temp_val;
-        LDBG("ps-calibration-max %d\n", pdata->ps_calibration_max);
+        ALS_DBG("ps-calibration-max %d\n", pdata->ps_calibration_max);
     } else {
         pdata->ps_calibration_max = DI_PS_CAL_THR_MAX;
         dev_err(dev, "Unable to read ps-calibration-max, using default %d\n", pdata->ps_calibration_max);
     }
 #endif
 
+    RETURN("%d", 0);
     return 0;
 }
 #endif
@@ -1651,6 +1894,8 @@ static int ap3426_probe(struct i2c_client *client,
     struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
     struct ap3426_data *data;
     int err = 0;
+
+    ENTRY("client:%p, id:%p)", client, id);
 
     if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
     {
@@ -1668,7 +1913,7 @@ static int ap3426_probe(struct i2c_client *client,
 #ifdef CONFIG_OF
     if (client->dev.of_node)
     {
-        LDBG("Device Tree parsing.");
+        ALS_DBG("Device Tree parsing.\n");
 
         err = ap3426_parse_dt(&client->dev, data);
         if (err)
@@ -1765,7 +2010,7 @@ static int ap3426_probe(struct i2c_client *client,
     data->psensor_wq = create_singlethread_workqueue("psensor_wq");
     if (!data->psensor_wq)
     {
-        LDBG("%s: create psensor_wq workqueue failed\n", __func__);
+        ALS_ERR("create psensor_wq workqueue failed\n");
         err = -ENOMEM;
         goto exit_request_irq;
     }
@@ -1773,7 +2018,7 @@ static int ap3426_probe(struct i2c_client *client,
 
     data->lsensor_wq = create_singlethread_workqueue("lsensor_wq");
     if (!data->lsensor_wq) {
-        LDBG("%s: create lsensor_wq workqueue failed\n", __func__);
+        ALS_DBG("create lsensor_wq workqueue failed\n");
         err = -ENOMEM;
         goto err_create_psensor_wq;
     }
@@ -1813,13 +2058,14 @@ static int ap3426_probe(struct i2c_client *client,
      * Try to calibrate now;
      * if PS is covered try again later when PS is used.
      */
-     ap3426_power_on_ps(data->client);
-     msleep(100);
-     ap3426_calibration(data->client);
-     ap3426_power_off_ps(data->client);
+    ap3426_power_on_ps(data->client);
+    msleep(100);
+    ap3426_calibration(data->client);
+    ap3426_power_off_ps(data->client);
 #endif
 
-    return 0;
+    err = 0;					/* Return(0) */
+    goto done;
 
 err_sensors_classdev_register_ps:
     sensors_classdev_unregister(&data->als_cdev);
@@ -1851,16 +2097,22 @@ err_power_ctl:
 err_power_on:
 #ifdef CONFIG_OF
 exit_parse_dt_fail:
-    LDBG("dts initialize failed.");
+    ALS_DBG("dts initialize failed.");
 #endif
     kfree(data);
 exit_free_gpio:
+
+done:
+    RETURN("err:%d", err);
     return err;
 }
 
 static int ap3426_remove(struct i2c_client *client)
 {
     struct ap3426_data *data = i2c_get_clientdata(client);
+
+    ENTRY("client:%p", client);
+
     free_irq(gpio_to_irq(data->int_pin), data);
 
     ap3426_power_ctl(data, false);
@@ -1888,6 +2140,8 @@ static int ap3426_remove(struct i2c_client *client)
     if(&data->pl_timer)
 	del_timer(&data->pl_timer);
     wake_lock_destroy(&data->ps_wakelock);
+
+    RETURN("%d", 0);
     return 0;
 }
 
@@ -1913,6 +2167,8 @@ static int ap3426_suspend(struct device *dev)
 {
     struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
+    ENTRY("dev:%p)", dev);
+
     if(misc_ls_opened == 1)
     {
 	ap3426_ls_enable(ps_data,false);
@@ -1926,6 +2182,7 @@ static int ap3426_suspend(struct device *dev)
         ap3426_disable_ps_interrupts(ps_data->client);
         ap3426_power_ctl(ps_data,false);
     }
+    RETURN("%d", 0);
     return 0;
 }
 
@@ -1933,7 +2190,8 @@ static int ap3426_resume(struct device *dev)
 {
     struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
-    printk("%s(dev:%p): rels_enable=%d", __func__, dev, ps_data->rels_enable);
+    ENTRY("dev:%p)", dev);
+    DBG("ps_data:%p->rels_enable:%d\n", ps_data, ps_data->rels_enable);
 
     // Removed it because it may cause system can't wake up
     //ap3426_power_init(ps_data,true);
@@ -1952,7 +2210,7 @@ static int ap3426_resume(struct device *dev)
 
         ap3426_ls_enable(ps_data,true);
     }
-
+    RETURN("%d", 0);
     return 0;
 }
 
