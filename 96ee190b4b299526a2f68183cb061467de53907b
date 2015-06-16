@@ -135,6 +135,24 @@
       "revId": "96ee190b4b299526a2f68183cb061467de53907b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_0a89fbca",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1478,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T07:18:39Z",
+      "side": 1,
+      "message": "The ALS interrupt should have been cleared by\nreading OXC, 0XD, OXE, 0XF. ap3426_get_adc_value()\nread 0xC and 0XD and ap3426_get_px_value() read 0XE and OXF.\n\nSeems safest to read all four registers independent of the INT_MASK being set. I think it would be best to expain this in the comment and add a call to ap3426_get_adc_value(). Al thought it should have been done in the block 1468 ... 1471 it seems most robust to make sure both sources of the interrupt have been cleared.\n\n-piet",
+      "parentUuid": "fa31d9ce_aa646f49",
+      "revId": "96ee190b4b299526a2f68183cb061467de53907b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
