@@ -22,6 +22,40 @@
       "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_6ac5175a",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-16T05:29:52Z",
+      "side": 1,
+      "message": "We should create a PSC_DBG to wrap proximity sensor related print outs as there are quite a bit added in this.",
+      "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_8aa08ba7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 826,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-16T05:29:52Z",
+      "side": 1,
+      "message": "ArySize should be renamed to c variable style eg. ary_size",
+      "revId": "165b8a1ede7536fded756f3ba7d64593f785d3c2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
