@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "fa31d9ce_aabaafbe",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T05:46:20Z",
+      "side": 1,
+      "message": "Sure. I typically find commit messaged to terse.",
+      "parentUuid": "3a461143_72c5105a",
+      "range": {
+        "startLine": 7,
+        "startChar": 30,
+        "endLine": 7,
+        "endChar": 32
+      },
+      "revId": "96ee190b4b299526a2f68183cb061467de53907b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa31d9ce_ca98c36d",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 1
@@ -36,6 +60,24 @@
       "writtenOn": "2015-06-16T05:31:51Z",
       "side": 1,
       "message": "Should this be wrapped in \nif (int_stat \u0026 AP3426_REG_SYS_INT_PMASK) ?",
+      "revId": "96ee190b4b299526a2f68183cb061467de53907b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa31d9ce_caafe37b",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1478,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-16T05:46:20Z",
+      "side": 1,
+      "message": "I done see why. If we received an interrupt we\nmust clear it. I suspect that since we received\nan interrupt the PS+LED is likely powered on. If\nit\u0027s not powered on clearing it is likely harmless\nand another interrupt can\u0027t occure.\n\nWhat makes you wonder/suspect that it might be needed?",
+      "parentUuid": "fa31d9ce_ca98c36d",
       "revId": "96ee190b4b299526a2f68183cb061467de53907b",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
