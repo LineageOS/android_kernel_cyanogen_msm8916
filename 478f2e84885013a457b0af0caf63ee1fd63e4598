@@ -16,6 +16,24 @@
       "revId": "478f2e84885013a457b0af0caf63ee1fd63e4598",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_6917e5ed",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1486,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-17T10:40:29Z",
+      "side": 1,
+      "message": "Considering the trivial cost of reading two registers\nI thought the possible benefits outweighed the cost.\n\nWe know we didn\u0027t read them and if we read them the\ninterrupt, if active, will be cleared. There may be\na hardware case condition that can dealt with by\nbeing cautious and trying to clear it \"just in case\".\n\nI know the odds are low but why bother only clearing\nif it appears to be posted? Difference in CPU time\nrelative to time getting to ISR is likely less than\na tenth of a percent.\n\n-piet",
+      "parentUuid": "da36d5c6_29f6cdd7",
+      "revId": "478f2e84885013a457b0af0caf63ee1fd63e4598",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
