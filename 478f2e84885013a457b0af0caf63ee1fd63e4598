@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da36d5c6_29f6cdd7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1486,
+      "author": {
+        "id": 11501
+      },
+      "writtenOn": "2015-06-17T10:14:48Z",
+      "side": 1,
+      "message": "why don\u0027t you just read als if (int_stat \u0026 AP3426_REG_SYS_INT_AMASK) is non zero and read ps if (int_stat \u0026 AP3426_REG_SYS_INT_PMASK) is non zero, I mean something like\n\nif (int_stat \u0026 AP3426_REG_SYS_INT_PMASK) {\n    ps_value \u003d ap3426_get_px_value(data-\u003eclient);\n    if (1 \u003d\u003d misc_ps_opened) {\n        call input_sync etc.\n    }\n}",
+      "revId": "478f2e84885013a457b0af0caf63ee1fd63e4598",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
