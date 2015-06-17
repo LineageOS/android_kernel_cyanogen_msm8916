@@ -31,7 +31,7 @@
  * Date     By       Summary
  * -------- -------- -------------------------------------------------------
  * 02/02/12 YC       1. Modify irq function to seperate two interrupt routine. 
- *					 2. Fix the index of reg array error in em write. 
+ *                   2. Fix the index of reg array error in em write.
  * 02/22/12 YC       3. Merge AP3426 and AP3216C into the same driver. (ver 1.8)
  * 03/01/12 YC       Add AP3212C into the driver. (ver 1.8)
  * 07/25/14 John	  Ver.2.1 , ported for Nexus 7
@@ -424,19 +424,80 @@ static int ap3426_get_px_value(struct i2c_client *client)
     return (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
 }
 
-static int ap3426_ps_enable(struct ap3426_data *ps_data,int enable)
+
+static inline void ap3426_disable_ps_and_als_interrupts(struct i2c_client *client)
+{
+   i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, 0);
+}
+
+static inline void ap3426_disable_ps_interrupts(struct i2c_client *client)
+{
+   int val;;
+
+   val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
+
+   val &= ~0x80;
+
+   i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+}
+
+static inline void ap3426_enable_ps_interrupts(struct i2c_client *client)
+{
+    int val;
+
+    val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
+
+    val |= 0x80;
+
+    i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+}
+
+/* Power on PS and IR Part of Chip */
+static inline int ap3426_power_on_ps(struct i2c_client *client)
+{
+    int err;
+
+    err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
+				AP3426_REG_SYS_INT_PMASK, 1, 1);
+    return(err);
+}
+
+static inline int ap3426_power_off_ps(struct i2c_client *client)
+{
+    int err;
+
+    err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
+				AP3426_REG_SYS_INT_PMASK, 1, 0);
+    return(err);
+}
+
+static int ap3426_ps_enable(struct ap3426_data *ps_data, int enable)
 {
     int32_t ret;
     int pxvalue;
     int distance;
+
+    LDBG("Entry(ps_data:%p, enable:%d)\n", ps_data, enable);
+
     if(misc_ps_opened == enable)
-                return 0;
-    misc_ps_opened = enable;
-    ret = __ap3426_write_reg(ps_data->client,
-        AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, enable);
+        return 0;
+
+    if (enable) {
+	ret = ap3426_power_on_ps(ps_data->client);
+	if (ret >= 0) {
+            ap3426_enable_ps_interrupts(ps_data->client);
+	}
+    } else {
+        ap3426_disable_ps_interrupts(ps_data->client);
+        ret = ap3426_power_off_ps(ps_data->client);
+    }
+
     if (ret < 0) {
         printk("ps enable error!!!!!!\n");
+    } else {
+	misc_ps_opened = enable;
     }
+
     // Ensure psensor wakeup the system
     msleep(50);
     if (enable)
@@ -459,6 +520,7 @@ static int ap3426_ps_enable(struct ap3426_data *ps_data,int enable)
 
     return ret;
 }
+
 static int ap3426_ls_enable(struct ap3426_data *ps_data,int enable)
 {
     	int32_t ret;
@@ -619,6 +681,7 @@ static ssize_t ps_enable_store(struct device *dev, struct device_attribute *attr
 {
         struct ap3426_data *ps_data =  dev_get_drvdata(dev);
         uint8_t en;
+
         if (sysfs_streq(buf, "1"))
                 en = 1;
         else if (sysfs_streq(buf, "0"))
@@ -629,8 +692,8 @@ static ssize_t ps_enable_store(struct device *dev, struct device_attribute *attr
                 return -EINVAL;
         }
 		LDBG("%s, en = %d\n", __func__, (u32)(en));
-    ap3426_ps_enable(ps_data, en);
-    return size;
+        ap3426_ps_enable(ps_data, en);
+        return size;
 }
 
 static struct device_attribute ps_enable_attribute = __ATTR(enable, 0666, ps_enable_show, ps_enable_store);
@@ -768,7 +831,7 @@ static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev,
 } 
 
 #ifdef DI_AUTO_CAL
-u8 Calibration_Flag = 0;
+static u8 ps_calibrated = 0;
 
 static int AP3xx6_set_pcrosstalk(struct i2c_client *client, int val)
 {
@@ -785,14 +848,14 @@ static int AP3xx6_set_pcrosstalk(struct i2c_client *client, int val)
 	return err;
 }
 
-int AP3xx6_Calibration(struct i2c_client *client)
+int ap3426_calibration(struct i2c_client *client)
 {
       // int err;
     struct ap3426_data *pdata = i2c_get_clientdata(client);
-	int i = 0;
-	u16 ps_data = 0;
-       u16 data = 0;
-	if(Calibration_Flag == 0)
+    int i = 0;
+    u16 ps_data = 0;
+    u16 data = 0;
+    if (!ps_calibrated)
 	{
 		AP3xx6_set_pcrosstalk(client, ps_data);
 		for(i=0; i<8; i++)
@@ -802,12 +865,12 @@ int AP3xx6_Calibration(struct i2c_client *client)
 			printk("AP3426 ps =%d \n",data);
 			if((data) > pdata->ps_calibration_max)
 			{
-				Calibration_Flag = 0;
+				ps_calibrated = 0;
 				goto err_out;
 			}
 			if((data) < pdata->ps_calibration_min)
 			{
-				Calibration_Flag = 0;
+				ps_calibrated = 0;
 				goto err_out;
 			}
 			else
@@ -816,7 +879,7 @@ int AP3xx6_Calibration(struct i2c_client *client)
 			}
 			msleep(50);
 		}
-		Calibration_Flag =1;
+		ps_calibrated = 1;
 		printk("AP3426 ps_data1 =%d \n",ps_data);
 		ps_data = ps_data/8;
 		printk("AP3426 ps_data2 =%d \n",ps_data);
@@ -840,17 +903,31 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
 					   struct ap3426_data, ps_cdev); 
    int err; 
 
-   err = ap3426_ps_enable(ps_data,enabled);
+   err = ap3426_ps_enable(ps_data, enabled);
 
-	#ifdef DI_AUTO_CAL
-	if(enabled ==1)
-	{
-        AP3xx6_Calibration(ps_data->client);
-	}
-	#endif
+#ifdef DI_AUTO_CAL
+    if(enabled == 1 && !ps_calibrated) {
+	struct i2c_client *client = ps_data->client;
+
+	/*
+	 * Apparently we weren't able to calibrate during the probe.
+	 * We are about to use the PS and we are curently using the
+	 * default calibration value but it won't be used while
+	 * calibrating.
+	 *
+	 * Might be better to prevent interrupts during calibration and
+	 * avoid a less accurate value being reported during a unlikely
+	 * race.
+	 */
+        ap3426_disable_ps_interrupts(client);
+        ap3426_calibration(client);
+        ap3426_enable_ps_interrupts(client);
+    }
+#endif
 
    if (err < 0) 
-	   return err; 
+       return err;
+
    return 0; 
 }
 
@@ -1346,6 +1423,9 @@ static int32_t di_ap3426_set_ps_thd_h(struct ap3426_data *ps_data, uint16_t thd_
     return i2c_smbus_write_word_data(ps_data->client, 0x2C, thd_h);
 }
 
+
+
+
 static int ap3426_init_client(struct i2c_client *client)
 {
     struct ap3426_data *data = i2c_get_clientdata(client);
@@ -1373,8 +1453,9 @@ static int ap3426_init_client(struct i2c_client *client)
     /* set defaults */
     ap3426_set_range(client, AP3426_ALS_RANGE_0);
     ap3426_set_mode(client, AP3426_SYS_DEV_DOWN);
-    //disable als interrupt mode
-    i2c_smbus_write_byte_data(client, 0x02, 0x80);
+
+    ap3426_disable_ps_and_als_interrupts(client);
+
     //ps/IR integrated time as 9T,for sensitivity
     // PS mean time default = 0x00 (1 converseion time = 5ms)
     // 5 + 0x08 x 0.0627 = 5.5 ms (ADC photodiode sample period)
@@ -1446,8 +1527,8 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
     int ps_value;
     int distance;
     int als_value;
+    int als_intr_cleared = 0;
     int_stat = ap3426_get_intstat(data->client);
-    int als_read = 0;
 
     if((1 == misc_ps_opened) && (int_stat & AP3426_REG_SYS_INT_PMASK))
     {
@@ -1469,7 +1550,7 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
         als_value = ap3426_get_adc_value(data->client);
         input_report_abs(data->lsensor_input_dev, ABS_MISC, als_value);
         input_sync(data->lsensor_input_dev);
-	als_read = 1;
+	als_intr_cleared = 1;
     }
 
     /*
@@ -1478,7 +1559,7 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
      * INT Clear Manner (CLR_MNR) has been set to 0 (Automatic) for
      * the PS and interrupts aren't currenlty being used for ALS.
      */
-    if (!als_read) {
+    if (!als_intr_cleared) {
         als_value = ap3426_get_adc_value(data->client);
     }
     ps_value = ap3426_get_px_value(data->client);
@@ -1727,16 +1808,16 @@ static int ap3426_probe(struct i2c_client *client,
 
     dev_info(&client->dev, "Driver version %s enabled\n", DRIVER_VERSION);
 
-	#ifdef DI_AUTO_CAL
-	 __ap3426_write_reg(data->client,
-        AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 1);
-	 
-	msleep(100);	
-       AP3xx6_Calibration(data->client);
-	   
-	 __ap3426_write_reg(data->client,
-        AP3426_REG_SYS_CONF, AP3426_REG_SYS_INT_PMASK, 1, 0);
-	#endif   
+#ifdef DI_AUTO_CAL
+    /*
+     * Try to calibrate now;
+     * if PS is covered try again later when PS is used.
+     */
+     ap3426_power_on_ps(data->client);
+     msleep(100);
+     ap3426_calibration(data->client);
+     ap3426_power_off_ps(data->client);
+#endif
    
     return 0;
 
@@ -1827,20 +1908,22 @@ static struct of_device_id ap3426_match_table[] =
 #define ap3426_match_table NULL
 #endif
 
+
 static int ap3426_suspend(struct device *dev)
 {
-	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+    struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
-	if(misc_ls_opened == 1)
-	{
-		ap3426_ls_enable(ps_data,false);
-		ps_data->rels_enable = 1;
-	}
+    if(misc_ls_opened == 1)
+    {
+	ap3426_ls_enable(ps_data,false);
+	ps_data->rels_enable = 1;
+    }
     // Removed it because it may cause system can't wake up
     //ap3426_power_init(ps_data,false);
     //power off when ps is disabled
     if (misc_ps_opened==0)
     {
+        ap3426_disable_ps_interrupts(ps_data->client);
         ap3426_power_ctl(ps_data,false);
     }
     return 0;
@@ -1848,9 +1931,10 @@ static int ap3426_suspend(struct device *dev)
 
 static int ap3426_resume(struct device *dev)
 {
-	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+    struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
-    printk("%s: rels_enable=%d", __func__, ps_data ->rels_enable);
+    printk("%s(dev:%p): rels_enable=%d", __func__, dev, ps_data->rels_enable);
+
     // Removed it because it may cause system can't wake up
     //ap3426_power_init(ps_data,true);
     // power on when ps is disable
@@ -1862,6 +1946,10 @@ static int ap3426_resume(struct device *dev)
     if (ps_data ->rels_enable == 1)
     {
         ap3426_init_client(ps_data->client);
+
+	if (misc_ps_opened)
+            ap3426_enable_ps_interrupts(ps_data->client);
+
         ap3426_ls_enable(ps_data,true);
     }
 
