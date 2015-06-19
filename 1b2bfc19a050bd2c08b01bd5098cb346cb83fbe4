@@ -16,6 +16,24 @@
       "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_f272deac",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-19T06:12:32Z",
+      "side": 1,
+      "message": "I\u0027ve been starting to test this resume and suspend code\nhoping to understand it better and make sure it\u0027s solid.\n\nI wasn\u0027t sure what rels is an acronym for. Perhaps re-ls.\nIn that case it makes sense and from the usage of \nrels_enable that seems to be it\u0027s intent. Also below\nif ps_opened is set  ap3426_ls_enable() is called which\nseems backward and likely should be ap3426_ps_enable().\n\nDo you know of any reason that we should have symetry\non the ps and als functions?  \n\nThe difference between rels_enable and misc_ls_opened\nisn\u0027t clear from it\u0027s usage in ap3426_ls_enable().\n\nMost strange is flipping the sate of rels_enable\nfrom 1 to 0 independent of enable being 0 or 1. \n\nKevin likely gets the obfuscation award here for\npicking a non-intuitive name rels_enable with semantics\nthat seems equally obscure. Hopefully we can make some\nsense of this, regain symmetry if possible, and make it\ncrystal clear to others in the future.\n\nI\u0027ll continue looking at it and thinking about it.",
+      "parentUuid": "da36d5c6_ef7115e2",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
