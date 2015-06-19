@@ -34,6 +34,41 @@
       "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_92e8c218",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-19T06:52:27Z",
+      "side": 1,
+      "message": "Yes rels_enable is \"re enable ls sensor\" can we (like you suggested) add a flag to init_client(bool disable_interrupt), so we don\u0027t have to worry about re-enabling interrupts in this path and introducing race (eg. during this disable and enable interval, there could be a ps interrupt that\u0027s missed) . in ls_enable the lack of checking is perhaps the original coder assumes the frameworks won\u0027t send ls enable/disable during a suspend.",
+      "parentUuid": "da36d5c6_f272deac",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_32dab679",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1972,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-19T06:52:27Z",
+      "side": 1,
+      "message": "ap3426_ls_enable should be outside of this if.",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
