@@ -55,6 +55,24 @@
     },
     {
       "key": {
+        "uuid": "da36d5c6_92a0c2a7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-19T09:12:02Z",
+      "side": 1,
+      "message": "Right. I\u0027ve never seen frameworks trying to do an enable/disable during a suspect/resume period but it\ndoes seems reasonable for the driver to defend itself from\nthis possibility.\n\nAdding a formal argument to ap3426_init_client()\nto indicate of interrupts should be enabled sounds\nlike a reasonable idea. I\u0027ll add it and include it\nin the next upload.\n\nI\u0027ll assume we want to prevent any request to resume\nwhile suspended and see if there are any issues. I doubt it.\nI\u0027ll use variable names that make reading the code clear.\n\nI\u0027ll also make sure the power regulation code is right.\nLin fixed it and it seem like it\u0027s not likely used on\nLettuce or Rendang but I suppose other devices could\nuse it and justify the codes existence. Perhaps should\nbe configurable via the device tree DTS entries.\n\n-piet",
+      "parentUuid": "da36d5c6_92e8c218",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da36d5c6_32dab679",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
@@ -66,6 +84,24 @@
       "writtenOn": "2015-06-19T06:52:27Z",
       "side": 1,
       "message": "ap3426_ls_enable should be outside of this if.",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_b23066a0",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1972,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-19T09:12:02Z",
+      "side": 1,
+      "message": "Yep. Fixing.",
+      "parentUuid": "da36d5c6_32dab679",
       "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
