@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da36d5c6_6fe285a1",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 920,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-19T02:51:06Z",
+      "side": 1,
+      "message": "spacing ie. (i \u003d 0; i \u003c CAL_SAMPLES; i++)",
+      "revId": "418b5880c6b0d853e589a3021de009a53950fa02",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da36d5c6_4fe5c1a6",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1425,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-19T02:51:06Z",
+      "side": 1,
+      "message": "typo?",
+      "revId": "418b5880c6b0d853e589a3021de009a53950fa02",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
