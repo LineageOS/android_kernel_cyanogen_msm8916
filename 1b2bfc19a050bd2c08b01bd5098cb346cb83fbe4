@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da36d5c6_ef7115e2",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-19T04:37:09Z",
+      "side": 1,
+      "message": "Isn\u0027t ps_data-\u003erels_enable flag supposed to set while the light sensor is on over a suspend \u0026 resume cycle, and in this resume function, it should call ap3426_ls_enable if rels_enable is 1?",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
