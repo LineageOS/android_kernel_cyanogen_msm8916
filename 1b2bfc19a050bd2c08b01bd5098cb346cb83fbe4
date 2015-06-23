@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "7a25e98e_cc59c390",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1946,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-23T09:37:55Z",
+      "side": 1,
+      "message": "oh never mind,please ignore the previous comment, I just realized ps_opened \u003d\u003d 0.",
+      "parentUuid": "7a25e98e_cc82a3c8",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da36d5c6_ef7115e2",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
