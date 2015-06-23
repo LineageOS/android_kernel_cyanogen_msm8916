@@ -34,6 +34,24 @@
       "revId": "2049487fdd0a7c725c83123fa91bb5ecc47ad34d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a25e98e_8f033d76",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1888,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-23T12:01:13Z",
+      "side": 1,
+      "message": "Fixed. \nWith so many lines changing it was time\nto switch to Linux std indent.",
+      "parentUuid": "7a25e98e_8cfeeb03",
+      "revId": "2049487fdd0a7c725c83123fa91bb5ecc47ad34d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
