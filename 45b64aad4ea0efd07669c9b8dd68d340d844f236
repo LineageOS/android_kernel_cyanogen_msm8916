@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a25e98e_89789dfa",
+        "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1986,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-23T06:19:25Z",
+      "side": 1,
+      "message": "why does gsl_quit_doze need to free_irq and here the code calls request_irq again?",
+      "revId": "45b64aad4ea0efd07669c9b8dd68d340d844f236",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
