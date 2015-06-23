@@ -16,6 +16,24 @@
       "revId": "2049487fdd0a7c725c83123fa91bb5ecc47ad34d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a25e98e_8cfeeb03",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1888,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-23T07:46:11Z",
+      "side": 1,
+      "message": "Yep, it should have been PS_DBG. I\u0027ll fix it.",
+      "parentUuid": "7a25e98e_c69e0207",
+      "revId": "2049487fdd0a7c725c83123fa91bb5ecc47ad34d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
