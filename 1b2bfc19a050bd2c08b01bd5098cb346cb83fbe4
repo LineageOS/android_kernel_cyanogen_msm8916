@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "7a25e98e_cc82a3c8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1946,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-23T09:34:38Z",
+      "side": 1,
+      "message": "ps interrupt cannot be disable in suspend since it\u0027s a \"wake sensor\".",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da36d5c6_ef7115e2",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
