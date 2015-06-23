@@ -16,6 +16,24 @@
       "revId": "45b64aad4ea0efd07669c9b8dd68d340d844f236",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a25e98e_29d889ef",
+        "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1986,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-06-23T06:38:24Z",
+      "side": 1,
+      "message": "I have no idea.\n\nWe got it this way, though.",
+      "parentUuid": "7a25e98e_89789dfa",
+      "revId": "45b64aad4ea0efd07669c9b8dd68d340d844f236",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
