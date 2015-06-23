@@ -73,6 +73,24 @@
     },
     {
       "key": {
+        "uuid": "7a25e98e_8ccfcbb2",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1967,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-23T09:04:54Z",
+      "side": 1,
+      "message": "I kinda like leaving the init code leaving interrupts\noff by default and explicitly enabling them. Race conditions\nwill be fixed by mutex. Interrupts will be disabled during\nthe suspend. \n\nMight be prudent make sure interrupts aren\u0027t enabled\nwhile we are suspended. Adding ps_data-\u003esuspened and\nmakeing sure we aren\u0027t doing something silly.",
+      "parentUuid": "da36d5c6_92e8c218",
+      "revId": "1b2bfc19a050bd2c08b01bd5098cb346cb83fbe4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "da36d5c6_32dab679",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
