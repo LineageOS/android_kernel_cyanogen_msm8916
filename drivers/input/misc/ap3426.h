@@ -243,4 +243,3 @@ struct ap3426_data {
 };
 
 #endif
-
