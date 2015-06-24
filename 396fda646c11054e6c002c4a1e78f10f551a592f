@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3a1ff146_44c84e75",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 504,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-24T06:57:28Z",
+      "side": 1,
+      "message": "why don\u0027t we have the check in the very beginning to be consistent with als_enable and just have a printk?",
+      "revId": "396fda646c11054e6c002c4a1e78f10f551a592f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a1ff146_44f12ecd",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 927,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-24T06:57:28Z",
+      "side": 1,
+      "message": "Please remove this",
+      "revId": "396fda646c11054e6c002c4a1e78f10f551a592f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a1ff146_e4b85ae8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1996,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-24T06:57:28Z",
+      "side": 1,
+      "message": "If als is disabled through a suspend/resume cycle, it would accidentally be turned on with this line. Let\u0027s just organize the code as:\nif (ps_data-\u003eals_re_enable) {\n    ap3426_init_client(ps_data-\u003eclient);\n    if (misc_ps_opened) {\n        ap3426_enable_ps_interrupts(ps_data-\u003eclient);\n    }\n    ap3426_als_enable(ps_data, true);\n}",
+      "revId": "396fda646c11054e6c002c4a1e78f10f551a592f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
