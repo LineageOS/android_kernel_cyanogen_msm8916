@@ -943,8 +943,14 @@ static int ap3426_als_enable(struct ap3426_data *ps_data, int enable)
 
 	msleep(50);
 	if (misc_als_opened) {
-		ALS_DBG("Starting Polling Timer.\n");
-		ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(ps_data->als_msec_poll_delay));
+		// Report a different value here so that it can get to userspace, because
+		// the input driver sends EV_ABS events only when if value changed
+		// from the last report.
+		int als_value = ap3426_get_adc_value(ps_data->client);
+		input_report_abs(ps_data->lsensor_input_dev, ABS_MISC, als_value + 1);
+		input_sync(ps_data->lsensor_input_dev);
+		ALS_DBG("Enable Polling Timer\n");
+		ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 	} else {
 #ifndef PS_POLLING_DEBUG
 		ALS_DBG("Disable Polling Timer.\n");
@@ -2516,7 +2522,7 @@ static void lsensor_work_handler(struct work_struct *w)
 	ap3426_lock_mutex(data);
 
 	value = ap3426_get_adc_value(data->client);
-	value = value * als_calibration / 100;
+	value *= als_calibration / 100;
 	input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
 	input_sync(data->lsensor_input_dev);
 
