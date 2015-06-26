@@ -242,6 +242,7 @@ struct ap3426_data {
 	uint16_t		ps_calibration_min;
 	uint16_t		ps_calibration_expected;
 	uint16_t		ps_calibration_max;
+	int als_last_value;
 };
 
 #endif

@@ -940,6 +940,14 @@ static int ap3426_als_enable(struct ap3426_data *ps_data, int enable)
 
 	msleep(50);
 	if (misc_als_opened) {
+		int value = ap3426_get_adc_value(ps_data->client);
+		value *= cali / 100;
+		if (ps_data->als_last_value == value) {
+			value += 1;
+			ps_data->als_last_value = value;
+			input_report_abs(ps_data->lsensor_input_dev, ABS_MISC, value);
+			input_sync(ps_data->lsensor_input_dev);
+		}
 		ALS_DBG("Enable Polling Timer\n");
 		ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 	} else {
@@ -2474,9 +2482,12 @@ static void lsensor_work_handler(struct work_struct *w)
 	ap3426_lock_mutex(data);
 
 	value = ap3426_get_adc_value(data->client);
-	value = value * als_calibration/ 100;
-	input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
-	input_sync(data->lsensor_input_dev);
+	value *= cali / 100;
+	if (data->als_last_value != value) {
+		data->als_last_value = value;
+		input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
+		input_sync(data->lsensor_input_dev);
+	}
 
 	ALS_DBG("Reported ABS_MISC:%d to input device.\n", value);
 
@@ -2533,8 +2544,12 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
 		/* We have an ALS Interrupt */
 		if (misc_als_opened) {
 			als_value = ap3426_get_adc_value(data->client);
-			input_report_abs(data->lsensor_input_dev, ABS_MISC, als_value);
-			input_sync(data->lsensor_input_dev);
+			if (data->als_last_value != als_value) {
+				data->als_last_value = als_value;
+				input_report_abs(data->lsensor_input_dev, ABS_MISC, als_value);
+				input_sync(data->lsensor_input_dev);
+			}
+		} else {
 			 /* Need to Clear Interrupt - read regs */
 			als_value = ap3426_get_adc_value(data->client);
 		}
