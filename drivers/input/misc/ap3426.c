@@ -57,6 +57,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/ioctl.h>
 #include <linux/atomic.h>
+#include <asm/bug.h>
 
 #define AP3426_DRV_NAME		"ap3426"
 #define DRIVER_VERSION		"1.0"
@@ -93,6 +94,8 @@
 
 // #define ALS_DEBUG                    /* Uncomment for additional ALS Debug */
 
+// #define MUTEX_DEBUG			/* Uncomment for Mutex checking */
+
 /*
  * DEBUG, INFO and ERR Logging are normally defined below and enabled.
  * pr_debug() is enabled above or if the kernel configs CONFIG_DYNAMIC_DEBUG.
@@ -107,7 +110,7 @@
  *     See: drivers/sensors/alsprox/pa12200001/pa12200001.c
  * where it appears the debug code is enabled for a CONFIG_DYNAMIC_DEBUG kernel.
  *
- * These can be disabled below to disable logging.
+ * These can be modified below to increase/disable/enable logging.
  */
 #define PS_debug        1		/* Increase to 2 for more details */
 #define PS_info         1
@@ -117,10 +120,10 @@
 #define ALS_info        1
 #define ALS_err         1
 
-#define MUTEX_debug     0               /* Usually not too interesting */
+#define MUTEX_debug     0		/* Usually not too interesting */
 
 #if defined(CONFIG_DYNAMIC_DEBUG)
-static atomic_t log_indent = ATOMIC_INIT(0);	/* Log Indent */
+static atomic_t log_indent = ATOMIC_INIT(0);
 
 static inline int indent(void)  { return((int) log_indent.counter); }
 static inline void ind(void)    { pr_debug("%*s",  (indent() * 2), " "); }
@@ -128,6 +131,7 @@ static inline void inc(void)    { atomic_inc(&log_indent); }
 static inline void dec(void)    { atomic_dec_if_positive(&log_indent); }
 
 #else
+
 #define indent() 0
 #define ind()
 #define inc()
@@ -196,6 +200,7 @@ static inline void dec(void)    { atomic_dec_if_positive(&log_indent); }
 #define MUTEX_DBG(args...)        { if (MUTEX_debug)     DBG(args);       }
 
 
+
 #define DI_AUTO_CAL
 
 #ifdef DI_AUTO_CAL
@@ -230,7 +235,7 @@ static int ap3426_range[4] = {32768,8192,2048,512};
 
 static int *range = ap3426_range;
 
-static int cali = 320;
+static int als_calibration = 320;
 static int misc_ps_opened = 0;
 static int misc_als_opened = 0;
 #ifdef CONFIG_AP3426_HEARTBEAT_SENSOR
@@ -239,6 +244,14 @@ static int misc_ht_opened = 0;
 struct regulator *vdd;
 struct regulator *vio;
 bool power_enabled;
+
+/*
+ * Number of threads posted.
+ * Increaded by hard interrupt handers and
+ * decremented by soft interrupt handler (aka thread).
+ */
+static atomic_t isr_threads_posted = ATOMIC_INIT(0);
+
 /*
  * register access helpers
  */
@@ -246,7 +259,7 @@ bool power_enabled;
 /*
 fixed for msm8916 kevindang20141010
 */
-static struct sensors_classdev sensors_light_cdev = { 
+static struct sensors_classdev sensors_light_cdev = {
 	.name = "light", 
 	.vendor = "DI", 
 	.version = 1, 
@@ -281,32 +294,105 @@ static struct sensors_classdev sensors_proximity_cdev = {
 	.delay_msec = 200, 
 	.sensors_enable = NULL, 
 	.sensors_poll_delay = NULL, 
-}; 
+};
 
+
+/*
+ * Mutex Functions:
+ *	Using a course locking strategy, locking at driver entry points and checking at points
+ *	that appear to be exposed to race conditions.  Most proximity drivers appear to have taken
+ *	this course locking strategy.
+ */
+#ifdef MUTEX_DEBUG
+static inline void ap3426_verify_mutex_locked(struct ap3426_data *data)
+{
+	struct mutex *lock = &data->lock;
+	int mutex_locked, i;
+
+	mutex_locked = mutex_is_locked(lock);
+
+	if (!mutex_locked) {
+		for (i = 0; i < 5; i++) {
+			printk(KERN_ERR " ******************** Mutex NOT Locked! ***********************\n");
+		}
+	}
+}
+#else
+#define ap3426_verify_mutex_locked(args)
+#endif
+
+#ifdef MUTEX_DEBUG
+static inline void ap3426_verify_client_mutex_locked(struct i2c_client *client)
+{
+        // ENTRY("client:%p", client);
+
+	if (client) {
+		struct ap3426_data *data = i2c_get_clientdata(client);
+
+		ap3426_verify_mutex_locked(data);
+	} else {
+		DBG("client = NULL!\n");
+	}
+	// RETURN_VOID();
+}
+#else
+#define ap3426_verify_client_mutex_locked(args)
+#endif
+
+
+static inline void ap3426_lock_mutex(struct ap3426_data *data)
+{
+	MUTEX_ENTRY("data:%p", data);
+
+	mutex_lock(&data->lock);
+
+	ap3426_verify_mutex_locked(data);
+
+	MUTEX_RETURN_VOID();
+}
+
+static inline void ap3426_unlock_mutex(struct ap3426_data *data)
+{
+	MUTEX_ENTRY("data:%p", data);
+
+	ap3426_verify_mutex_locked(data);
+
+	mutex_unlock(&data->lock);
+
+	MUTEX_RETURN_VOID();
+}
+
+/*
+ * Register Functions:
+ */
 static int __ap3426_read_reg(struct i2c_client *client,
 	u32 reg, u8 mask, u8 shift)
 {
-    struct ap3426_data *data = i2c_get_clientdata(client);
+	struct ap3426_data *data = i2c_get_clientdata(client);
 
-    return (data->reg_cache[ap3426_reg_to_idx_array[reg]] & mask) >> shift;
+	ap3426_verify_mutex_locked(data);
+
+	return (data->reg_cache[ap3426_reg_to_idx_array[reg]] & mask) >> shift;
 }
 
 static int __ap3426_write_reg(struct i2c_client *client,
 	u32 reg, u8 mask, u8 shift, u8 val)
 {
-    struct ap3426_data *data = i2c_get_clientdata(client);
-    int ret = 0;
-    u8 tmp;
+	struct ap3426_data *data = i2c_get_clientdata(client);
+	int ret = 0;
+	u8 tmp;
 
-    tmp = data->reg_cache[ap3426_reg_to_idx_array[reg]];
-    tmp &= ~mask;
-    tmp |= val << shift;
+	ap3426_verify_mutex_locked(data);
 
-    ret = i2c_smbus_write_byte_data(client, reg, tmp);
-    if (!ret)
-	data->reg_cache[ap3426_reg_to_idx_array[reg]] = tmp;
+	tmp = data->reg_cache[ap3426_reg_to_idx_array[reg]];
+	tmp &= ~mask;
+	tmp |= val << shift;
 
-    return ret;
+	ret = i2c_smbus_write_byte_data(client, reg, tmp);
+	if (!ret)
+		data->reg_cache[ap3426_reg_to_idx_array[reg]] = tmp;
+
+	return ret;
 }
 
 /*
@@ -316,154 +402,242 @@ static int __ap3426_write_reg(struct i2c_client *client,
 /* range */
 static int ap3426_get_range(struct i2c_client *client)
 {
-    u8 idx = __ap3426_read_reg(client, AP3426_REG_ALS_CONF,
-	    AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT); 
-    return range[idx];
+	int rv;
+	u8 idx;
+
+	ENTRY("client:%p", client);
+
+	idx = __ap3426_read_reg(client, AP3426_REG_ALS_CONF,
+			AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT);
+
+	rv = range[idx];
+
+	RETURN("rv:%d", rv);
+	return(rv);
 }
 
 static int ap3426_set_range(struct i2c_client *client, int range)
 {
-    return __ap3426_write_reg(client, AP3426_REG_ALS_CONF,
-	    AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT, range);
+	int rv;
+
+	ENTRY("client:%p, range:%d", client, range);
+
+	rv =  __ap3426_write_reg(client, AP3426_REG_ALS_CONF,
+			AP3426_ALS_RANGE_MASK, AP3426_ALS_RANGE_SHIFT, range);
+
+	RETURN("rv:%d", rv);
+	return(rv);
 }
 
 /* mode */
 static int ap3426_get_mode(struct i2c_client *client)
 {
-    int ret;
+	int rv;
 
-    ret = __ap3426_read_reg(client, AP3426_REG_SYS_CONF,
-	    AP3426_REG_SYS_CONF_MASK, AP3426_REG_SYS_CONF_SHIFT);
-    return ret;
+	ENTRY("client:%p", client);
+
+	rv = __ap3426_read_reg(client, AP3426_REG_SYS_CONF,
+			AP3426_REG_SYS_CONF_MASK, AP3426_REG_SYS_CONF_SHIFT);
+
+	RETURN("rv:%d", rv);
+	return rv;
 }
 
 static int ap3426_set_mode(struct i2c_client *client, int mode)
 {
-    int ret;
+	int ret;
 
-    misc_ps_opened = mode & AP3426_SYS_ALS_ENABLE;
-    misc_als_opened = mode & AP3426_SYS_PS_ENABLE;
+	ENTRY("client:%p, mode:%d", client, mode);
 
-    ret = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
-	    AP3426_REG_SYS_CONF_MASK, AP3426_REG_SYS_CONF_SHIFT, mode);
-    return ret;
+	misc_ps_opened = mode & AP3426_SYS_ALS_ENABLE;
+	misc_als_opened = mode & AP3426_SYS_PS_ENABLE;
+
+	ret = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
+			AP3426_REG_SYS_CONF_MASK, AP3426_REG_SYS_CONF_SHIFT, mode);
+
+	RETURN("rv:%d", ret);
+	return ret;
 }
 
 /* ALS low threshold */
 static int ap3426_get_althres(struct i2c_client *client)
 {
-    int lsb, msb;
-    lsb = __ap3426_read_reg(client, AP3426_REG_ALS_THDL_L,
+	int lsb, msb, rv;
+
+	ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
+	lsb = __ap3426_read_reg(client, AP3426_REG_ALS_THDL_L,
 	    AP3426_REG_ALS_THDL_L_MASK, AP3426_REG_ALS_THDL_L_SHIFT);
-    msb = __ap3426_read_reg(client, AP3426_REG_ALS_THDL_H,
+
+	msb = __ap3426_read_reg(client, AP3426_REG_ALS_THDL_H,
 	    AP3426_REG_ALS_THDL_H_MASK, AP3426_REG_ALS_THDL_H_SHIFT);
-    return ((msb << 8) | lsb);
+
+	rv = ((msb << 8) | lsb);
+
+	RETURN("rv:%d", rv);
+	return rv;
 }
 
 static int ap3426_set_althres(struct i2c_client *client, int val)
 {
+	int lsb, msb, err;
 
-    int lsb, msb, err;
+	msb = val >> 8;
+	lsb = val & AP3426_REG_ALS_THDL_L_MASK;
 
-    msb = val >> 8;
-    lsb = val & AP3426_REG_ALS_THDL_L_MASK;
+	PS_ENTRY("client:%p, val:%d", client, val);
 
-    err = __ap3426_write_reg(client, AP3426_REG_ALS_THDL_L,
-	    AP3426_REG_ALS_THDL_L_MASK, AP3426_REG_ALS_THDL_L_SHIFT, lsb);
-    if (err)
+	ap3426_verify_client_mutex_locked(client);
+
+	err = __ap3426_write_reg(client, AP3426_REG_ALS_THDL_L,
+			AP3426_REG_ALS_THDL_L_MASK, AP3426_REG_ALS_THDL_L_SHIFT, lsb);
+	if (err)
+		goto done;
+
+	err = __ap3426_write_reg(client, AP3426_REG_ALS_THDL_H,
+			AP3426_REG_ALS_THDL_H_MASK, AP3426_REG_ALS_THDL_H_SHIFT, msb);
+done:
+	RETURN("err:%d", err);
 	return err;
-
-    err = __ap3426_write_reg(client, AP3426_REG_ALS_THDL_H,
-	    AP3426_REG_ALS_THDL_H_MASK, AP3426_REG_ALS_THDL_H_SHIFT, msb);
-
-    return err;
 }
 
 /* ALS high threshold */
 static int ap3426_get_ahthres(struct i2c_client *client)
 {
-    int lsb, msb;
-    lsb = __ap3426_read_reg(client, AP3426_REG_ALS_THDH_L,
+	int lsb, msb, rv;
+
+	ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
+	lsb = __ap3426_read_reg(client, AP3426_REG_ALS_THDH_L,
 	    AP3426_REG_ALS_THDH_L_MASK, AP3426_REG_ALS_THDH_L_SHIFT);
-    msb = __ap3426_read_reg(client, AP3426_REG_ALS_THDH_H,
+
+	msb = __ap3426_read_reg(client, AP3426_REG_ALS_THDH_H,
 	    AP3426_REG_ALS_THDH_H_MASK, AP3426_REG_ALS_THDH_H_SHIFT);
-    return ((msb << 8) | lsb);
+
+	rv = ((msb << 8) | lsb);
+
+	RETURN("rv:%d", rv);
+	return rv ;
 }
 
 static int ap3426_set_ahthres(struct i2c_client *client, int val)
 {
-    int lsb, msb, err;
+	int lsb, msb, err;
 
-    msb = val >> 8;
-    lsb = val & AP3426_REG_ALS_THDH_L_MASK;
+	PS_ENTRY("client:%p, val:%d", client, val);
 
-    err = __ap3426_write_reg(client, AP3426_REG_ALS_THDH_L,
-	    AP3426_REG_ALS_THDH_L_MASK, AP3426_REG_ALS_THDH_L_SHIFT, lsb);
-    if (err)
+	ap3426_verify_client_mutex_locked(client);
+
+	msb = val >> 8;
+	lsb = val & AP3426_REG_ALS_THDH_L_MASK;
+
+	err = __ap3426_write_reg(client, AP3426_REG_ALS_THDH_L,
+			AP3426_REG_ALS_THDH_L_MASK, AP3426_REG_ALS_THDH_L_SHIFT, lsb);
+
+	if (err)
+		goto done;
+
+	err = __ap3426_write_reg(client, AP3426_REG_ALS_THDH_H,
+			AP3426_REG_ALS_THDH_H_MASK, AP3426_REG_ALS_THDH_H_SHIFT, msb);
+
+done:
+	RETURN("err:%d", err);
 	return err;
-
-    err = __ap3426_write_reg(client, AP3426_REG_ALS_THDH_H,
-	    AP3426_REG_ALS_THDH_H_MASK, AP3426_REG_ALS_THDH_H_SHIFT, msb);
-
-    return err;
 }
 
 /* PX low threshold */
 static int ap3426_get_plthres(struct i2c_client *client)
 {
-    int lsb, msb;
-    lsb = __ap3426_read_reg(client, AP3426_REG_PS_THDL_L,
-	    AP3426_REG_PS_THDL_L_MASK, AP3426_REG_PS_THDL_L_SHIFT);
-    msb = __ap3426_read_reg(client, AP3426_REG_PS_THDL_H,
-	    AP3426_REG_PS_THDL_H_MASK, AP3426_REG_PS_THDL_H_SHIFT);
-    return ((msb << 8) | lsb);
+	int lsb, msb, rv;
+
+	PS_ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
+	lsb = __ap3426_read_reg(client, AP3426_REG_PS_THDL_L,
+		AP3426_REG_PS_THDL_L_MASK, AP3426_REG_PS_THDL_L_SHIFT);
+
+	msb = __ap3426_read_reg(client, AP3426_REG_PS_THDL_H,
+		AP3426_REG_PS_THDL_H_MASK, AP3426_REG_PS_THDL_H_SHIFT);
+
+	rv = ((msb << 8) | lsb);
+
+	PS_RETURN("rv:%d", rv);
+	return rv ;
 }
 
 static int ap3426_set_plthres(struct i2c_client *client, int val)
 {
-    int lsb, msb, err;
+	int lsb, msb, err;
 
-    msb = val >> 8;
-    lsb = val & AP3426_REG_PS_THDL_L_MASK;
+	PS_ENTRY("client:%p, val:%d", client, val);
 
-    err = __ap3426_write_reg(client, AP3426_REG_PS_THDL_L,
-	    AP3426_REG_PS_THDL_L_MASK, AP3426_REG_PS_THDL_L_SHIFT, lsb);
-    if (err)
+	ap3426_verify_client_mutex_locked(client);
+
+	msb = val >> 8;
+	lsb = val & AP3426_REG_PS_THDL_L_MASK;
+
+	err = __ap3426_write_reg(client, AP3426_REG_PS_THDL_L,
+			AP3426_REG_PS_THDL_L_MASK, AP3426_REG_PS_THDL_L_SHIFT, lsb);
+
+	if (err)
+		goto done;
+
+	err = __ap3426_write_reg(client, AP3426_REG_PS_THDL_H,
+			AP3426_REG_PS_THDL_H_MASK, AP3426_REG_PS_THDL_H_SHIFT, msb);
+done:
+	PS_RETURN("err:%d", err);
 	return err;
-
-    err = __ap3426_write_reg(client, AP3426_REG_PS_THDL_H,
-	    AP3426_REG_PS_THDL_H_MASK, AP3426_REG_PS_THDL_H_SHIFT, msb);
-
-    return err;
 }
 
 /* PX high threshold */
 static int ap3426_get_phthres(struct i2c_client *client)
 {
-    int lsb, msb;
-    lsb = __ap3426_read_reg(client, AP3426_REG_PS_THDH_L,
-	    AP3426_REG_PS_THDH_L_MASK, AP3426_REG_PS_THDH_L_SHIFT);
-    msb = __ap3426_read_reg(client, AP3426_REG_PS_THDH_H,
-	    AP3426_REG_PS_THDH_H_MASK, AP3426_REG_PS_THDH_H_SHIFT);
-    return ((msb << 8) | lsb);
+	int lsb, msb, rv;
+
+	PS_ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
+	lsb = __ap3426_read_reg(client, AP3426_REG_PS_THDH_L,
+			AP3426_REG_PS_THDH_L_MASK, AP3426_REG_PS_THDH_L_SHIFT);
+
+	msb = __ap3426_read_reg(client, AP3426_REG_PS_THDH_H,
+			AP3426_REG_PS_THDH_H_MASK, AP3426_REG_PS_THDH_H_SHIFT);
+
+	rv = ((msb << 8) | lsb);
+
+	PS_RETURN("rv:%d", rv);
+        return rv ;
 }
+
 
 static int ap3426_set_phthres(struct i2c_client *client, int val)
 {
-    int lsb, msb, err;
+	int lsb, msb, err;
 
-    msb = val >> 8;
-    lsb = val & AP3426_REG_PS_THDH_L_MASK;
+	PS_ENTRY("client:%p, val:%d", client, val);
 
-    err = __ap3426_write_reg(client, AP3426_REG_PS_THDH_L,
-	    AP3426_REG_PS_THDH_L_MASK, AP3426_REG_PS_THDH_L_SHIFT, lsb);
-    if (err)
+	ap3426_verify_client_mutex_locked(client);
+
+	msb = val >> 8;
+	lsb = val & AP3426_REG_PS_THDH_L_MASK;
+
+	err = __ap3426_write_reg(client, AP3426_REG_PS_THDH_L,
+			AP3426_REG_PS_THDH_L_MASK, AP3426_REG_PS_THDH_L_SHIFT, lsb);
+
+	if (err)
+		goto done;
+
+	err = __ap3426_write_reg(client, AP3426_REG_PS_THDH_H,
+			AP3426_REG_PS_THDH_H_MASK, AP3426_REG_PS_THDH_H_SHIFT, msb);
+done:
+	PS_RETURN("err:%d", err);
 	return err;
-
-    err = __ap3426_write_reg(client, AP3426_REG_PS_THDH_H,
-	    AP3426_REG_PS_THDH_H_MASK, AP3426_REG_PS_THDH_H_SHIFT, msb);
-
-    return err;
 }
 
 static int ap3426_get_adc_value(struct i2c_client *client)
@@ -471,6 +645,8 @@ static int ap3426_get_adc_value(struct i2c_client *client)
 	unsigned int lsb, msb, val;
 
 	ALS_ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
 
 	val = lsb = i2c_smbus_read_byte_data(client, AP3426_REG_ALS_DATA_LOW);
 
@@ -492,10 +668,10 @@ static int ap3426_get_adc_value(struct i2c_client *client)
 
 		range_tmp = ap3426_get_range(client);
 		tmp = (((msb << 8) | lsb) * range_tmp) >> 16;
-		tmp2 = tmp * cali / 100;
+		tmp2 = tmp * als_calibration/ 100;
 
-		ALS_DBG("tmp2:%d = tmp:%d * cali:%d\n",
-			 tmp2,     tmp,     cali);
+		ALS_DBG("tmp2:%d = tmp:%d * als_calibration:%d\n", \
+			 tmp2,     tmp,     als_calibration);
 	}
 #endif
 
@@ -511,22 +687,23 @@ done:
 /* Get PS Distance: Near:0 or Far:1 */
 static int ap3426_get_object(struct i2c_client *client)
 {
-    int val;
-    int rv;
+	int val;
+	int rv;
 
-    PS_ENTRY("client:%p", client);
+	PS_ENTRY("client:%p", client);
 
-    val = i2c_smbus_read_byte_data(client, AP3426_OBJ_COMMAND);
+	val = i2c_smbus_read_byte_data(client, AP3426_OBJ_COMMAND);
 
-    PS_DBG2("val:0X%x &= AP3426_OBJ_MASK:0x%x\n", val, AP3426_OBJ_MASK);
-    val &= AP3426_OBJ_MASK;
+	PS_DBG2("val:0X%x &= AP3426_OBJ_MASK:0x%x\n", val, AP3426_OBJ_MASK);
+	val &= AP3426_OBJ_MASK;
 
-    rv = !(val >> AP3426_OBJ_SHIFT);
-    PS_DBG2("rv = 0x%x = !(val:0x%x >> AP3426_OBJ_SHIFT):%d;\n",
-             rv,           val,        AP3426_OBJ_SHIFT);
+	rv = !(val >> AP3426_OBJ_SHIFT);
 
-    PS_RETURN("rv:%d", rv);
-    return(rv);
+	PS_DBG2("rv = 0x%x = !(val:0x%x >> AP3426_OBJ_SHIFT):%d;\n",
+	         rv,           val,        AP3426_OBJ_SHIFT);
+
+	PS_RETURN("rv:%d", rv);
+	return(rv);
 }
 
 static int ap3426_get_intstat(struct i2c_client *client)
@@ -535,6 +712,7 @@ static int ap3426_get_intstat(struct i2c_client *client)
 	int rv;
 
 	PS_ENTRY("client:%p", client);
+
 	val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTSTATUS);
 	val &= AP3426_REG_SYS_INT_MASK;
 
@@ -546,54 +724,72 @@ static int ap3426_get_intstat(struct i2c_client *client)
 
 static int ap3426_get_px_value(struct i2c_client *client)
 {
-    int lsb, msb;
-    int rv;
+	int lsb, msb;
+	int rv;
 
-    PS_ENTRY("client:%p", client);
+	PS_ENTRY("client:%p", client);
 
-    rv = lsb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_LOW);
+	ap3426_verify_client_mutex_locked(client);
 
-    if (lsb < 0) {
-	PS_ERR("lsb < 0\n");
-	goto done;
-    }
-    PS_DBG2("IR = 0X%x = lsb\n", (u32)(lsb));
-    rv = msb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_HIGH);
+	rv = lsb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_LOW);
 
-    if (msb < 0) {
-	PS_ERR("msb < 0\n");
-	goto done;
-    }
-    // PS_DBG("IR = 0X%x = msb\n", (u32)(msb));
-    rv = (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
+	if (lsb < 0) {
+		PS_ERR("lsb < 0\n");
+		goto done;
+	}
+	PS_DBG2("IR = 0X%x = lsb\n", (u32)(lsb));
+	rv = msb = i2c_smbus_read_byte_data(client, AP3426_REG_PS_DATA_HIGH);
+
+	if (msb < 0) {
+		PS_ERR("msb < 0\n");
+		goto done;
+	}
+	PS_DBG2("IR = 0X%x = msb\n", (u32)(msb));
+	rv = (u32)(((msb & AL3426_REG_PS_DATA_HIGH_MASK) << 8) | (lsb & AL3426_REG_PS_DATA_LOW_MASK));
 
 done:
-    PS_RETURN("rv:0X%x:%d", rv, rv);
-    return(rv);
+	PS_RETURN("rv:0X%x:%d", rv, rv);
+	return(rv);
 }
 
 
 static inline void ap3426_disable_ps_and_als_interrupts(struct i2c_client *client)
 {
+	PS_ENTRY("client:%p", client);
+
 	i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, 0);
+
+	PS_RETURN_VOID();
 }
 
 static inline void ap3426_disable_ps_interrupts(struct i2c_client *client)
 {
 	int val;;
 
+	PS_ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
 	val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
 	val &= ~0x80;
 	i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+
+	PS_RETURN_VOID();
 }
 
 static inline void ap3426_enable_ps_interrupts(struct i2c_client *client)
 {
 	int val;
 
+
+	PS_ENTRY("client:%p", client);
+	ap3426_verify_client_mutex_locked(client);
+
 	val = i2c_smbus_read_byte_data(client, AP3426_REG_SYS_INTCTRL);
 	val |= 0x80;
 	i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, val);
+
+	PS_RETURN_VOID();
 }
 
 /* Power on PS and IR Part of Chip */
@@ -601,8 +797,14 @@ static inline int ap3426_power_on_ps(struct i2c_client *client)
 {
 	int err;
 
+	PS_ENTRY("client:%p", client);
+
+	ap3426_verify_client_mutex_locked(client);
+
 	err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
 				AP3426_REG_SYS_INT_PMASK, 1, 1);
+
+	PS_RETURN("err:%d", err);
 	return(err);
 }
 
@@ -610,8 +812,12 @@ static inline int ap3426_power_off_ps(struct i2c_client *client)
 {
 	int err;
 
+	PS_ENTRY("client:%p", client);
+
 	err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
 				AP3426_REG_SYS_INT_PMASK, 1, 0);
+
+	PS_RETURN("err:%d", err);
 	return(err);
 }
 
@@ -620,8 +826,12 @@ static inline int ap3426_power_on_als(struct i2c_client *client)
 {
 	int err;
 
+	PS_ENTRY("client:%p", client);
+
 	err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
 				AP3426_REG_SYS_INT_AMASK, 0, 1);
+
+	PS_RETURN("err:%d", err);
 	return(err);
 }
 
@@ -629,8 +839,12 @@ static inline int ap3426_power_off_als(struct i2c_client *client)
 {
 	int err;
 
+	PS_ENTRY("client:%p", client);
+
 	err = __ap3426_write_reg(client, AP3426_REG_SYS_CONF,
 				AP3426_REG_SYS_INT_AMASK, 0, 0);
+
+	PS_RETURN("err:%d", err);
 	return(err);
 }
 
@@ -650,7 +864,7 @@ static int ap3426_ps_enable(struct ap3426_data *ps_data, int enable)
 		goto done;
 	}
 	if (misc_ps_opened == enable) {
-		PS_DBG("misc_ps_opened == enabe\n");
+		PS_DBG("misc_ps_opened == enable already; done\n");
 		ret = 0;
 		goto done;
 	}
@@ -744,10 +958,21 @@ light sensor register & unregister
 ********************************************************************/
 static ssize_t ls_enable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    int32_t ret;
+	struct ap3426_data *ps_data =  dev_get_drvdata(dev);
+	int32_t ret;
+	ssize_t rv;
 
-    ret = misc_als_opened;
-    return scnprintf(buf, PAGE_SIZE, "%d\n", ret);
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(ps_data);			/* Not really needed */
+
+	ret = misc_als_opened;
+	rv = scnprintf(buf, PAGE_SIZE, "%d\n", ret);
+
+	ap3426_unlock_mutex(ps_data);
+
+	ALS_RETURN("rv:%zd", rv);
+	return(rv);
 }
 
 static ssize_t ls_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
@@ -755,20 +980,27 @@ static ssize_t ls_enable_store(struct device *dev, struct device_attribute *attr
 	struct ap3426_data *ps_data =  dev_get_drvdata(dev);
 	uint8_t en;
 
-	ENTRY("dev:%p, attr:%p, buf:%p, size:%zd", dev, attr, buf, size);
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p, size:%zd",
+		   dev,    attr,    buf,    size);
+
+	ap3426_lock_mutex(ps_data);
 
 	if (sysfs_streq(buf, "1"))
 		en = 1;
 	else if (sysfs_streq(buf, "0"))
 		en = 0;
 	else {
-		printk(KERN_ERR "invalid value %d\n",  *buf);
-		return -EINVAL;
+		ALS_ERR("invalid value '%c':%d\n",  *buf, *buf);
+		size = -EINVAL;
+		goto done;
 	}
 	ALS_DBG("en = %d\n", (u32)(en));
 	ap3426_als_enable(ps_data, en);
 
-	RETURN("%zd", size);
+done:
+	ap3426_unlock_mutex(ps_data);
+
+	ALS_RETURN("size:%zd", size);
 	return size;
 }
 
@@ -788,6 +1020,8 @@ static int ap3426_register_lsensor_device(struct i2c_client *client, struct ap34
 {
     struct input_dev *input_dev;
     int rc;
+
+    ALS_ENTRY("client:%p, data:%p", client, data);
 
     ALS_DBG("allocating input device lsensor\n");
     input_dev = input_allocate_device();
@@ -809,13 +1043,19 @@ static int ap3426_register_lsensor_device(struct i2c_client *client, struct ap34
 	goto done;
     }
     rc = sysfs_create_group(&input_dev->dev.kobj, &ap3426_ls_attribute_group);// every devices register his own devices
+
 done:
+    RETURN("rc:%d", rc);
     return rc;
 }
 
 static void ap3426_unregister_lsensor_device(struct i2c_client *client, struct ap3426_data *data)
 {
-    input_unregister_device(data->lsensor_input_dev);
+	PS_ENTRY("(client:%p, data:%p)", client, data);
+
+	input_unregister_device(data->lsensor_input_dev);
+
+	PS_RETURN_VOID();
 }
 
 /*********************************************************************
@@ -827,7 +1067,7 @@ static int ap3426_register_heartbeat_sensor_device(struct i2c_client *client, st
     struct input_dev *input_dev;
     int rc;
 
-    ALS_ENTRY("client:%pm data:%p", client, data);
+    ALS_ENTRY("client:%p, data:%p", client, data);
 
     input_dev = input_allocate_device();
     if (!input_dev) {
@@ -847,6 +1087,7 @@ static int ap3426_register_heartbeat_sensor_device(struct i2c_client *client, st
 	pr_err("%s: could not register input device for heartbeat sensor\n", __FUNCTION__);
 	goto done;
     }
+
 done:
     ALS_RETURN("rc:%d", rc):
     return rc;
@@ -854,25 +1095,59 @@ done:
 
 static void ap3426_unregister_heartbeat_device(struct i2c_client *client, struct ap3426_data *data)
 {
-    input_unregister_device(data->hsensor_input_dev);
+	PS_ENTRY("(client:%p, data:%p)", client, data);
+
+	input_unregister_device(data->hsensor_input_dev);
+
+	PS_RETURN_VOID();
 }
 #endif
 
-/*********************************************************************
-proximity sensor register & unregister
-********************************************************************/
+/*
+ * TEST: FAILED
+ *      cat /sys/class/sensors/proximity/device/sensors/proximity/enable
+ *
+ * TODO/BUG?:
+ *	We are returning the right correct but kernel console
+ *	log DOESN'T show us executing this function. Another
+ *	driver is likely registering the same inode.
+ *
+ *	Hopefully not entering this driver without holding mutex. :(
+ */
 static ssize_t ps_enable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-    int32_t ret;
+	struct ap3426_data *ps_data =  dev_get_drvdata(dev);
+	ssize_t rv = 0L;
+	int32_t ret;
 
-    ret = misc_als_opened;
-    return scnprintf(buf, PAGE_SIZE, "%d\n", ret);
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(ps_data);		/* This entry is unusual and doesn't really need to lock */
+
+	ret = misc_als_opened;
+	rv = scnprintf(buf, PAGE_SIZE, "%d\n", ret);
+
+	ap3426_unlock_mutex(ps_data);
+
+	PS_RETURN("rv:%zd", rv);
+	return(rv);
 }
 
+/*
+ * TESTED:
+ *	echo 0 > /sys/class/sensors/proximity/device/sensors/proximity/enable
+ *	echo 1 > /sys/class/sensors/proximity/device/sensors/proximity/enable
+ *	echo 2 > /sys/class/sensors/proximity/device/sensors/proximity/enable	[Invalid value of input, input=2]
+ */
 static ssize_t ps_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct ap3426_data *ps_data =  dev_get_drvdata(dev);
+	ssize_t rv = size;						/* Default */
 	uint8_t en;
+
+	PS_ENTRY("dev:%p, attr:%p, buf:%p, size:%zd", dev, attr, buf, size);
+
+	ap3426_lock_mutex(ps_data);
 
 	if (sysfs_streq(buf, "1"))
 		en = 1;
@@ -880,19 +1155,30 @@ static ssize_t ps_enable_store(struct device *dev, struct device_attribute *attr
 		en = 0;
 	else {
 		printk(KERN_ERR "%s, invalid value %d\n", __func__, *buf);
-                return -EINVAL;
+                rv = -EINVAL;
+		goto done;
         }
 	ALS_DBG("en = %d\n", (u32)(en));
+
 	ap3426_ps_enable(ps_data, en);
-	return size;
+
+done:
+	ap3426_unlock_mutex(ps_data);
+
+	PS_RETURN("rv:%zd", rv);
+	return rv;
 }
 
+/*
+ * Strange that these two functions are only externally visible here and yet I can see ps_enable_store()
+ * in the logs but not ps_enable_show.
+ */
 static struct device_attribute ps_enable_attribute = __ATTR(enable, 0666, ps_enable_show, ps_enable_store);
 
 static struct attribute *ap3426_ps_attrs [] =
 {
-    &ps_enable_attribute.attr,
-    NULL
+	&ps_enable_attribute.attr,
+	NULL
 };
 
 static struct attribute_group ap3426_ps_attribute_group = {
@@ -938,10 +1224,16 @@ done:
     return rc;
 }
 
+
 static void ap3426_unregister_psensor_device(struct i2c_client *client, struct ap3426_data *data)
 {
-    input_unregister_device(data->psensor_input_dev);
+	PS_ENTRY("(client:%p, data:%p)", client, data);
+
+	input_unregister_device(data->psensor_input_dev);
+
+	PS_RETURN_VOID();
 }
+
 #if 0
 static void ap3426_change_ls_threshold(struct i2c_client *client)
 {
@@ -966,45 +1258,83 @@ static void ap3426_change_ls_threshold(struct i2c_client *client)
 
 
 /* range */
+/*
+ * TESTED:
+ *	cat /sys/class/sensors/proximity/device/sensors/light/device/range
+ *	cat /sys/class/sensors/proximity/device/sensors/proximity/device/range
+ *
+ * Typical output 32768.
+ */
 static ssize_t ap3426_show_range(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%i\n", ap3426_get_range(data->client));
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+	ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%i\n", ap3426_get_range(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return(rv);
 }
 
+/*
+ * TESTED:
+ *	echo 1 > /sys/class/sensors/proximity/device/sensors/light/device/range
+ */
 static ssize_t ap3426_store_range(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val;
+	ssize_t rv;
+	int ret;
 
-    if ((strict_strtoul(buf, 10, &val) < 0) || (val > 3))
-	return -EINVAL;
+	ENTRY("dev:%p, attr:%p, buf:%p. count:%zd", \
+	       dev,    attr,    buf,    count);
 
-    ret = ap3426_set_range(data->client, val);
+	if ((strict_strtoul(buf, 10, &val) < 0) || (val > 3)) {
+		rv = -EINVAL;
+		goto done;
+	}
+	ret = ap3426_set_range(data->client, val);
 
-    return (ret < 0)? ret:count;
+	rv = (ret < 0)? ret:count;
+
+done:
+	ap3426_unlock_mutex(data);
+	RETURN("rv:%zd", rv);
+        return(rv);
 }
 
+static DEVICE_ATTR(range, S_IWUSR | S_IRUGO,
+	ap3426_show_range, ap3426_store_range);
 
-//kevindang for msm8916 20141010
 /*
- * ALS is typically enabled when Adaptive Brightness is enabled in setup.
+ * ALS is typically enabled when Adaptive Brightness is enabled in GUI setup writing to this.
+ *
+ * TESTED:
+ *     echo 1000 > /sys/class/sensors/proximity/device/sensors/light/enable
  */
 static int ap3426_als_enable_set(struct sensors_classdev *sensors_cdev,
-						unsigned int enabled) 
-{ 
+						unsigned int enabled)
+{
 	struct ap3426_data *als_data = container_of(sensors_cdev,
-						struct ap3426_data, als_cdev); 
-	int err; 
+						struct ap3426_data, als_cdev);
+	int err;
 	int rv = 0;
 
 	ALS_ENTRY("sensors_cdev:%p, enabled:%d", sensors_cdev, enabled);
+
+	ap3426_lock_mutex(als_data);
 
 	if (enabled && als_data->suspended) {
 		printk(KERN_ERR "%s: Enabled while Suspended!\n", __func__);
@@ -1013,26 +1343,46 @@ static int ap3426_als_enable_set(struct sensors_classdev *sensors_cdev,
 	err = ap3426_als_enable(als_data, enabled);
 
 	if (err < 0)
-		rv = err;;
+		rv = err;
 
-	ALS_RETURN("rv:%d", rv);
-	return 0;
+	ap3426_unlock_mutex(als_data);
+
+	ALS_RETURN("%d", rv);
+	return rv;
 }
 
+/*
+ * TESTED: echo 1500 > /sys/class/sensors/proximity/device/sensors/light/poll_delay
+ *
+ * TODO: Delay in ap3426_data should be set and used for calls to mod_timer(),
+ *	 Currently delay_msec is discarded. That's how it is in Tomatto and
+ *	 Howward seems to think it's better as well.
+ */
 static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev, unsigned int delay_msec)
 {
 	struct ap3426_data *als_data = container_of(sensors_cdev, struct ap3426_data, als_cdev);
 	int ret;
-	
+
+	ALS_ENTRY("sensors_cdev:%p, delay_msec:%d", sensors_cdev, delay_msec);
+
+	ap3426_lock_mutex(als_data);	/* Not recally necessary at this entry point */
+
 	if (delay_msec < MIN_ALS_POLL_DELAY_MS) {
+		ALS_DBG("delay_msec:%d < MIN_ALS_POLL_DELAY_MS:%d; using MIN\n",
+		         delay_msec,     MIN_ALS_POLL_DELAY_MS);
+
 		ret = mod_timer(&als_data->pl_timer, jiffies + msecs_to_jiffies(MIN_ALS_POLL_DELAY_MS));
 	}
-   
 	if (delay_msec > PL_TIMER_DELAY) {
 		ret = mod_timer(&als_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 	}
-	return 0;
-} 
+	ret = 0;	/* modtimer returns 0 or 1 on replacing timer entry; no error cases */
+
+	ap3426_unlock_mutex(als_data);
+
+	ALS_RETURN("%d", ret);
+	return ret;
+}
 
 #ifdef DI_AUTO_CAL
 static u8 ps_calibrated = 0;
@@ -1073,11 +1423,11 @@ static int ap3426_set_ps_crosstalk_calibration(struct i2c_client *client, int va
 	msb = val >> 8;
 	lsb = val & 0xFF;
 	err = __ap3426_write_reg(client, 0x28, 0xFF, 0x00, lsb);
-	     
+
 	err =__ap3426_write_reg(client, 0x29, 0xFF, 0x00, msb);
 
 	printk("%s: Calibration Register = %d.\n", __func__, val);
-          
+
 	return err;
 }
 
@@ -1099,6 +1449,8 @@ int ap3426_ps_calibration(struct i2c_client *client)
 	u16 sample;
 	u16 sample_data[CAL_SAMPLES];
 	int samples = 0;
+
+	PS_ENTRY("client:%p", client);
 
 	if (!ps_calibrated) {
 		ap3426_set_ps_crosstalk_calibration(client, 0);		/* Baseline */
@@ -1146,6 +1498,10 @@ int ap3426_ps_calibration(struct i2c_client *client)
 			rv = 1;
 		} else {
 			ave = pdata->ps_calibration_expected;
+
+			printk(KERN_ERR "%s samples:%d <= CAL_SAMPLES:%d/2;\n", __func__,
+				            samples,      CAL_SAMPLES);
+
 			printk("%s: Failed to compute a good calibration;\n", __func__);
 
 			printk("%s: Using device's expected calibration value: %d for now.\n",
@@ -1158,16 +1514,25 @@ int ap3426_ps_calibration(struct i2c_client *client)
 			rv = -1;
 		}
 	}
+	PS_RETURN("rv:%d", rv);
 	return rv;
 }
 #endif  /* DI_AUTO_CAL */
 
+/*
+ * TESTED: echo 1 > /sys/class/sensors/proximity/device/sensors/proximity/enable
+ */
 static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
-					   unsigned int enabled) 
+					   unsigned int enabled)
 {
 	struct ap3426_data *ps_data = container_of(sensors_cdev,
-					   struct ap3426_data, ps_cdev); 
+					   struct ap3426_data, ps_cdev);
+	int rv = 0;
 	int err;
+
+	PS_ENTRY("sensors_cdev:%p, enabled:%d", sensors_cdev, enabled);
+
+	ap3426_lock_mutex(ps_data);
 
 	err = ap3426_ps_enable(ps_data, enabled);
 
@@ -1192,16 +1557,19 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
 #endif
 
 	if (err < 0)
-		return err;
+		rv = err;
 
-	return 0;
+	ap3426_unlock_mutex(ps_data);
+
+	RETURN("rv:%d", rv);
+	return rv;
 }
 
-
-//end
 static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 {
 	int ret = 0;
+
+	ENTRY("data:%p, on:%d", data, on);
 
 	if (!on && data->power_enabled)
 	{
@@ -1210,7 +1578,8 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 			if (ret) {
 				dev_err(&data->client->dev,
 					"Regulator vdd disable failed ret=%d\n", ret);
-				return ret;
+
+				goto done;
 			}
 		}
 
@@ -1227,7 +1596,7 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 							ret);
 					}
 				}
-				return ret;
+				goto done;
 			}
 		}
 
@@ -1243,21 +1612,23 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 		{
 			dev_err(&data->client->dev,
 				"Regulator vdd enable failed ret=%d\n", ret);
-			return ret;
+
+			goto done;
 		}
 
 		ret = regulator_enable(data->vio);
-		if (ret) 
+		if (ret)
 		{
 			dev_err(&data->client->dev,
 				"Regulator vio enable failed ret=%d\n", ret);
 			regulator_disable(data->vdd);
-			return ret;
+
+			goto done;
 		}
 
 		data->power_enabled = on;
 		printk(KERN_INFO "%s: enable ap3426 power\n", __func__);
-	} 
+	}
 	else
 	{
 		dev_warn(&data->client->dev,
@@ -1265,10 +1636,12 @@ static int ap3426_power_ctl(struct ap3426_data *data, bool on)
 				on, data->power_enabled);
 	}
 
+done:
+	RETURN("ret:%d", ret);
 	return ret;
 }
 
-static int ap3426_power_init(struct ap3426_data*data, bool on)
+static int ap3426_power_init(struct ap3426_data *data, bool on)
 {
 	int ret;
 
@@ -1307,7 +1680,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 			ret = regulator_set_voltage(data->vdd,
 					AP3426_VDD_MIN_UV,
 					AP3426_VDD_MAX_UV);
-			if (ret) 
+			if (ret)
 			{
 				dev_err(&data->client->dev,
 					"Regulator set failed vdd ret=%d\n",
@@ -1317,7 +1690,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 		}
 
 		data->vio = regulator_get(&data->client->dev, "vio");
-		if (IS_ERR(data->vio)) 
+		if (IS_ERR(data->vio))
 		{
 			ret = PTR_ERR(data->vio);
 			dev_err(&data->client->dev,
@@ -1330,7 +1703,7 @@ static int ap3426_power_init(struct ap3426_data*data, bool on)
 			ret = regulator_set_voltage(data->vio,
 					AP3426_VIO_MIN_UV,
 					AP3426_VIO_MAX_UV);
-			if (ret) 
+			if (ret)
 			{
 				dev_err(&data->client->dev,
 				"Regulator set failed vio ret=%d\n", ret);
@@ -1356,354 +1729,617 @@ done:
 }
 
 
-static DEVICE_ATTR(range, S_IWUSR | S_IRUGO,
-	ap3426_show_range, ap3426_store_range);
-
-
-/* mode */
+/*
+ * TESTED:
+ *	cat /sys/class/sensors/proximity/device/sensors/light/device/mode
+ * and
+ *	cat /sys/class/sensors/proximity/device/sensors/proximity/device/mode
+ */
 static ssize_t ap3426_show_mode(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_mode(data->client));
+	ssize_t rv;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+
+	ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_mode(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return(rv);
 }
 
+/*
+ * TESTED:
+ *	echo 1 > /sys/class/sensors/proximity/device/sensors/light/device/mode			[Disables Polling]
+ *	echo 2 > /sys/class/sensors/proximity/device/sensors/light/device/mode			[Enables  Polling]
+ * and
+ *	echo 1 > /cat /sys/class/sensors/proximity/device/sensors/proximity/device/mode		[Disables Polling]
+ *	echo 2 > /cat /sys/class/sensors/proximity/device/sensors/proximity/device/mode		[Enables  Polling]
+ */
 static ssize_t ap3426_store_mode(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val = 0L;
+	ssize_t rv = count;
+	int ret;
 
-    if ((strict_strtoul(buf, 10, &val) < 0) || (val > 7))
-	return -EINVAL;
+	ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
 
-    ret = ap3426_set_mode(data->client, val);
+	ap3426_lock_mutex(data);
 
-    if (ret < 0)
-	return ret;
-    ALS_DBG("Starting timer to fire in 200ms (%ld)\n", jiffies );
-    ret = mod_timer(&data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
+	if ((strict_strtoul(buf, 10, &val) < 0) || (val > 7)) {
+		ERR("rv = -EINVAL:%d; val:%ld", EINVAL, val);
+		rv = -EINVAL;
+		goto done;
+	}
+	ret = ap3426_set_mode(data->client, val);
 
-    if(ret) {
-	ALS_DBG("ret = %d = mod_timer(...); [Timer Error?] \n", ret);
-    }
-    return count;
+	if (ret < 0) {
+		rv = ret;
+		goto done;
+	}
+
+	DBG("Starting timer to fire in PL_TIMER_DELAY:%d ms (jiffies:%ld)\n", PL_TIMER_DELAY, jiffies );
+	ret = mod_timer(&data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
+
+	if (ret) {
+		ALS_DBG("ret = %d = mod_timer(...); [Timer Error?] \n", ret);
+		/* Suspect we should set rv = ret here */
+	}
+
+done:
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return rv;
 }
 
-static DEVICE_ATTR(mode, S_IRUGO | S_IWUGO,
-	ap3426_show_mode, ap3426_store_mode);
+static DEVICE_ATTR(mode, S_IRUGO | S_IWUGO, ap3426_show_mode, ap3426_store_mode);
 
 
-/* lux */
+/*
+* TESTED:
+ *	cat /sys/class/sensors/proximity/device/sensors/proximity/device/lux
+ */
 static ssize_t ap3426_show_lux(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
 
-    /* No LUX data if power down */
-    if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN)
-	return sprintf((char*) buf, "%s\n", "Please power up first!");
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
 
-    return sprintf(buf, "%d\n", ap3426_get_adc_value(data->client));
+	ap3426_lock_mutex(data);
+
+	/* No LUX data if power down */
+	if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN) {
+		PS_DBG("ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN");
+		rv = sprintf((char*) buf, "%s: Please power up Promimity Sensor first!", __func__);
+	} else {
+		rv = sprintf(buf, "%d\n", ap3426_get_adc_value(data->client));
+	}
+	ap3426_unlock_mutex(data);
+
+	PS_RETURN("rv:%zd", rv);
+	return(rv);
 }
 
 static DEVICE_ATTR(lux, S_IRUGO, ap3426_show_lux, NULL);
 
 
-/* Px data */
+/*
+ * TESTED: cat /sys/class/sensors/proximity/device/sensors/proximity/device/pxvalue
+ */
 static ssize_t ap3426_show_pxvalue(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
 
-    /* No Px data if power down */
-    if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN)
-	return -EBUSY;
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
 
-    return sprintf(buf, "%d\n", ap3426_get_px_value(data->client));
+	ap3426_lock_mutex(data);
+
+	/* No Px data if PS is powered down */
+	if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN) {
+		rv = -EBUSY;
+		goto done;
+	}
+	rv = sprintf(buf, "%d\n", ap3426_get_px_value(data->client));
+
+done:
+        ap3426_unlock_mutex(data);
+
+        PS_RETURN("rv:%zd", rv);
+        return(rv);
 }
 
 static DEVICE_ATTR(pxvalue, S_IRUGO, ap3426_show_pxvalue, NULL);
 
 
-/* proximity object detect */
+/*
+ * proximity object detect:
+ * TESTED:
+ *	cat /sys/class/sensors/proximity/device/sensors/proximity/device/object
+ */
+
 static ssize_t ap3426_show_object(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_object(data->client));
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_object(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	PS_RETURN("rv:%zd", rv);
+	return(rv);
 }
 
 static DEVICE_ATTR(object, S_IRUGO, ap3426_show_object, NULL);
 
 
-/* ALS low threshold */
+/*
+ * ALS low threshold:
+ *
+ * TESTED:
+ *	cat /sys/class/sensors/proximity/device/sensors/proximity/device/althres
+ *      65535
+ */
 static ssize_t ap3426_show_althres(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_althres(data->client));
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+        PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+        ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_althres(data->client));
+
+	ap3426_unlock_mutex(data);
+
+        PS_RETURN("rv:%zd", rv);
+        return(rv);
 }
 
+
+/*
+ * TESTED:
+ * 	echo 65535 > /sys/class/sensors/proximity/device/sensors/proximity/device/althres
+ */
 static ssize_t ap3426_store_althres(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val;
+	ssize_t rv = count;		/* Default Return Value */
+	int ret;
 
-    if (strict_strtoul(buf, 10, &val) < 0)
-	return -EINVAL;
+	PS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", \
+		  dev,    attr,    buf,    count);
 
-    ret = ap3426_set_althres(data->client, val);
-    if (ret < 0)
-	return ret;
+	ap3426_lock_mutex(data);
 
-    return count;
+	if (strict_strtoul(buf, 10, &val) < 0) {
+		char *buffer = (char *) buf;
+
+		buffer[count] = '\0';
+		PS_ERR("buf:%s Isn't a Number!; rv = -EINVAL:%d;\n", \
+                        buf,                          EINVAL);
+
+		rv = -EINVAL;
+		goto done;
+	}
+	ret = ap3426_set_althres(data->client, val);
+
+	if (ret < 0) {
+		rv = ret;
+	}
+done:
+	ap3426_unlock_mutex(data);
+	PS_RETURN("rv:%zd", rv);
+	return rv;
 }
 
 static DEVICE_ATTR(althres, S_IWUSR | S_IRUGO,
 	ap3426_show_althres, ap3426_store_althres);
 
 
-/* ALS high threshold */
+/*
+ * Show ALS high threshold:
+ *
+ * TESTED:
+ *      cat /sys/class/sensors/proximity/device/sensors/light/device/ahthres
+ */
 static ssize_t ap3426_show_ahthres(struct device *dev,
-	struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_ahthres(data->client));
+	ssize_t rv;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", \
+                  dev,    attr,    buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_ahthres(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	PS_RETURN("rv:%zd", rv);
+	return(rv);
 }
 
+/*
+ * Store ALS high threshold:
+ *
+ * TESTED:
+ *      echo 65535 > /sys/class/sensors/proximity/device/sensors/light/device/ahthres
+ */
 static ssize_t ap3426_store_ahthres(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val;
+	ssize_t rv = count;	/* Default return value */
+	int ret;
 
-    if (strict_strtoul(buf, 10, &val) < 0)
-	return -EINVAL;
+	PS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", \
+		  dev,    attr,    buf,    count);
 
-    ret = ap3426_set_ahthres(data->client, val);
-    if (ret < 0)
-	return ret;
+	ap3426_lock_mutex(data);
 
-    return count;
+	if (strict_strtoul(buf, 10, &val) < 0) {
+		rv = -EINVAL;
+		goto done;
+	}
+	ret = ap3426_set_ahthres(data->client, val);
+
+	if (ret < 0) {
+		rv = ret;
+		goto done;
+	}
+done:
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return rv;;
 }
 
 static DEVICE_ATTR(ahthres, S_IWUSR | S_IRUGO,
 	ap3426_show_ahthres, ap3426_store_ahthres);
 
-/* Px low threshold */
+/*
+ * Show PS low threshold:
+ *
+ * TESTED:
+ *      cat /sys/class/sensors/proximity/device/sensors/proximity/device/plthres
+ */
 static ssize_t ap3426_show_plthres(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_plthres(data->client));
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+	PS_ENTRY("dev:%p, attr:%p, buf:%p", \
+                  dev,    attr,    buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_plthres(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return rv;
 }
 
+/*
+ * Store PS low threshold:
+ *
+ * TESTED:
+ *      echo 100 > /sys/class/sensors/proximity/device/sensors/proximity/device/plthres
+ */
 static ssize_t ap3426_store_plthres(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val;
+	ssize_t rv = count;
+	int ret;
 
-    if (strict_strtoul(buf, 10, &val) < 0)
-	return -EINVAL;
+	ap3426_lock_mutex(data);
 
-    ret = ap3426_set_plthres(data->client, val);
-    if (ret < 0)
-	return ret;
+	if (strict_strtoul(buf, 10, &val) < 0) {
+		rv = -EINVAL;
+		goto done;
+	}
 
-    return count;
+	ret = ap3426_set_plthres(data->client, val);
+	if (ret < 0)
+		rv = ret;
+done:
+	ap3426_unlock_mutex(data);
+	return rv;
 }
 
 static DEVICE_ATTR(plthres, S_IWUSR | S_IRUGO,
 	ap3426_show_plthres, ap3426_store_plthres);
 
-/* Px high threshold */
+/*
+ * Show PS high threshold:
+ *
+ * TESTED:
+ *       cat  /sys/class/sensors/proximity/device/sensors/proximity/device/plthres
+ */
 static ssize_t ap3426_show_phthres(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    return sprintf(buf, "%d\n", ap3426_get_phthres(data->client));
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+        PS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", ap3426_get_phthres(data->client));
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return rv;
 }
 
+/*
+ * Store PS high threshold:
+ *
+ * TESTED:
+ *      echo 100 > /sys/class/sensors/proximity/device/sensors/proximity/device/plthres
+ */
 static ssize_t ap3426_store_phthres(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    unsigned long val;
-    int ret;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	unsigned long val;
+	ssize_t rv = count;	/* Default */
+	int ret;
 
-    if (strict_strtoul(buf, 10, &val) < 0)
-	return -EINVAL;
+        PS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", \
+                  dev,    attr,    buf,    count);
 
-    ret = ap3426_set_phthres(data->client, val);
-    if (ret < 0)
-	return ret;
+	ap3426_lock_mutex(data);
 
-    return count;
+	if (strict_strtoul(buf, 10, &val) < 0) {
+		rv = -EINVAL;
+		goto done;
+	}
+
+	ret = ap3426_set_phthres(data->client, val);
+
+	if (ret < 0)
+		rv = ret;
+done:
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return rv;
 }
 
 static DEVICE_ATTR(phthres, S_IWUSR | S_IRUGO,
 	ap3426_show_phthres, ap3426_store_phthres);
 
-
-/* calibration */
+/*
+ * Show ALS Calibration:
+ *
+ * TESTED:
+ *       cat  /sys/class/sensors/proximity/device/sensors/light/device/calibration
+ *	 320
+ */
 static ssize_t ap3426_show_calibration_state(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-    return sprintf(buf, "%d\n", cali);
+        struct input_dev *input = to_input_dev(dev);
+        struct ap3426_data *data = input_get_drvdata(input);
+	ssize_t rv;
+
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
+
+	ap3426_lock_mutex(data);
+
+	rv = sprintf(buf, "%d\n", als_calibration);
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return(rv);
 }
 
+/*
+ * Store ALS Calibration:		[Need to Power Up]
+ *
+ * TESTED:
+ *       echo 320 >  /sys/class/sensors/proximity/device/sensors/light/device/calibration
+ */
 static ssize_t ap3426_store_calibration_state(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
 {
-    struct input_dev *input = to_input_dev(dev);
-    struct ap3426_data *data = input_get_drvdata(input);
-    int stdls, lux; 
-    char tmp[10];
-    ssize_t rv = 0;
+	struct input_dev *input = to_input_dev(dev);
+	struct ap3426_data *data = input_get_drvdata(input);
+	int stdls, lux;
+	char tmp[10];
+	ssize_t rv = 0;
 
-    ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
 
-    /* No LUX data if not operational */
-    if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN)
-    {
-	printk("%s: Please power up first!\n", __func__);
-	rv = -EINVAL;
-	goto done;
-    }
+	ap3426_lock_mutex(data);
 
-    cali = 100;
-    sscanf(buf, "%d %s", &stdls, tmp);
+	/* No LUX data if not operational */
+	if (ap3426_get_mode(data->client) == AP3426_SYS_DEV_DOWN) {
+		printk("%s: Please power up first!\n", __func__);
+		rv = -EINVAL;
+		goto done;
+	}
 
-    if (!strncmp(tmp, "-setcv", 6))
-    {
-	cali = stdls;
-	rv = -EBUSY;
-	goto done;
-    }
+	als_calibration = 100;
+	sscanf(buf, "%d %s", &stdls, tmp);
 
-    if (stdls < 0)
-    {
-	printk("Std light source: [%d] < 0 !!!\nCheck again, please.\n\
-		Set calibration factor to 100.\n", stdls);
+	if (!strncmp(tmp, "-setcv", 6)) {
+		als_calibration = stdls;
+		rv = -EBUSY;
+		goto done;
+	}
 
-	rv = -EBUSY;
-	goto done;
-    }
+	if (stdls < 0) {
+		printk("Std light source: [%d] < 0 !!!\nCheck again, please.\n\
+			Set calibration factor to 100.\n", stdls);
 
-    lux = ap3426_get_adc_value(data->client);
-    cali = stdls * 100 / lux;
+		rv = -EBUSY;
+		goto done;
+	}
 
-    rv = -EBUSY;		/* WHY? */
+	lux = ap3426_get_adc_value(data->client);
+	als_calibration = stdls * 100 / lux;
+
+	rv = -EBUSY;		/* WHY? */
 
 done:
-    RETURN("rv:%zd", rv);
-    return(rv);
+	ap3426_unlock_mutex(data);
+
+	RETURN("rv:%zd", rv);
+	return(rv);
 }
 
 static DEVICE_ATTR(calibration, S_IWUSR | S_IRUGO,
 	ap3426_show_calibration_state, ap3426_store_calibration_state);
 
+
 #ifdef ALS_DEBUG
-/* engineer mode */
+/* engineer mode: 'em'
+ *
+ * Prints Register Cache.
+ *
+ * 	cat /sys/class/sensors/proximity/device/sensors/light/device/em
+ */
 static ssize_t ap3426_em_read(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-    struct i2c_client *client = to_i2c_client(dev);
-    struct ap3426_data *data = i2c_get_clientdata(client);
-    int i;
-    u8 tmp;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ap3426_data *data = i2c_get_clientdata(client);
+	int i;
+	u8 tmp;
 
-    ALS_DBG("DEBUG ap3426_em_read..\n");
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p", dev, attr, buf);
 
-    for (i = 0; i < AP3426_NUM_CACHABLE_REGS; i++)
-    {
-	tmp = i2c_smbus_read_byte_data(data->client, reg_array[i]);
+	ap3426_lock_mutex(data);
 
-	printk("Reg[0x%x] Val[0x%x]\n", reg_array[i], tmp);
-    }
+	for (i = 0; i < AP3426_NUM_CACHABLE_REGS; i++) {
+		tmp = i2c_smbus_read_byte_data(data->client, reg_array[i]);
 
-    return 0;
+		printk("    Reg[0x%x] Val[0x%x]\n", reg_array[i], tmp);
+	}
+	ap3426_unlock_mutex(data);
+
+	RETURN("%d", 0);
+	return 0;
 }
 
+/*
+ * Engineering Mode (EM) test to write to register.
+ *
+ * TESTED: echo 1 2 > /sys/class/sensors/proximity/device/sensors/light/device/em
+ *
+ * Output:  Write [2] to Reg[1]..
+ */
 static ssize_t ap3426_em_write(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
 {
-    struct i2c_client *client = to_i2c_client(dev);
-    struct ap3426_data *data = i2c_get_clientdata(client);
-    u32 addr,val;
-    int ret = 0;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ap3426_data *data = i2c_get_clientdata(client);
+	u32 addr,val;
+	int ret = 0;
 
-    ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
+	ALS_ENTRY("dev:%p, attr:%p, buf:%p, count:%zd", dev, attr, buf, count);
 
-    sscanf(buf, "%x%x", &addr, &val);
+	ap3426_lock_mutex(data);
 
-    printk("Write [%x] to Reg[%x]...\n",val,addr);
+	sscanf(buf, "%x%x", &addr, &val);
 
-    ret = i2c_smbus_write_byte_data(data->client, addr, val);
-    if (!ret)
-	    data->reg_cache[ap3426_reg_to_idx_array[addr]] = val;
+	printk("    Write [%x] to Reg[%x]...\n", val, addr);
 
-    RETURN("count:%zd", count);
-    return count;
+	ret = i2c_smbus_write_byte_data(data->client, addr, val);
+	if (!ret)
+		data->reg_cache[ap3426_reg_to_idx_array[addr]] = val;
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("count:%zd", count);
+
+	return count;
 }
 static DEVICE_ATTR(em, S_IWUSR |S_IRUGO,
 	ap3426_em_read, ap3426_em_write);
 #endif
 
 static struct attribute *ap3426_attributes[] = {
-    &dev_attr_range.attr,
-    &dev_attr_mode.attr,
-    &dev_attr_lux.attr,
-    &dev_attr_object.attr,
-    &dev_attr_pxvalue.attr,
-    &dev_attr_althres.attr,
-    &dev_attr_ahthres.attr,
-    &dev_attr_plthres.attr,
-    &dev_attr_phthres.attr,
-    &dev_attr_calibration.attr,
+	&dev_attr_range.attr,
+	&dev_attr_mode.attr,
+	&dev_attr_lux.attr,
+	&dev_attr_object.attr,
+	&dev_attr_pxvalue.attr,
+	&dev_attr_althres.attr,
+	&dev_attr_ahthres.attr,
+	&dev_attr_plthres.attr,
+	&dev_attr_phthres.attr,
+	&dev_attr_calibration.attr,
 #ifdef ALS_DEBUG
-    &dev_attr_em.attr,
+	&dev_attr_em.attr,
 #endif
-    NULL
+	NULL
 };
 
 static const struct attribute_group ap3426_attr_group = {
-    .attrs = ap3426_attributes,
+	.attrs = ap3426_attributes,
 };
 
 static int32_t di_ap3426_set_ps_thd_l(struct ap3426_data *ps_data, uint16_t thd_l)
 {
-    return i2c_smbus_write_word_data(ps_data->client, 0x2A, thd_l);
+	return i2c_smbus_write_word_data(ps_data->client, 0x2A, thd_l);
 }
 
 static int32_t di_ap3426_set_ps_thd_h(struct ap3426_data *ps_data, uint16_t thd_h)
 {
-    return i2c_smbus_write_word_data(ps_data->client, 0x2C, thd_h);
+	return i2c_smbus_write_word_data(ps_data->client, 0x2C, thd_h);
 }
 
 
@@ -1714,6 +2350,8 @@ static int ap3426_init_client(struct i2c_client *client)
     int i;
 
     ENTRY("client:%p", client);
+
+    ap3426_verify_client_mutex_locked(client);
 
 		/*lsensor high low thread*/
     i2c_smbus_write_byte_data(client, 0x1A, 0);
@@ -1729,9 +2367,10 @@ static int ap3426_init_client(struct i2c_client *client)
      * if one of the reads fails, we consider the init failed */
     for (i = 0; i < AP3426_NUM_CACHABLE_REGS; i++) {
 	int v = i2c_smbus_read_byte_data(client, reg_array[i]);
+
 	if (v < 0) {
-	    rv = -ENODEV;
-	    goto done;
+		rv = -ENODEV;
+		goto done;
 	}
 	data->reg_cache[i] = v;
     }
@@ -1751,9 +2390,12 @@ done:
     return rv;;
 }
 
+/*
+ * Seems to be a stub function that wasn't implemented.
+ */
 static int ap3426_check_id(struct ap3426_data *data)
 {
-		return 0;
+	return 0;
 }
 
 void pl_timer_callback(unsigned long pl_data)
@@ -1785,34 +2427,63 @@ void pl_timer_callback(unsigned long pl_data)
 static void psensor_work_handler(struct work_struct *w)
 {
 
-    struct ap3426_data *data =
+	struct ap3426_data *data =
 	container_of(w, struct ap3426_data, psensor_work);
-    int distance,pxvalue;
+	int distance,pxvalue;
 
-    distance = ap3426_get_object(data->client);
-    pxvalue = ap3426_get_px_value(data->client); //test
-	
-    input_report_abs(data->psensor_input_dev, ABS_DISTANCE, distance);
-    input_sync(data->psensor_input_dev);
-    ALS_DBG("distance:%d, value:%d\n", distance, pxvalue);
+	ALS_ENTRY("w:%p", w);
+
+	ap3426_lock_mutex(data);
+
+	distance = ap3426_get_object(data->client);
+	pxvalue = ap3426_get_px_value(data->client); //test
+
+	input_report_abs(data->psensor_input_dev, ABS_DISTANCE, distance);
+	input_sync(data->psensor_input_dev);
+
+	ALS_DBG("Reported ABS_DISTANCE:%d to input device, value:%d\n", distance, pxvalue);
+
+	ap3426_unlock_mutex(data);
+
+	ALS_RETURN_VOID();
 }
 
+/*
+ * Passes Lux values to input driver.
+ * The input driver filters out non-changing values
+ * and provides the events via /dev/input/event[N].
+ * They can be viewed via getevent:
+ *	getevent /dev/input/event1	[Lettuce]
+ *      getevent /dev/input/event3	[Dandang]
+ *
+ * These events are read by Frameworks:
+ *	frameworks/base/services/core/java/com/android/server/display/
+ *		AutomaticBrightnessController.java
+ * and
+ *		DisplayPowerControlle.java
+ */
 static void lsensor_work_handler(struct work_struct *w)
 {
 
-    struct ap3426_data *data =
+	struct ap3426_data *data =
 	container_of(w, struct ap3426_data, lsensor_work);
-    int value;
+	int value;
 
-    ALS_ENTRY("w:%p", w);
+	ALS_ENTRY("w:%p", w);
 
-    value = ap3426_get_adc_value(data->client);
-    value = value * cali / 100;
-    input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
-    input_sync(data->lsensor_input_dev);
+	ap3426_lock_mutex(data);
 
-    ALS_RETURN_VOID();
-    return;
+	value = ap3426_get_adc_value(data->client);
+	value = value * als_calibration/ 100;
+	input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
+	input_sync(data->lsensor_input_dev);
+
+	ALS_DBG("Reported ABS_MISC:%d to input device.\n", value);
+
+	ap3426_unlock_mutex(data);
+
+	ALS_RETURN_VOID();
+	return;
 }
 
 /*
@@ -1824,6 +2495,7 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
 {
 
 	struct ap3426_data *data = (struct ap3426_data *) client_data;
+	int isr_threads_posted_value;
 	int got_ps_value = 0;
 	u8 int_stat;
 	int ps_value;
@@ -1832,8 +2504,9 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
 
 	PS_ENTRY("irg:%d, client_data:%p", irq, client_data);
 
-	int_stat = ap3426_get_intstat(data->client);
+	ap3426_lock_mutex(data);
 
+	int_stat = ap3426_get_intstat(data->client);
 	if (int_stat & AP3426_REG_SYS_INT_PMASK) {
 		/* We have a PS Interrupt */
 		if (misc_ps_opened) {
@@ -1867,17 +2540,31 @@ static irqreturn_t ap3426_threaded_isr(int irq, void *client_data)
 			als_value = ap3426_get_adc_value(data->client);
 		}
 	}
-	PS_DBG("ps_value:%d, als_value:%d, distance:%d;\n",
+	PS_DBG("ps_value:%d, als_value:%d, distance:%d;\n", \
 		ps_value,    als_value,    distance);
+
+	atomic_dec_if_positive(&isr_threads_posted);
+
+	isr_threads_posted_value = atomic_read(&isr_threads_posted);
+	if (isr_threads_posted_value > 2) {
+		printk(KERN_ERR "%s: isr_threads_posted_value:%d;\n",  __func__,
+				     isr_threads_posted_value);
+	} else {
+		DBG("isr_threads_posted_value:%d;\n", isr_threads_posted_value);
+	}
+
+	ap3426_unlock_mutex(data);
 
 	PS_RETURN("IRQ_HANDLED:%d", IRQ_HANDLED);
 	return IRQ_HANDLED;
 }
 
 
-static irqreturn_t ap3426_irq(int irq, void *data_)
+static irqreturn_t ap3426_irq(int irq, void *data)
 {
-    return IRQ_WAKE_THREAD;
+	atomic_inc(&isr_threads_posted);
+
+	return IRQ_WAKE_THREAD;;
 }
 
 #ifdef CONFIG_OF	/* Open Firmware */
@@ -1966,7 +2653,8 @@ static int ap3426_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
-	struct ap3426_data *data;
+	struct ap3426_data *data = NULL;
+	int mutex_locked = 0;
 	int err = 0;
 
 	ENTRY("client:%p, id:%p)", client, id);
@@ -2003,6 +2691,12 @@ static int ap3426_probe(struct i2c_client *client,
 #endif
 
 	data->client = client;
+	DBG("data:%p->client = client:%p;\n", data, client);
+
+	mutex_init(&data->lock);
+	ap3426_lock_mutex(data);
+	mutex_locked = 1;
+
 	i2c_set_clientdata(client, data);
 
 	err = ap3426_power_init(data, true);
@@ -2106,6 +2800,12 @@ static int ap3426_probe(struct i2c_client *client,
 
 	wake_lock_init(&data->ps_wakelock, WAKE_LOCK_SUSPEND, "ps_wakelock");
 
+	/*
+	 * Register methods that can be invoked via:
+	 *	/sys/class/sensors/proximity/device/sensors/light/
+	 *		enable
+	 *		poll_delay
+	 */
 	data->als_cdev = sensors_light_cdev;
 	data->als_cdev.sensors_enable = ap3426_als_enable_set;
 	data->als_cdev.sensors_poll_delay = ap3426_als_poll_delay_set;
@@ -2113,10 +2813,18 @@ static int ap3426_probe(struct i2c_client *client,
 	if (err)
 		goto err_sensors_classdev_register;
 
+	/*
+	 * Register methods that can be invoked via:
+	 *	/sys/class/sensors/proximity/device/sensors/proximity/
+	 *		enable
+	 * NOTE:
+	 *     	Since we are using interrupts the poll_delay isn't
+	 *	normally supported.
+	 */
 	data->ps_cdev = sensors_proximity_cdev;
 	data->ps_cdev.sensors_enable = ap3426_ps_enable_set;
 	err = sensors_classdev_register(&client->dev, &data->ps_cdev);
-	if(err)
+	if (err)
 		goto err_sensors_classdev_register_ps;
 
 	private_pl_data = data;
@@ -2184,53 +2892,70 @@ err_power_on:
 exit_parse_dt_fail:
 	ALS_DBG("dts initialize failed.");
 #endif
-	kfree(data);
-
+	if (data) {
+		if (mutex_locked) {
+			ap3426_unlock_mutex(data);
+			 mutex_locked = 0;
+		}
+		kfree(data);
+		data = NULL;
+	}
 exit_free_gpio:
 
 done:
-    RETURN("err:%d", err);
+	if (data) {
+		if (mutex_locked) {
+			ap3426_unlock_mutex(data);
+		}
+	}
+	RETURN("err:%d", err);
 	return err;
 }
 
 static int ap3426_remove(struct i2c_client *client)
 {
-    struct ap3426_data *data = i2c_get_clientdata(client);
+	struct ap3426_data *data = i2c_get_clientdata(client);
 
-    ENTRY("client:%p", client);
+	ENTRY("client:%p", client);
 
-    free_irq(gpio_to_irq(data->int_pin), data);
+	ap3426_lock_mutex(data);
 
-    ap3426_power_ctl(data, false);
+	free_irq(gpio_to_irq(data->int_pin), data);
 
-    sysfs_remove_group(&data->client->dev.kobj, &ap3426_attr_group);
-//kevindang20140924
-    sysfs_remove_group(&data->psensor_input_dev->dev.kobj, &ap3426_ps_attribute_group);// every devices register his own devices
-    sysfs_remove_group(&data->lsensor_input_dev->dev.kobj, &ap3426_ls_attribute_group);// every devices register his own devices
-//end
-    ap3426_unregister_psensor_device(client,data);
-    ap3426_unregister_lsensor_device(client,data);
+	ap3426_power_ctl(data, false);
+
+	sysfs_remove_group(&data->client->dev.kobj, &ap3426_attr_group);
+//kevindang20140924...
+	sysfs_remove_group(&data->psensor_input_dev->dev.kobj, &ap3426_ps_attribute_group);// every devices register his own devices
+	sysfs_remove_group(&data->lsensor_input_dev->dev.kobj, &ap3426_ls_attribute_group);// every devices register his own devices
+//...end
+
+	ap3426_unregister_psensor_device(client,data);
+	ap3426_unregister_lsensor_device(client,data);
 #ifdef CONFIG_AP3426_HEARTBEAT_SENSOR
-    ap3426_unregister_heartbeat_device(client,data);
+	ap3426_unregister_heartbeat_device(client,data);
 #endif
-    ap3426_power_init(data, false);
+	ap3426_power_init(data, false);
 
+	ap3426_set_mode(client, 0);
+	kfree(i2c_get_clientdata(client));
 
-    ap3426_set_mode(client, 0);
-    kfree(i2c_get_clientdata(client));
+	if (data->psensor_wq)
+		destroy_workqueue(data->psensor_wq);
 
-    if (data->psensor_wq)
-	destroy_workqueue(data->psensor_wq);
-    if (data->lsensor_wq)
-	destroy_workqueue(data->lsensor_wq);
-    if(&data->pl_timer)
-	del_timer(&data->pl_timer);
+	if (data->lsensor_wq)
+		destroy_workqueue(data->lsensor_wq);
 
-    DBG("wake_lock_destroy(&data->ps_wakelock);\n");
-    wake_lock_destroy(&data->ps_wakelock);
+	if(&data->pl_timer)
+		del_timer(&data->pl_timer);
 
-    RETURN("%d", 0);
-    return 0;
+	DBG("wake_lock_destroy(&data->ps_wakelock);\n");
+	wake_lock_destroy(&data->ps_wakelock);
+
+	ap3426_unlock_mutex(data);
+
+	RETURN("%d", 0);
+	return 0;
 }
 
 static const struct i2c_device_id ap3426_id[] =
@@ -2257,6 +2982,8 @@ static int ap3426_suspend(struct device *dev)
 
 	ENTRY("dev:%p)", dev);
 
+	ap3426_lock_mutex(ps_data);
+
 	if (misc_als_opened == 1) {
 		ap3426_als_enable(ps_data, false);
 		ps_data->als_re_enable = 1;
@@ -2273,6 +3000,7 @@ static int ap3426_suspend(struct device *dev)
 
 	ap3426_power_ctl(ps_data,false);
 	ps_data->suspended = 1;
+	ap3426_unlock_mutex(ps_data);
 
 	RETURN("%d", 0);
 	return 0;
@@ -2283,7 +3011,9 @@ static int ap3426_resume(struct device *dev)
 	struct ap3426_data *ps_data = dev_get_drvdata(dev);
 
 	ENTRY("dev:%p)", dev);
-	DBG("ps_data:%p->rals_re_enable:%d\n", ps_data, ps_data->als_re_enable);
+
+	ap3426_lock_mutex(ps_data);
+
 
 	// power_int() currently disabled it because
 	// it may prevent system from wakeing up.
@@ -2303,6 +3033,9 @@ static int ap3426_resume(struct device *dev)
                 ps_data->als_re_enable = 0;
         }
 	ps_data->suspended = 0;
+
+	ap3426_unlock_mutex(ps_data);
+
 
 	RETURN("%d", 0);
 	return 0;
@@ -2327,7 +3060,7 @@ static int __init ap3426_init(void)
     int ret;
 
     ret = i2c_add_driver(&ap3426_driver);
-    return ret;	
+    return ret;
 
 }
 

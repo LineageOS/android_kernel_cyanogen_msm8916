@@ -231,8 +231,10 @@ struct ap3426_data {
 	bool			power_enabled;
 	bool			als_enabled;
 	bool 			als_re_enable;
+	int			als_poll_delay;
 	bool			ps_enabled;
 	bool			ps_re_enable;
+	bool			ps_poll_delay;
 	bool 			suspended;
 	struct wake_lock	ps_wakelock;
 	uint16_t		ps_thd_l;
@@ -243,4 +245,3 @@ struct ap3426_data {
 };
 
 #endif
-
