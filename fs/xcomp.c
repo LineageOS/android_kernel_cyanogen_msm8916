@@ -78,18 +78,47 @@ static int xcomp_inode_read(struct inode *inode, struct xcomp_inode_info *info,
 		pgoff = off - (index << PAGE_SHIFT);
 		pgrem = min_t(size_t, len, PAGE_SIZE - pgoff);
 
-		page = grab_cache_page(&info->i_mapping, index);
+find_page:
+		page = find_get_page(&info->i_mapping, index);
 		if (!page) {
-			printk(KERN_INFO "%s: out of memory\n", __func__);
-			ret = -ENOMEM;
-			goto out;
+			page = page_cache_alloc_cold(&info->i_mapping);
+			if (!page) {
+				ret = -ENOMEM;
+				goto out;
+			}
+			ret = add_to_page_cache_lru(page, &info->i_mapping, index, GFP_KERNEL);
+			if (ret) {
+				page_cache_release(page);
+				if (ret == -EEXIST)
+					goto find_page;
+				goto out;
+			}
 		}
+		ClearPageError(page);
 		ret = info->i_lower_readpage(page);
 		if (ret) {
-			unlock_page(page);
+			page_cache_release(page);
 			goto out;
 		}
-		wait_on_page_locked(page);
+		if (!PageUptodate(page)) {
+			ret = lock_page_killable(page);
+			if (ret) {
+				page_cache_release(page);
+				goto out;
+			}
+			if (!PageUptodate(page)) {
+				if (page->mapping == NULL) {
+					unlock_page(page);
+					page_cache_release(page);
+					goto find_page;
+				}
+				unlock_page(page);
+				page_cache_release(page);
+				ret = -EIO;
+				goto out;
+			}
+		}
+
 		pageaddr = kmap_atomic(page);
 		memcpy(buf, pageaddr + pgoff, pgrem);
 		kunmap_atomic(pageaddr);
@@ -226,11 +255,13 @@ static void map_pages(struct address_space *mapping, loff_t off,
 		page = find_get_page(mapping, pidx);
 		if (!page)
 			page = grab_cache_page(mapping, pidx);
-		if (!page)
+		if (!page) {
 			goto no_page;
+		}
 
-		if (PageUptodate(page))
+		if (PageUptodate(page)) {
 			goto skip_page;
+		}
 
 		pageaddr = kmap_atomic(page);
 		if (obuf) {
@@ -379,19 +410,34 @@ static void cluster_wait(struct work_struct *work)
 		size_t pidx = off >> PAGE_SHIFT;
 		loff_t poff = off - (pidx << PAGE_SHIFT);
 		size_t prem = min_t(size_t, len, PAGE_SIZE - poff);
+		int err;
 		page = find_get_page(&info->i_mapping, pidx);
-		BUG_ON(!page);
-		wait_on_page_locked(page);
-		if (PageError(page)) {
-			/* Keep reading, failure will be noticed below */
-			vfree(ibuf);
-			ibuf = NULL;
+		if (!page) {
+			goto out_err;
 		}
-		if (ibuf) {
-			pageaddr = kmap_atomic(page);
-			memcpy(ibuf + boff, pageaddr + poff, prem);
-			kunmap_atomic(pageaddr);
+		if (!PageUptodate(page)) {
+			err = lock_page_killable(page);
+			if (err) {
+				page_cache_release(page);
+				goto out_err;
+			}
+			if (!PageUptodate(page)) {
+				if (page->mapping == NULL) {
+					unlock_page(page);
+					page_cache_release(page);
+					goto out_err;
+				}
+				unlock_page(page);
+				page_cache_release(page);
+				err = -EIO;
+				goto out_err;
+			}
 		}
+		/* XXX: For PageError, is the page uptodate or not? */
+		pageaddr = kmap_atomic(page);
+		memcpy(ibuf + boff, pageaddr + poff, prem);
+		kunmap_atomic(pageaddr);
+		unlock_page(page);
 		page_cache_release(page);
 
 		boff += prem;
@@ -447,18 +493,30 @@ static int cluster_read(struct inode *inode, struct xcomp_inode_info *info, size
 		size_t page_off = off - (index << PAGE_SHIFT);
 		size_t page_rem = min_t(size_t, len, PAGE_SIZE - page_off);
 		struct page *page;
-		page = grab_cache_page(&info->i_mapping, index);
+
+find_page:
+		page = find_get_page(&info->i_mapping, index);
 		if (!page) {
-			printk(KERN_INFO "%s: out of memory\n", __func__);
-			ret = -ENOMEM;
-			goto out;
+			page = page_cache_alloc_cold(&info->i_mapping);
+			if (!page) {
+				ret = -ENOMEM;
+				goto out;
+			}
+			ret = add_to_page_cache_lru(page, &info->i_mapping, index, GFP_KERNEL);
+			if (ret) {
+				page_cache_release(page);
+				if (ret == -EEXIST)
+					goto find_page;
+				goto out;
+			}
 		}
 		ClearPageError(page);
 		ret = info->i_lower_readpage(page);
 		if (ret) {
-			printk(KERN_INFO "%s: lower_readpage failed\n", __func__);
+			page_cache_release(page);
 			goto out;
 		}
+
 		off += page_rem;
 		len -= page_rem;
 	}
@@ -487,6 +545,17 @@ int xcomp_readpage(struct xcomp_inode_info *info, struct page *page)
 	struct inode *inode = page->mapping->host;
 	size_t ppc;
 	size_t cidx;
+	void *pageaddr;
+
+	if (page->index * PAGE_SIZE >= inode->i_size) {
+		pageaddr = kmap_atomic(page);
+		memset(pageaddr, 0, PAGE_SIZE);
+		kunmap_atomic(pageaddr);
+		flush_dcache_page(page);
+		SetPageUptodate(page);
+		unlock_page(page);
+		return 0;
+	}
 
 	ppc = info->i_cluster_size / PAGE_SIZE;
 	cidx = page->index / ppc;
@@ -572,8 +641,16 @@ EXPORT_SYMBOL_GPL(xcomp_inode_info_init);
 
 int xcomp_inode_info_free(struct xcomp_inode_info *info)
 {
+	if (info->i_mapping.nrpages)
+		truncate_inode_pages(&info->i_mapping, 0);
+	might_sleep();
+	spin_lock_irq(&info->i_mapping.tree_lock);
+	BUG_ON(info->i_mapping.nrpages);
+	spin_unlock_irq(&info->i_mapping.tree_lock);
+	BUG_ON(!list_empty(&info->i_mapping.private_list));
+
 	vfree(info->i_clusters);
-	info->i_clusters = NULL;
+	memset(info, 0, sizeof(struct xcomp_inode_info));
 	return 0;
 }
 EXPORT_SYMBOL_GPL(xcomp_inode_info_free);
