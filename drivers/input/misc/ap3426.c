@@ -940,6 +940,9 @@ static int ap3426_als_enable(struct ap3426_data *ps_data, int enable)
 
 	msleep(50);
 	if (misc_als_opened) {
+		int als_value = ap3426_get_adc_value(ps_data->client);
+		input_report_abs(ps_data->lsensor_input_dev, ABS_MISC, als_value + 1);
+		input_sync(ps_data->lsensor_input_dev);
 		ALS_DBG("Enable Polling Timer\n");
 		ret = mod_timer(&ps_data->pl_timer, jiffies + msecs_to_jiffies(PL_TIMER_DELAY));
 	} else {
@@ -2474,7 +2477,7 @@ static void lsensor_work_handler(struct work_struct *w)
 	ap3426_lock_mutex(data);
 
 	value = ap3426_get_adc_value(data->client);
-	value = value * als_calibration/ 100;
+	value *= als_calibration / 100;
 	input_report_abs(data->lsensor_input_dev, ABS_MISC, value);
 	input_sync(data->lsensor_input_dev);
 
