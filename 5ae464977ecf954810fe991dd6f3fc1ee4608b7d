@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bff0334d_d4589c57",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-27T00:06:26Z",
+      "side": 1,
+      "message": "Your change seems to show that in the dark\na series or 0\u0027s would be prefixed with a 1.\n\n   0 0 0 0 --\u003e 1 0 0 0 0\n\nbut your commit message seems to suggest:\n\n   0 0 0 0  --\u003e 0 1 0 1\n\n\nDon\u0027t know why you have no noise in the dark\non your phone,\n\nDo you get noise when your phone is on your desk?\n\nI get:\n\n    298 291 176 214 \n\nno saving from using ABS measurement on my phone.\n\nAs I recall we use to prime the pipe with initial\nvalues for ALS or PS, I kinda recall it being PS,\nbut the idea seems reasonable since the input device\nis filtering out change.\n\nI tried using non-ABS input but then the events\nare on event3 and no longer on event1 inode.",
+      "range": {
+        "startLine": 9,
+        "startChar": 57,
+        "endLine": 9,
+        "endChar": 62
+      },
+      "revId": "5ae464977ecf954810fe991dd6f3fc1ee4608b7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
