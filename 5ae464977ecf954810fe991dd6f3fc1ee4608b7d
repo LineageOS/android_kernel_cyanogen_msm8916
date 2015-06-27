@@ -46,6 +46,30 @@
       "revId": "5ae464977ecf954810fe991dd6f3fc1ee4608b7d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_d42d3ca9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-06-27T00:24:05Z",
+      "side": 1,
+      "message": "One more thing, this\u0027ll happen for any value, not just zero.\nHowever, since it\u0027s a very small change for the range, and only happens once, there shouldn\u0027t be any negative effects.\n\nAll of this happens really quickly anyways.\n\nIn the dark, on turning the screen on:\n \n\u003c6\u003e[  128.451869]     ap3426_als_enable: Reporting ABS_MISC: 1\n\u003c6\u003e[  128.651454]   lsensor_work_handler: Reporting ABS_MISC: 0",
+      "parentUuid": "bff0334d_343fc8d7",
+      "range": {
+        "startLine": 9,
+        "startChar": 57,
+        "endLine": 9,
+        "endChar": 62
+      },
+      "revId": "5ae464977ecf954810fe991dd6f3fc1ee4608b7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
