@@ -22,6 +22,30 @@
       "revId": "5ae464977ecf954810fe991dd6f3fc1ee4608b7d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_343fc8d7",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-06-27T00:13:01Z",
+      "side": 1,
+      "message": "I\u0027ll update the commit message.\n\nAnd I don\u0027t get any noise at all, it\u0027s pitch dark right now, and my tomato reports a constant value of 0 as well.\n\nI believe we could skip that change as it would be more intrusive, and this already fixes it and isn\u0027t too bad of a fix.",
+      "parentUuid": "bff0334d_d4589c57",
+      "range": {
+        "startLine": 9,
+        "startChar": 57,
+        "endLine": 9,
+        "endChar": 62
+      },
+      "revId": "5ae464977ecf954810fe991dd6f3fc1ee4608b7d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
