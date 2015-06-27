@@ -2,6 +2,142 @@
   "comments": [
     {
       "key": {
+        "uuid": "bff0334d_cfab6973",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 511,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "PS_ENTRY and PS_RETURN?",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_0fa2719b",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 548,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "should be PS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_4f987969",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1048,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "ALS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_4fb199e1",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1300,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "ap3426_lock_mutex is missing here",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_2fb655db",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1359,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "Remove this statement?",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_efc74d45",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2057,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "PS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_afc14531",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2272,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "ALS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_8fdc4119",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2306,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "ALS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bff0334d_d4aadc17",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
@@ -67,6 +203,23 @@
       "side": 1,
       "message": "Now I see what happen. You applied my patches and then added\nyours. Looks like you noticed that the interrupt clearing\nlogic could be further optimized by skipping a second \nreading of the AP3426_REG_ALS_DATA_HIGH:0xD register via\nap3426_get_adc_value(). \n\nYep seems fine ashame we didn\u0027t notice it during\nthe review of http://review.cyanogenmod.org/#/c/100958/.",
       "parentUuid": "bff0334d_4f83d905",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_4fe639eb",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2956,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-06-27T06:45:45Z",
+      "side": 1,
+      "message": "for symmetry may be a good idea to free mutex",
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
