@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bff0334d_6f9fbdb4",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 945,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-27T02:29:46Z",
+      "side": 1,
+      "message": "Looks good.",
+      "range": {
+        "startLine": 945,
+        "startChar": 25,
+        "endLine": 945,
+        "endChar": 26
+      },
+      "revId": "c74b41af33e56daf026d709314f2fe5242899796",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
