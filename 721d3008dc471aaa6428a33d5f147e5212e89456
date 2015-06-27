@@ -52,6 +52,24 @@
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_8fb7a1d9",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2538,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-27T05:24:54Z",
+      "side": 1,
+      "message": "Now I see what happen. You applied my patches and then added\nyours. Looks like you noticed that the interrupt clearing\nlogic could be further optimized by skipping a second \nreading of the AP3426_REG_ALS_DATA_HIGH:0xD register via\nap3426_get_adc_value(). \n\nYep seems fine ashame we didn\u0027t notice it during\nthe review of http://review.cyanogenmod.org/#/c/100958/.",
+      "parentUuid": "bff0334d_4f83d905",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
