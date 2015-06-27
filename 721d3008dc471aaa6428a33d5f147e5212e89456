@@ -34,6 +34,24 @@
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bff0334d_4f83d905",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2538,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-27T04:44:37Z",
+      "side": 1,
+      "message": "I figured you out. PS4 means Patch Set 4. \n\nI\u0027ll double check.",
+      "parentUuid": "bff0334d_d4aadc17",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
