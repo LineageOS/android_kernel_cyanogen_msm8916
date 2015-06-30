@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "9ff52f3f_0ef833c2",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 511,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bff0334d_cfab6973",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bff0334d_0fa2719b",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
@@ -30,6 +48,24 @@
       "writtenOn": "2015-06-27T06:45:45Z",
       "side": 1,
       "message": "should be PS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_eef4efd1",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 548,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bff0334d_0fa2719b",
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -53,6 +89,24 @@
     },
     {
       "key": {
+        "uuid": "9ff52f3f_aefee7ab",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1048,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bff0334d_4f987969",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bff0334d_4fb199e1",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
@@ -64,6 +118,24 @@
       "writtenOn": "2015-06-27T06:45:45Z",
       "side": 1,
       "message": "ap3426_lock_mutex is missing here",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_8e2d6348",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1300,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "bff0334d_4fb199e1",
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -87,6 +159,24 @@
     },
     {
       "key": {
+        "uuid": "9ff52f3f_ceefebe7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1359,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "Added code to set delay as mentioned in the TODO.\nRemoved TODO.",
+      "parentUuid": "bff0334d_2fb655db",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bff0334d_efc74d45",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
@@ -98,6 +188,24 @@
       "writtenOn": "2015-06-27T06:45:45Z",
       "side": 1,
       "message": "PS_RETURN",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_aeeca7f3",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2057,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "done",
+      "parentUuid": "bff0334d_efc74d45",
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -220,6 +328,24 @@
       "writtenOn": "2015-06-27T06:45:45Z",
       "side": 1,
       "message": "for symmetry may be a good idea to free mutex",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_4eb51bee",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2956,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T06:37:31Z",
+      "side": 1,
+      "message": "With this code not being called as far as we know\nI\u0027m reluctant to free the data. I assume that\u0027s what\nyou well suggesting. \n\nNo way to test. I\u0027ll leave a #if 0 ... #endif fragment.\n\n\n#if 0\n        /* \n         * data likely should be made free here.\n         * data is likely detach by the  \n         *      kfree(i2c_get_clientdata(client));\n         */\n        kfree(data);\n#endif\n\nPerhaps it\u0027s possible for a blocked thread to wake up \nafter the ap3426_unlock_mutex(data) and expect to fine \nthe data structure.\n\nThink the risk reward is best to leave it to someone\nwho can test the remove() code. Like if module support\nis added.",
+      "parentUuid": "bff0334d_4fe639eb",
       "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
