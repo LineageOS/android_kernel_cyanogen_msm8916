@@ -22,6 +22,30 @@
       "revId": "82fab180f729bc4775a7fee0c4de75cad8d66f1e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_f97277e3",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 949,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-06-30T23:56:46Z",
+      "side": 1,
+      "message": "1. The work func does that for us already, which makes the input code report both values.\n\n2. Me too, will update.",
+      "parentUuid": "9ff52f3f_792f87f6",
+      "range": {
+        "startLine": 949,
+        "startChar": 54,
+        "endLine": 949,
+        "endChar": 56
+      },
+      "revId": "82fab180f729bc4775a7fee0c4de75cad8d66f1e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
