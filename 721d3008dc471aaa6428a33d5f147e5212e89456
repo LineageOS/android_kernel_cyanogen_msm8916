@@ -177,6 +177,24 @@
     },
     {
       "key": {
+        "uuid": "9ff52f3f_eecbcf6f",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1359,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T07:05:02Z",
+      "side": 1,
+      "message": "To my surprise something in user space appears to be\nsetting the poll delay to 1 second:\n\n\u003c6\u003e[   95.299527]  ap3426_als_enable_set(sensors_cdev:ffffffc0709cd458, enabled:1): {\n\u003c6\u003e[   95.299536]   ap3426_als_enable(ps_data:ffffffc0709cd400, enable:1): {\n\u003c6\u003e[   95.299542]     ap3426_als_enable: misc_als_opened:0\n\u003c6\u003e[   95.299547]     ap3426_power_on_als(client:ffffffc071433000): {\n\u003c6\u003e[   95.299919]       ap3426_power_on_als: return(err:0);\n\u003c6\u003e[   95.299930]     }\n\u003c6\u003e[   95.358627]     ap3426_als_enable: Enable Polling Timer\n\u003c6\u003e[   95.358644]     ap3426_als_enable: return(ret:0);\n\u003c6\u003e[   95.358651]   }\n\u003c6\u003e[   95.358654]   ap3426_als_enable_set: return(0);\n\u003c6\u003e[   95.358659]  }\n\u003c6\u003e[   95.358819]\n\u003c6\u003e[   95.358828]  ap3426_als_poll_delay_set(sensors_cdev:ffffffc0709cd458, delay_msec:1000): {\n\u003c6\u003e[   95.358837] ap3426_als_poll_delay_set: als_data-\u003eals_msec_poll_delay:200 \u003d delay_msec:1000\n\u003c6\u003e[   95.358841]   ap3426_als_poll_delay_set: Launching Timer.\n\u003c6\u003e[   95.358847]   ap3426_als_poll_delay_set: return(1);\n\u003c6\u003e[   95.358852]  }",
+      "parentUuid": "9ff52f3f_ceefebe7",
+      "revId": "721d3008dc471aaa6428a33d5f147e5212e89456",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "bff0334d_efc74d45",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 5
