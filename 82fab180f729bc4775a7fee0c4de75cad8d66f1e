@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9ff52f3f_792f87f6",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 949,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-06-30T23:48:39Z",
+      "side": 1,
+      "message": "Two thoughts come to mind. \n   1. How about sending als_value +1 followed by als_value.\n      Without resampling als_value. That way the input code\n      can\u0027t discard the value. This code isn\u0027t called very \n      often. I think the cost/reliability benefit may be\n      in favor or sending the value twice, N and N+1.\n\n   2. Nit - I like a space between decl and code.\n  \n-piet",
+      "range": {
+        "startLine": 949,
+        "startChar": 54,
+        "endLine": 949,
+        "endChar": 56
+      },
+      "revId": "82fab180f729bc4775a7fee0c4de75cad8d66f1e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
