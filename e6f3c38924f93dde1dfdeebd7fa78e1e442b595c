@@ -22,6 +22,30 @@
       "revId": "e6f3c38924f93dde1dfdeebd7fa78e1e442b595c",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ff52f3f_f9095731",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 952,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-07-01T00:29:38Z",
+      "side": 1,
+      "message": "You are right, I\u0027ll update.",
+      "parentUuid": "9ff52f3f_f95b9751",
+      "range": {
+        "startLine": 952,
+        "startChar": 39,
+        "endLine": 952,
+        "endChar": 41
+      },
+      "revId": "e6f3c38924f93dde1dfdeebd7fa78e1e442b595c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
