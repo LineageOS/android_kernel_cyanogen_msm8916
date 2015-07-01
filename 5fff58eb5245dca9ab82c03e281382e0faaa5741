@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9ff52f3f_9475729b",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 1396,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-07-01T01:24:47Z",
+      "side": 1,
+      "message": "Everyone ok with this choice.\n\nFrom what I was seeing in the logs it seemed to make\nthe most sense. Other implementation of setting of\nthe ALS polling delay don\u0027t even start the timer.",
+      "range": {
+        "startLine": 1390,
+        "startChar": 2,
+        "endLine": 1396,
+        "endChar": 5
+      },
+      "revId": "5fff58eb5245dca9ab82c03e281382e0faaa5741",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
