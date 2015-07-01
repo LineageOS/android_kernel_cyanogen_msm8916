@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9ff52f3f_f95b9751",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 952,
+      "author": {
+        "id": 13108
+      },
+      "writtenOn": "2015-07-01T00:21:50Z",
+      "side": 1,
+      "message": "I think this example may have gotten lost:\n\nIsn\u0027t there a tiny possibility that the value read will\nchange by 1 between the 1st and 2nd reading. Ex:\n\n   3, 4, 4, 4, .... 4\n\nSo the 1st reading will be increased by 1. Yielding:\n\n   4, 4, 4, 4, .... 4\n\nSo nothing gets reported to java code.\n\n\nIf ya send N and N+1 you get:\n\n    4, 5, 4, 4, 4, .... 4\n\nor if ya send N+1 and N you get:\n\n    5, 4, 4, 4, 4, ... 4\n\nI thought the latter, N+1 folled by N during enable\nmight be slightly better.\n\nI know the possibility is very remote. Just hate those bugs\nthat slip through. Seemed like cheep insurance to me.\n\n-piet",
+      "range": {
+        "startLine": 952,
+        "startChar": 39,
+        "endLine": 952,
+        "endChar": 41
+      },
+      "revId": "e6f3c38924f93dde1dfdeebd7fa78e1e442b595c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
