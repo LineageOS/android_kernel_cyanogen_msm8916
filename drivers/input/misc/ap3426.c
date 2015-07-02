@@ -58,6 +58,7 @@
 #include <linux/ioctl.h>
 #include <linux/atomic.h>
 #include <asm/bug.h>
+#include <linux/sensors/alsprox_common.h>
 
 #define AP3426_DRV_NAME		"ap3426"
 #define DRIVER_VERSION		"1.0"
@@ -1530,6 +1531,7 @@ int ap3426_ps_calibration(struct i2c_client *client)
 			}
 			ave = total/samples;
 			PS_DBG("ave = %d\n", ave);
+			pdata->ps_calibration_value = ave;
 			ap3426_set_ps_crosstalk_calibration(client, ave);
 			msleep(50);
 			sample = ap3426_get_px_value(client);
@@ -1538,6 +1540,7 @@ int ap3426_ps_calibration(struct i2c_client *client)
 			sample = ap3426_get_px_value(client);
 			PS_DBG("sample = %d\n", sample);
 			ps_calibrated = 1;
+			pdata->ps_calibration_mode = ps_calibrated;
 			rv = 1;
 		} else {
 			ave = pdata->ps_calibration_expected;
@@ -2639,8 +2642,10 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
 	rc = of_property_read_u32(dt, "ap3426,ps-thdl", &temp_val);
 	if (!rc) {
 		pdata->ps_thd_l = (u16)temp_val;
+		pdata->ps_thd_l_default = (u16)temp_val;
 		PS_DBG("ps-thdl = %d\n", pdata->ps_thd_l);
 	} else {
+		pdata->ps_thd_l = PX_LOW_THRESHOLD;
 		pdata->ps_thd_l = PX_LOW_THRESHOLD;
 		dev_err(dev, "Unable to read 'ap3426,ps-thdl', using default %d\n",
 		                              pdata->ps_thd_l);
@@ -2649,9 +2654,11 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *pdata)
 	rc = of_property_read_u32(dt, "ap3426,ps-thdh", &temp_val);
 	if (!rc) {
 		pdata->ps_thd_h= (u16)temp_val;
+		pdata->ps_thd_h_default = (u16)temp_val;
 		PS_DBG("ps-thdh = %d\n", pdata->ps_thd_h);
 	} else {
 		pdata->ps_thd_h = PX_HIGH_THRESHOLD;
+		pdata->ps_thd_h_default = PX_HIGH_THRESHOLD;
 		dev_err(dev, "Unable to read 'ap3426,ps-thdh', using default %d\n",
 		                              pdata->ps_thd_h);
 	}
@@ -2693,6 +2700,253 @@ done:
 	return rv;
 }
 #endif
+
+/* Proximity sensor IOCTL related constants */
+static int ap3426_open(struct inode *inode, struct file *file);
+static int ap3426_release(struct inode *inode, struct file *file);
+static int ap3426_collect_pxh_threshold(struct ap3426_data *data);
+static long ap3426_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+#define ALSPROX_MISC_DEVICE_NAME "yl_alsprox_sensor"
+
+static struct file_operations ap3426_fops = {
+    .owner = THIS_MODULE,
+    .open = ap3426_open,
+    .release = ap3426_release,
+    .unlocked_ioctl = ap3426_ioctl,
+};
+
+static struct miscdevice ap3426_misc_dev = {
+    .minor = MISC_DYNAMIC_MINOR,
+    .name = ALSPROX_DEVICE_NAME,
+    .fops = &ap3426_fops,
+};
+
+int MAX_PXH_THRESHOLD_SAMPLES = 10;
+int PXH_THRESHOLD_ACTUAL_SAMPLES = 6;
+int PXH_THRESHOLD_START_INDEX = 2;
+int PXH_THRESHOLD_END_INDEX = 7;
+int PXH_THRESHOLD_MIN = 60;
+int PXH_THRESHOLD_MAX = 450;
+int PXL_PERCENTAGE = 2; // percentange of the high threshold (out of 10)
+
+enum REQUEST_ARG_OFFSET {
+    REQ_OFFSET_RESULT = 0,
+    REQ_OFFSET_TYPE,
+    REQ_OFFSET_CALIBRATE_STATE,
+    REQ_OFFSET_CALIBRATE_VALUE,
+    REQ_OFFSET_HI,
+    REQ_OFFSET_MAX
+};
+
+static int ap3426_open(struct inode *inode, struct file *file)
+{
+	struct ap3426_data *data;
+	int ret = -EPERM;
+	PS_DBG("==ap3426_open==\n");
+	if (file->private_data) {
+		data = container_of(file->private_data, struct ap3426_data, misc_dev);
+		if (data) {
+			ap3426_lock_mutex(data);
+			ret = misc_ps_opened ? 0 : -EPERM;
+			printk(KERN_ERR "%s: ps not enabled\n", __func__);
+			ap3426_unlock_mutex(data);
+		} else {
+			PS_DBG("data null\n");
+		}
+	} else {
+		PS_DBG("private_data null\n");
+	}
+
+	return ret;
+}
+
+static int ap3426_release(struct inode *inode, struct file *file)
+{
+	PS_DBG("==ap3426_release==\n");
+	return 0;
+}
+
+static int ap3426_collect_pxh_threshold(struct ap3426_data *data)
+{
+	int px_samples[10];
+	int i = 0;
+	int j = 0;
+	int tmp_value;
+	int px_sum = 0;
+	int pxh_threshold = 0;
+
+	while (i < MAX_PXH_THRESHOLD_SAMPLES) {
+	        msleep(50);
+	        px_samples[i] = ap3426_get_px_value(data->client);
+	        PS_DBG("ap3426 px_samples[%d]=%d\n", i, px_samples[i]);
+	        i++;
+	}
+	// bubble sort samples
+	for (i = 0; i < MAX_PXH_THRESHOLD_SAMPLES - 1; i++) {
+		for (j = i; j < MAX_PXH_THRESHOLD_SAMPLES - i; j++) {
+			if (px_samples[j] > px_samples[j + 1]) {
+				tmp_value = px_samples[j];
+				px_samples[j] = px_samples[j + 1];
+				px_samples[j + 1] = tmp_value;
+			}
+		}
+	}
+	PS_DBG("sorted px_samples: ");
+	for (i = 0; i < MAX_PXH_THRESHOLD_SAMPLES; i++) {
+		PS_DBG("%d ", px_samples[i]);
+		if (i == MAX_PXH_THRESHOLD_SAMPLES - 1) {
+			PS_DBG("\n");
+		}
+	}
+
+	// take medium 6
+	for (i = PXH_THRESHOLD_START_INDEX; i <= PXH_THRESHOLD_END_INDEX; i++) {
+		px_sum += px_samples[i];
+	}
+	pxh_threshold = px_sum / PXH_THRESHOLD_ACTUAL_SAMPLES;
+	if (pxh_threshold <= PXH_THRESHOLD_MAX && pxh_threshold >= PXH_THRESHOLD_MIN) {
+		PS_DBG("===ap3426 COLLECT %d\n", pxh_threshold);
+		return pxh_threshold;
+	} else {
+		// invalid
+		return 0;
+	}
+}
+
+static long ap3426_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	int ret = 1;
+	int32_t prox_param[REQ_OFFSET_MAX];
+	int pxh_threshold;
+	int pxl_threshold;
+	struct ap3426_data *data;
+
+	if (file->private_data) {
+		data = container_of(file->private_data, struct ap3426_data, misc_dev);
+		if (!data) {
+			printk(KERN_ERR "%s: data null\n", __func__);
+			ret = -EINVAL;
+			goto ioctl_finalize;
+		}
+	} else {
+		printk(KERN_ERR "%s: file->private_data null\n", __func__);
+		ret = -EINVAL;
+		goto ioctl_finalize;
+	}
+	ap3426_lock_mutex(data);
+	// proximity sensor needs to be enabled to process ioctl
+	if (!misc_ps_opened) {
+		printk(KERN_ERR "%s: not misc_ps_opened \n", __func__);
+		ret = -EPERM;
+		goto ioctl_finalize;
+	}
+	ret = copy_from_user(prox_param, (int32_t*)arg, sizeof(prox_param));
+	if (ret < 0) {
+		printk(KERN_ERR "%s: copy_from_user failed %d\n", __func__, ret);
+		goto ioctl_finalize;
+	}
+	PS_DBG("Before ioctl prox_param %d %d %d %d %d\n", prox_param[0], prox_param[1],
+		prox_param[2], prox_param[3], prox_param[4]);
+	prox_param[REQ_OFFSET_RESULT] = 1;
+	switch (cmd) {
+	case ALSPROX_IOCTL_PROX_CALIBRATE:
+		printk("ALSPROX_IOCTL_PROX_CALIBRATE\n");
+#ifdef DI_AUTO_CAL
+		if (prox_param[REQ_OFFSET_CALIBRATE_STATE]) {
+			// enable proximity sensor calibration
+			if (!ps_calibrated) {
+				ret = ap3426_ps_calibration(data->client);
+				if (ret < 0) {
+					printk(KERN_ERR "%s: ps_calibration error\n", __func__);
+					prox_param[REQ_OFFSET_RESULT] = -1;
+					ret = -EINVAL;
+					goto ioctl_finalize;
+				}
+			}
+		} else {
+			// disable proximity sensor calibration
+			ps_calibrated = 0;
+			ap3426_set_ps_crosstalk_calibration(data->client, 0);
+			data->ps_calibration_mode = 0;
+			data->ps_calibration_value = 0;
+			// reset high and low thresholds to default
+			data->ps_thd_l = data->ps_thd_l_default;
+			data->ps_thd_h = data->ps_thd_h_default;
+			di_ap3426_set_ps_thd_l(data, data->ps_thd_l);
+			di_ap3426_set_ps_thd_h(data, data->ps_thd_h);
+		}
+#else
+		// DI_AUTO_CAL not defined
+		prox_param[REQ_OFFSET_RESULT] = -1;
+		ret = -EINVAL;
+#endif
+		break;
+	case ALSPROX_IOCTL_PROX_CALIBRATE_STATE_GET:
+		PS_DBG("ALSPROX_IOCTL_PROX_CALIBRATE_STATE_GET\n");
+		break;
+	case ALSPROX_IOCTL_PROX_HI_SET:
+		PS_DBG("ALSPROX_IOCTL_PROX_HI_SET\n");
+		data->ps_thd_h = prox_param[REQ_OFFSET_HI];
+		// low threshold is set at 20% lower of the high threshold
+		data->ps_thd_l = data->ps_thd_h * 2 / 10;
+		di_ap3426_set_ps_thd_l(data, data->ps_thd_l);
+		di_ap3426_set_ps_thd_h(data, data->ps_thd_h);
+		break;
+	case ALSPROX_IOCTL_PROX_HI_MANUAL_SET:
+		// Sensor needs to be calibrated before this mode can be used
+		PS_DBG("ALSPROX_IOCTL_PROX_HI_MANUAL_SET\n");
+		if (!data->ps_calibration_mode) {
+			// thresholds can only be set when sensor's calibrated
+			prox_param[REQ_OFFSET_RESULT] = -1;
+			ret = -EINVAL;
+			goto ioctl_finalize;
+		} else {
+			pxh_threshold = ap3426_collect_pxh_threshold(data);
+			if (pxh_threshold) {
+				// low threshold is set at a percentage of the high threshold
+				pxl_threshold = (pxh_threshold * PXL_PERCENTAGE / 10);
+				if (pxh_threshold < PXH_THRESHOLD_MIN ||
+					pxh_threshold > PXH_THRESHOLD_MAX ||
+					pxl_threshold <= 0) {
+					// Invalid thresholds, fail
+					prox_param[REQ_OFFSET_RESULT] = -1;
+					ret = -EINVAL;
+				} else {
+					data->ps_thd_l = pxl_threshold;
+					data->ps_thd_h = pxh_threshold;
+					di_ap3426_set_ps_thd_l(data, data->ps_thd_l);
+					di_ap3426_set_ps_thd_h(data, data->ps_thd_h);
+					ret = 1;
+				}
+			} else {
+				prox_param[REQ_OFFSET_RESULT] = -1;
+				ret = -EINVAL;
+			}
+		}
+		break;
+	default:
+		printk(KERN_ERR "%s: Unknown ioctl\n", __func__);
+		prox_param[REQ_OFFSET_RESULT]  = -1;
+		ret = -EINVAL;
+		break;
+	}
+ioctl_finalize:
+	ap3426_unlock_mutex(data);
+	// Populate the return values
+	prox_param[REQ_OFFSET_CALIBRATE_STATE] = data->ps_calibration_mode;
+	prox_param[REQ_OFFSET_CALIBRATE_VALUE] = data->ps_calibration_value;
+	prox_param[REQ_OFFSET_HI] = data->ps_thd_h;
+
+	PS_DBG("After ioctl %d %d %d %d %d\n", prox_param[0], prox_param[1], prox_param[2], prox_param[3], prox_param[4]);
+
+	if (copy_to_user((int32_t*)arg, prox_param, sizeof(prox_param))) {
+		printk(KERN_ERR "%s: copy_to_user violation\n", __func__);
+		prox_param[REQ_OFFSET_RESULT] = -1;
+		ret =  -EFAULT;
+	}
+	return ret;
+}
 
 static int ap3426_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
@@ -2878,6 +3132,12 @@ static int ap3426_probe(struct i2c_client *client,
 	if (err)
 		goto err_sensors_classdev_register_ps;
 
+	data->misc_dev = ap3426_misc_dev;
+	err = misc_register(&data->misc_dev);
+	if (err) {
+		printk(KERN_ERR "%s: misc_register failed\n", __func__);
+		goto err_sensors_classdev_register_misc;
+	}
 	private_pl_data = data;
 
 	// init the ps event value because it may cause screen off at first call
@@ -2899,6 +3159,8 @@ static int ap3426_probe(struct i2c_client *client,
 	err = 0;		/* Return(0) */
 	goto done;
 
+err_sensors_classdev_register_misc:
+	sensors_classdev_unregister(&data->ps_cdev);
 err_sensors_classdev_register_ps:
 	sensors_classdev_unregister(&data->als_cdev);
 

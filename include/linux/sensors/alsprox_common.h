@@ -27,6 +27,9 @@
 #define ALSPROX_IOCTL_PROX_OFFSET    _IOW(ALSPROX_IOCTL_MAGIC, 5, unsigned long)
 #define ALSPROX_IOCTL_PROX_CALIBRATE _IOW(ALSPROX_IOCTL_MAGIC, 6, unsigned long)
 #define ALSPROX_IOCTL_PHONE_STATE    _IOW(ALSPROX_IOCTL_MAGIC, 7, unsigned long)
+#define ALSPROX_IOCTL_PROX_CALIBRATE_STATE_GET _IOW(ALSPROX_IOCTL_MAGIC, 8, unsigned long)
+#define ALSPROX_IOCTL_PROX_HI_SET _IOW(ALSPROX_IOCTL_MAGIC, 9, unsigned long)
+#define ALSPROX_IOCTL_PROX_HI_MANUAL_SET _IOW(ALSPROX_IOCTL_MAGIC, 10, unsigned long)
 
 struct prox_offset {
     unsigned short key;

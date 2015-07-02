@@ -215,6 +215,7 @@ struct ap3426_data {
 
 	struct sensors_classdev als_cdev; 	//for msm8916  kevindang20141010
 	struct sensors_classdev ps_cdev;	//for msm8916
+	struct miscdevice misc_dev;
 
 	struct input_dev   	*psensor_input_dev;
 	struct input_dev   	*lsensor_input_dev;
@@ -238,9 +239,13 @@ struct ap3426_data {
 	struct wake_lock	ps_wakelock;
 	uint16_t		ps_thd_l;
 	uint16_t		ps_thd_h;
+	uint16_t		ps_thd_l_default;
+	uint16_t		ps_thd_h_default;
 	uint16_t		ps_calibration_min;
 	uint16_t		ps_calibration_expected;
 	uint16_t		ps_calibration_max;
+	uint16_t		ps_calibration_value;
+	uint16_t		ps_calibration_mode;
 };
 
 #endif
