@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7ffa3b31_d3ef96e7",
+        "filename": "drivers/video/msm/mdss/mdss_dsi.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 480,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-06T23:53:21Z",
+      "side": 1,
+      "message": "This seems like a pretty nasty hack, is there some reason doing this in the regular panel off reset sequence isn\u0027t workable?",
+      "revId": "6f49122a6c35cdc364a2c4fb5bd3ff05bf790d61",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
