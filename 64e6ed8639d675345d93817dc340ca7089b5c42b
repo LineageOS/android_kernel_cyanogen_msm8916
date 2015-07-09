@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5ff73747_11217c4e",
+        "filename": "arch/arm/boot/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 12759
+      },
+      "writtenOn": "2015-07-09T03:02:21Z",
+      "side": 0,
+      "message": "Same as with this line",
+      "revId": "64e6ed8639d675345d93817dc340ca7089b5c42b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
