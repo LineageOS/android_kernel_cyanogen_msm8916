@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff0f0b1f_8e132bb9",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1439,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-07-14T06:55:05Z",
+      "side": 1,
+      "message": "Wrong data type resulted in array corruption",
+      "revId": "d902ac603c9af13daa406a1bf8f930203317fea3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff0f0b1f_6e18d7d2",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1603,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-07-14T06:55:05Z",
+      "side": 1,
+      "message": "Calibration should be done before ps_enable to avoid interrupt coming in.",
+      "revId": "d902ac603c9af13daa406a1bf8f930203317fea3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff0f0b1f_4e0d138f",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2439,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-07-14T06:55:05Z",
+      "side": 1,
+      "message": "Different device types require different integrated time values, made it into a dtsi setting.",
+      "revId": "d902ac603c9af13daa406a1bf8f930203317fea3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
