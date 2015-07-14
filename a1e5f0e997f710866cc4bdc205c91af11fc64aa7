@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff0f0b1f_4e3ab3e7",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-07-14T14:24:40Z",
+      "side": 1,
+      "message": "s/input/ARM: dts: g36c1h/\n\nPerhaps?",
+      "revId": "a1e5f0e997f710866cc4bdc205c91af11fc64aa7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
