@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff0f0b1f_70130d68",
+        "filename": "sound/soc/codecs/arizona.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2937,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-17T04:31:40Z",
+      "side": 1,
+      "message": "if (...) {",
+      "range": {
+        "startLine": 2937,
+        "startChar": 5,
+        "endLine": 2937,
+        "endChar": 14
+      },
+      "revId": "632f9f1d67ea41eecac397e0a7a7582078035a22",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
