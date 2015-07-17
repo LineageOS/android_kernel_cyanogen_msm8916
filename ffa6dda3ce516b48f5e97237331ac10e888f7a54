@@ -22,6 +22,30 @@
       "revId": "ffa6dda3ce516b48f5e97237331ac10e888f7a54",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff0f0b1f_4674cf99",
+        "filename": "Documentation/devicetree/bindings/input/misc/ap3426_cm.txt",
+        "patchSetId": 3
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 2195
+      },
+      "writtenOn": "2015-07-17T23:18:27Z",
+      "side": 1,
+      "message": "You\u0027re right, these 3 aren\u0027t.\n\nGot distracted in the middle of this :(",
+      "parentUuid": "ff0f0b1f_2b0d263e",
+      "range": {
+        "startLine": 13,
+        "startChar": 0,
+        "endLine": 19,
+        "endChar": 71
+      },
+      "revId": "ffa6dda3ce516b48f5e97237331ac10e888f7a54",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
