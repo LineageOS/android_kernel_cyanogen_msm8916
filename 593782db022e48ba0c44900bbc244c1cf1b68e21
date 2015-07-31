@@ -16,6 +16,41 @@
       "revId": "593782db022e48ba0c44900bbc244c1cf1b68e21",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bf091321_931eab6e",
+        "filename": "drivers/sensors/sensors_class.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 434,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-31T18:10:09Z",
+      "side": 1,
+      "message": "Nope, this is unnecessary.",
+      "parentUuid": "bf091321_93990b21",
+      "revId": "593782db022e48ba0c44900bbc244c1cf1b68e21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bf091321_b319af89",
+        "filename": "drivers/sensors/sensors_class.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 451,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-07-31T18:10:09Z",
+      "side": 1,
+      "message": "This line is writing into sensors_cdev-\u003ecal_result at the offset given by the cmd parameter (essentially writes into cal_result.[offset_x, offset_y, offset_z, bias, etc)]. You can send CMD_W_BIAS, followed by CMD_COMPLETE to do the same thing you\u0027re trying to.",
+      "revId": "593782db022e48ba0c44900bbc244c1cf1b68e21",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
