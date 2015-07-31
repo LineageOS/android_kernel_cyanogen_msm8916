@@ -412,8 +412,10 @@ static ssize_t sensors_calibrate_store(struct device *dev,
 	int cmd, bit_h;
 
 	ret = kstrtol(buf, 0, &data);
-	if (ret)
+	if (ret) {
+		dev_err(dev, "kstrtol error %d\n", ret);
 		return ret;
+	}
 	dev_dbg(dev, "data = %lx\n", data);
 	cmd = data & CMD_MASK;
 	if (cmd == CMD_DO_CAL) {
@@ -429,6 +431,13 @@ static ssize_t sensors_calibrate_store(struct device *dev,
 				axis, apply_now);
 		if (ret)
 			return ret;
+	} else if (cmd == CMD_W_BIAS) {
+		sensors_cdev->cal_result.bias= (data & DATA_MASK) >> 16;
+		ret = sensors_cdev->sensors_write_cal_params
+				(sensors_cdev, &sensors_cdev->cal_result);
+		dev_dbg(dev, "CD_W_BIAS bias = %d, result = %d\n",
+			sensors_cdev->cal_result.bias,
+			ret);
 	} else {
 		if (sensors_cdev->sensors_write_cal_params == NULL) {
 			dev_err(dev,
