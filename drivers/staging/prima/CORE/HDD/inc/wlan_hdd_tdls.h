@@ -224,7 +224,7 @@ int wlan_hdd_sta_tdls_init(hdd_adapter_t *pAdapter);
 
 void wlan_hdd_tdls_init(hdd_context_t * pHddCtx);
 
-void wlan_hdd_tdls_exit(hdd_adapter_t *pAdapter);
+void wlan_hdd_tdls_exit(hdd_adapter_t *pAdapter, tANI_BOOLEAN mutexLock);
 
 void wlan_hdd_tdls_extract_da(struct sk_buff *skb, u8 *mac);
 
@@ -346,4 +346,6 @@ int hdd_set_tdls_scan_type(hdd_adapter_t *pAdapter,
 
 // tdlsoffchan
 hddTdlsPeer_t *wlan_hdd_tdls_get_first_connected_peer(hdd_adapter_t *pAdapter);
+
+int wlan_hdd_validate_tdls_context(hdd_context_t *pHddCtx, tdlsCtx_t *pTdlsCtx);
 #endif // __HDD_TDSL_H
