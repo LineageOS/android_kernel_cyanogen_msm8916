@@ -95,6 +95,7 @@
 #define AP3426_BOOT_TIME_MS		12
 
 #define AP3426_CALIBRATE_SAMPLES	15
+#define AP3426_MAX_CROSSTALK		500
 /* als and ps interrupt enabled, clear by software */
 #define AP3426_INT_CONFIG		0x89
 
@@ -156,6 +157,7 @@ struct ap3426_data {
 	int			ps_mean_time;
 	int			ps_integrated_time;
 	int			ps_wakeup_threshold;
+	int			ps_max_crosstalk;
 
 	int			last_als;
 	int			last_ps;
@@ -487,6 +489,12 @@ static int ap3426_parse_dt(struct device *dev, struct ap3426_data *di)
 		return -EINVAL;
 	}
 
+	rc = of_property_read_u32(dp, "di,ps-max-crosstalk", &value);
+	if (rc) {
+		dev_err(dev, "di,ps-max-crosstalk incorrect\n");
+		value = AP3426_MAX_CROSSTALK;
+	}
+	di->ps_max_crosstalk = value;
 	return 0;
 }
 
@@ -1402,6 +1410,41 @@ static int ap3426_cdev_als_flush(struct sensors_classdev *sensors_cdev)
 	return 0;
 }
 
+static void swap_at(u16 *x, u16 *y)
+{
+	u16 temp = *x;
+
+	*x = *y;
+	*y = temp;
+}
+
+static u16 ap3426_get_average(u16 *sample_data, int size)
+{
+	int i, j;
+	u32 sum = 0;
+	int start_index = 2;
+	int end_index = size - 3;
+	int actual_size = size - 4;
+	for (i = 0; i < size - 1; i++) {
+		for (j = i + 1; j < size; j++) {
+			if (sample_data[i] > sample_data[j]) {
+				 swap_at(&sample_data[i], &sample_data[j]);
+			}
+		}
+	}
+	printk("%s: Sorted sample_data[ ", __func__);
+	for (i = 0; i < size; i++) {
+		printk("%d ", sample_data[i]);
+	}
+	printk("]\n");
+	// collect the medium samples only (cut off first and last 2)
+	for (i = start_index; i <= end_index; i++) {
+		sum += sample_data[i];
+	}
+	printk("%s: Calibrated average %d\n", __func__, sum / actual_size);
+	return (u16) (sum / actual_size);
+}
+
 /* This function should be called when sensor is disabled */
 static int ap3426_cdev_ps_calibrate(struct sensors_classdev *sensors_cdev,
 		int axis, int apply_now)
@@ -1410,12 +1453,12 @@ static int ap3426_cdev_ps_calibrate(struct sensors_classdev *sensors_cdev,
 	int power;
 	unsigned int config;
 	unsigned int interrupt;
-	u16 min = PS_DATA_MASK;
+	u16 avg = 0;
+	u16 data[AP3426_CALIBRATE_SAMPLES];
 	u8 ps_data[2];
-	int count = AP3426_CALIBRATE_SAMPLES;
+	int count = 0;
 	struct ap3426_data *di = container_of(sensors_cdev,
 			struct ap3426_data, ps_cdev);
-
 
 	if (axis != AXIS_BIAS)
 		return 0;
@@ -1492,7 +1535,7 @@ static int ap3426_cdev_ps_calibrate(struct sensors_classdev *sensors_cdev,
 		goto exit_disable_ps;
 	}
 
-	while (--count) {
+	while (count < AP3426_CALIBRATE_SAMPLES) {
 		/*
 		 * This function is expected to be executed only 1 time in
 		 * factory and never be executed again during the device's
@@ -1506,20 +1549,20 @@ static int ap3426_cdev_ps_calibrate(struct sensors_classdev *sensors_cdev,
 			dev_err(&di->i2c->dev, "read PS data failed\n");
 			break;
 		}
-		if (min > ((ps_data[1] << 8) | ps_data[0]))
-			min = (ps_data[1] << 8) | ps_data[0];
+		data[count] = (ps_data[1] << 8) | ps_data[0];
+		count++;
 	}
-
-	if (!count) {
-		if (min > (PS_DATA_MASK >> 1)) {
+	avg = ap3426_get_average(data, (int) AP3426_CALIBRATE_SAMPLES);
+	if (count == AP3426_CALIBRATE_SAMPLES) {
+		if (avg > di->ps_max_crosstalk) {
 			dev_err(&di->i2c->dev, "ps data out of range, check if shield\n");
 			rc = -EINVAL;
 			goto exit_disable_ps;
 		}
 
 		if (apply_now) {
-			ps_data[0] = PS_LOW_BYTE(min);
-			ps_data[1] = PS_HIGH_BYTE(min);
+			ps_data[0] = PS_LOW_BYTE(avg);
+			ps_data[1] = PS_HIGH_BYTE(avg);
 			rc = regmap_bulk_write(di->regmap, AP3426_REG_PS_CAL_L,
 					ps_data, 2);
 			if (rc) {
@@ -1527,11 +1570,11 @@ static int ap3426_cdev_ps_calibrate(struct sensors_classdev *sensors_cdev,
 						AP3426_REG_PS_CAL_L, rc);
 				goto exit_disable_ps;
 			}
-			di->bias = min;
+			di->bias = avg;
 		}
 
 		snprintf(di->calibrate_buf, sizeof(di->calibrate_buf), "0,0,%d",
-				min);
+				avg);
 		dev_dbg(&di->i2c->dev, "result: %s\n", di->calibrate_buf);
 	} else {
 		dev_err(&di->i2c->dev, "calibration failed\n");
