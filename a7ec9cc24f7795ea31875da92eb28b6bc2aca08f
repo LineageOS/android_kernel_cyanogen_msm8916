@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "7f231b9d_8a043bc8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 1428,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T03:45:38Z",
+      "side": 1,
+      "message": "yes a big, before merging I will do another thorough test along with HAL.",
+      "parentUuid": "7f231b9d_2a5e47e6",
+      "revId": "a7ec9cc24f7795ea31875da92eb28b6bc2aca08f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7f231b9d_0a738b82",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 7
@@ -30,6 +48,24 @@
       "writtenOn": "2015-08-12T03:37:19Z",
       "side": 1,
       "message": "dev_dbg instead, if you really want this output. It\u0027s also better that you call dev_dbg in the calling function so you have access to the device object.",
+      "revId": "a7ec9cc24f7795ea31875da92eb28b6bc2aca08f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_6a09dfdb",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 1436,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T03:45:38Z",
+      "side": 1,
+      "message": "done",
+      "parentUuid": "7f231b9d_0a738b82",
       "revId": "a7ec9cc24f7795ea31875da92eb28b6bc2aca08f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
