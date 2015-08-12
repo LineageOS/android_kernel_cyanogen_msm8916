@@ -67,6 +67,24 @@
       "revId": "fdcf1aae864db7f19328e5522737a5db3fae21f7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_2af767f8",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1544,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T02:49:24Z",
+      "side": 1,
+      "message": "The \"medium_average\" is still needed, sometimes we have samples like [0 30 25 ...] and we want to sort them first and get rid of the initial 0. In worst case we lose 10% accuracy.",
+      "parentUuid": "7f231b9d_aa8db77c",
+      "revId": "fdcf1aae864db7f19328e5522737a5db3fae21f7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
