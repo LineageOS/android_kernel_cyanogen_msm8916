@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f231b9d_3f3a0be7",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1428,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-12T01:44:27Z",
+      "side": 1,
+      "message": "This function seems really heavy on the debugging. That\u0027s probably unnecessary for the final version of this.",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_9f2a3f8e",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1457,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-12T01:44:27Z",
+      "side": 1,
+      "message": "If you calculate an average in place in the loop, you don\u0027t need this array at all.",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_7f308308",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1459,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-12T01:44:27Z",
+      "side": 1,
+      "message": "FWIW you probably didn\u0027t need to reverse the direction count goes, which will help minimize the number of changes you needed to make.",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_9f559f20",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1555,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-12T01:44:27Z",
+      "side": 1,
+      "message": "Isn\u0027t AP3426_CALIBRATE_SAMPLES an integer already?\n\nAlso, if you don\u0027t want the debugging from above, you can just as easily calculate an average in place in the while loop.",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_5f35c7f6",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1557,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-08-12T01:44:27Z",
+      "side": 1,
+      "message": "Looks like they default this check of 0x7fff. Any reason why we don\u0027t?",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
