@@ -19,6 +19,23 @@
     },
     {
       "key": {
+        "uuid": "7f231b9d_ea0e0f31",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1435,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T02:12:33Z",
+      "side": 1,
+      "message": "will take out the printk",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7f231b9d_9f2a3f8e",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 1
@@ -53,6 +70,24 @@
     },
     {
       "key": {
+        "uuid": "7f231b9d_aa181775",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1459,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T02:12:33Z",
+      "side": 1,
+      "message": "the count down loop made it awkwardly count down from 14 to 1, then exit at 0, so the data[0] is never filled.",
+      "parentUuid": "7f231b9d_7f308308",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7f231b9d_9f559f20",
         "filename": "drivers/input/misc/ap3426.c",
         "patchSetId": 1
@@ -81,6 +116,24 @@
       "writtenOn": "2015-08-12T01:44:27Z",
       "side": 1,
       "message": "Looks like they default this check of 0x7fff. Any reason why we don\u0027t?",
+      "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f231b9d_2a0d2737",
+        "filename": "drivers/input/misc/ap3426.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1557,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-08-12T02:12:33Z",
+      "side": 1,
+      "message": "I miscalculated at one point, PS_DATA_MASK is 0x3ff, so (PS_DATA_MASK \u003e\u003e 1) is 0x1ff and 511, which is a good threshold. I will revert the need of a dtsi entry.",
+      "parentUuid": "7f231b9d_5f35c7f6",
       "revId": "94876f6c86b1c3978bb72f10e17328faa84fe7f3",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
