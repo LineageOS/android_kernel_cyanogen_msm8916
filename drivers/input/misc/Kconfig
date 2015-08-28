@@ -841,6 +841,15 @@ config SENSORS_BMA2X2_ENABLE_INT2
 	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
 	 Can only open if you do NOT open interrupt INT1 support
 
+config SENSORS_BMA2X2_ENABLE_IDENT
+	tristate "BMA2X2 acceleration sensor identification header support"
+	depends on SENSORS_BMA2X2
+	default y
+	help
+	 If you say yes here, you get IDENT support for Bosch Sensortec
+	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
+	 Select it will enable identification support
+
 config SIG_MOTION
 	tristate "support significant motion sensor function"
 	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
