@@ -315,7 +315,7 @@ static void aw2013_led_work(struct work_struct *work)
 	 * If value in AW_REG_LED_ENABLE is 0, it means the RGB leds are
 	 * all off. So we need to power it off.
 	 */
-	if (val == 0) {
+	if (val == 0 && led->pdata->led->poweron) {
 		if (aw2013_power_on(led->pdata->led, false)) {
 			dev_err(&led->pdata->led->client->dev,
 				"power off failed");
