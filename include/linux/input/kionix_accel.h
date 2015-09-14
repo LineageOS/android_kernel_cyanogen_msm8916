@@ -1,31 +1,27 @@
-/* include/linux/input/kionix_accel.h - Kionix accelerometer driver
- *
- * Copyright (C) 2012 Kionix, Inc.
- * Written by Kuching Tan <kuchingtan@kionix.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 #ifndef __KIONIX_ACCEL_H__
 #define __KIONIX_ACCEL_H__
 
-#define KIONIX_ACCEL_I2C_ADDR		0x0F
-#define KIONIX_ACCEL_NAME			"kionix_accel"
+/* POWER SUPPLY VOLTAGE RANGE */
+#define KIONIX_VDD_MIN_UV  2000000
+#define KIONIX_VDD_MAX_UV  3300000
+#define KIONIX_VIO_MIN_UV  1750000
+#define KIONIX_VIO_MAX_UV  1950000
+/* Polling delay in msecs */
+#define POLL_INTERVAL_MIN_MS	10
+#define POLL_INTERVAL_MAX_MS	10000
+#define POLL_DEFAULT_INTERVAL_MS 200
+#define KIONIX_ACCEL_MAX_DELAY 1000
+#define KIONIX_ACCEL_MIN_DELAY 10
+
+#define KIONIX_ACCEL_I2C_ADDR		0x0f
+#define KIONIX_ACCEL_NAME			"accelerometer"
 #define KIONIX_ACCEL_IRQ			"kionix-irq"
 
 struct kionix_accel_platform_data {
+	int (*acc_power)(unsigned char onoff);
+	int (*acc_init)(void);
+	void (*acc_exit)(void);
+	int (*acc_power_on)(bool);
 	/* Although the accelerometer can perform at high ODR,
 	 * there is a need to keep the maximum ODR to a lower
 	 * value due to power consumption or other concern.
@@ -41,7 +37,7 @@ struct kionix_accel_platform_data {
 	 * sysfs control. Recommended value is 200ms.*/
 	unsigned int poll_interval;
 
-	/* This variable controls the corresponding direction
+ /* This variable controls the corresponding direction
 	 * of the accelerometer that is mounted on the board
 	 * of the device. Refer to the porting guide for
 	 * details. Valid value is 1 to 8. */
