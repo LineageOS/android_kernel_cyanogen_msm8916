@@ -21,11 +21,34 @@
 #ifndef __KIONIX_ACCEL_H__
 #define __KIONIX_ACCEL_H__
 
+#ifdef INPUT_KXTJ9_HQ
+/* POWER SUPPLY VOLTAGE RANGE */
+#define KIONIX_VDD_MIN_UV  2000000
+#define KIONIX_VDD_MAX_UV  3300000
+#define KIONIX_VIO_MIN_UV  1750000
+#define KIONIX_VIO_MAX_UV  1950000
+/* Polling delay in msecs */
+#define POLL_INTERVAL_MIN_MS	10
+#define POLL_INTERVAL_MAX_MS	10000
+#define POLL_DEFAULT_INTERVAL_MS 200
+#define KIONIX_ACCEL_MAX_DELAY 1000
+#define KIONIX_ACCEL_MIN_DELAY 10
+
+#define KIONIX_ACCEL_I2C_ADDR		0x0f
+#define KIONIX_ACCEL_NAME			"accelerometer"
+#define KIONIX_ACCEL_IRQ			"kionix-irq"
+#else
 #define KIONIX_ACCEL_I2C_ADDR		0x0F
 #define KIONIX_ACCEL_NAME			"kionix_accel"
-#define KIONIX_ACCEL_IRQ			"kionix-irq"
+#endif
 
 struct kionix_accel_platform_data {
+#ifdef INPUT_KXTJ9_HQ
+	int (*acc_power)(unsigned char onoff);
+	int (*acc_init)(void);
+	void (*acc_exit)(void);
+	int (*acc_power_on)(bool);
+#endif
 	/* Although the accelerometer can perform at high ODR,
 	 * there is a need to keep the maximum ODR to a lower
 	 * value due to power consumption or other concern.
@@ -41,7 +64,7 @@ struct kionix_accel_platform_data {
 	 * sysfs control. Recommended value is 200ms.*/
 	unsigned int poll_interval;
 
-	/* This variable controls the corresponding direction
+ /* This variable controls the corresponding direction
 	 * of the accelerometer that is mounted on the board
 	 * of the device. Refer to the porting guide for
 	 * details. Valid value is 1 to 8. */
