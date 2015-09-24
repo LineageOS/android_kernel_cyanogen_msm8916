@@ -90,3 +90,5 @@ obj-$(CONFIG_MACH_LONGCHEER)	+= lct_tp_fm_info.o
 obj-$(CONFIG_MACH_LONGCHEER)	+= lct_ctp_selftest.o
 obj-$(CONFIG_MACH_LONGCHEER)	+= lct_ctp_upgrade.o
 obj-$(CONFIG_MACH_LONGCHEER)	+= lct_if_ctp_upgrade.o
+
+obj-$(CONFIG_TOUCHSCREEN_MSG2XXX)	+= msg2xxx.o
