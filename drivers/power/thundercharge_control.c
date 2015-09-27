@@ -1,7 +1,7 @@
 /*
  * Copyright © 2015, Varun Chitre "varun.chitre15" <varun.chitre15@gmail.com>
  *
- * Charger Control driver for yl_bq24157_charger
+ * Charger Control driver for yl_bq24157_charger and yl_fan5405_charger
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,13 +19,18 @@
 #include <linux/kernel.h>
 #include "thundercharge_control.h"
 
-int mswitch=0;
-int custom_current=500;
+#define ENABLED             0
+#define AC_CURRENT          1100
+#define USB_CURRENT         500
+#define MAX_VBUS_CURRENT    1500
+#define THUNDERCHARGE       "thundercharge"
 
-#define DRIVER_VERSION  1
-#define DRIVER_SUBVER 1
+int mswitch = ENABLED;
+int custom_ac_current = AC_CURRENT;
+int custom_usb_current = USB_CURRENT;
 
-#define MAX_VBUS_CURRENT 1500
+#define DRIVER_VERSION  2
+#define DRIVER_SUBVER 0
 
 static ssize_t mswitch_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -39,33 +44,47 @@ static ssize_t mswitch_store(struct kobject *kobj, struct kobj_attribute *attr, 
 	switch(val)
 	{
 	case 0:
-	mswitch=0;
-	break;
 	case 1:
-	mswitch=1;
+		mswitch = val;
 	break;
 	default:
-	pr_info("Invalid value specified");
+		pr_info("%s: invalid value specified", THUNDERCHARGE);
     break;
 }
 
 return count;
 }
 
-static ssize_t cust_current_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t cust_ac_current_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d", custom_current);
+	return sprintf(buf, "%d", custom_ac_current);
 }
 
-static ssize_t cust_current_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+static ssize_t cust_usb_current_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
-int newcurr;
-sscanf(buf, "%d", &newcurr);
-if(mswitch==1 && newcurr<=MAX_VBUS_CURRENT)
-custom_current = newcurr;
-else
-pr_info("Main switch disabled or exceeds vbus limit, neglecting values\n");
-return count;
+	int newcurr;
+	sscanf(buf, "%d", &newcurr);
+	if(mswitch == 1 && newcurr <= MAX_VBUS_CURRENT)
+		custom_usb_current = newcurr;
+	else
+		pr_info("%s: disabled or limit reached, ignoring\n", THUNDERCHARGE);
+	return count;
+}
+
+static ssize_t cust_usb_current_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d", custom_usb_current);
+}
+
+static ssize_t cust_ac_current_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int newcurr;
+	sscanf(buf, "%d", &newcurr);
+	if(mswitch == 1 && newcurr <= MAX_VBUS_CURRENT)
+		custom_ac_current = newcurr;
+	else
+		pr_info("%s: disabled or limit reached, ignoring\n", THUNDERCHARGE);
+	return count;
 }
 
 static ssize_t chgr_ver_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
@@ -84,15 +103,22 @@ static struct kobj_attribute chgr_ctrl_ver_attribute =
 		0444,
 		chgr_ver_show, NULL);
 
-static struct kobj_attribute cust_current_attribute =
-	__ATTR(custom_current,
+static struct kobj_attribute cust_ac_current_attribute =
+	__ATTR(custom_ac_current,
 		0666,
-		cust_current_show,
-		cust_current_store);
+		cust_ac_current_show,
+		cust_ac_current_store);
+
+static struct kobj_attribute cust_usb_current_attribute =
+	__ATTR(custom_usb_current,
+		0666,
+		cust_usb_current_show,
+		cust_usb_current_store);
 
 static struct attribute *charger_control_attrs[] =
 	{
-		&cust_current_attribute.attr,
+		&cust_ac_current_attribute.attr,
+		&cust_usb_current_attribute.attr,
 		&mswitch_attribute.attr,
 		&chgr_ctrl_ver_attribute.attr,
 		NULL,
@@ -139,4 +165,3 @@ module_exit(charger_control_remove);
 MODULE_LICENSE("GPL and additional rights");
 MODULE_AUTHOR("Varun Chitre <varun.chitre15@gmail.com>");
 MODULE_DESCRIPTION("BQ24157 Charger control driver");
-
