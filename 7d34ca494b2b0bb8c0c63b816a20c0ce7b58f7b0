@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9f436f4f_8f2af58d",
+        "filename": "arch/arm/boot/dts/qcom/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-09-29T23:51:09Z",
+      "side": 0,
+      "message": "You\u0027ll probably want to rewrite this commit later because of this part of the change. This makes it really hard to separate adding the touchscreen driver from adding any further devices.",
+      "revId": "7d34ca494b2b0bb8c0c63b816a20c0ce7b58f7b0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
