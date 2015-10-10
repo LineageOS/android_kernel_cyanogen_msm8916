@@ -1287,6 +1287,7 @@ static int ft5x06_ts_resume(struct device *dev)
 #endif
 
 #if defined(CONFIG_FB)
+static bool unblanked_once = false;
 static void fb_notify_resume_work(struct work_struct *work)
 {
 	struct ft5x06_ts_data *ft5x06_data =
@@ -1315,12 +1316,15 @@ static int fb_notifier_callback(struct notifier_block *self,
 			}
 		} else {
 			if (event == FB_EVENT_BLANK) {
-				if (*blank == FB_BLANK_UNBLANK)
-					ft5x06_ts_resume(
-						&ft5x06_data->client->dev);
-				else if (*blank == FB_BLANK_POWERDOWN)
-					ft5x06_ts_suspend(
-						&ft5x06_data->client->dev);
+				if (*blank == FB_BLANK_UNBLANK) {
+					if (unblanked_once)
+						ft5x06_ts_resume(
+							&ft5x06_data->client->dev);
+				} else if (*blank == FB_BLANK_POWERDOWN) {
+						unblanked_once = true;
+						ft5x06_ts_suspend(
+							&ft5x06_data->client->dev);
+				}
 			}
 		}
 	}
