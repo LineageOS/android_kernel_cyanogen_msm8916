@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f287b81_c6ba06dd",
+        "filename": "arch/arm/configs/cyanogenmod_rendang_defconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 10621
+      },
+      "writtenOn": "2015-10-16T02:14:04Z",
+      "side": 1,
+      "message": "# CONFIG_KERNEL_XZ is not set",
+      "revId": "a1fd3da1b7870272e64534bfc5efe647b8e551d7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
