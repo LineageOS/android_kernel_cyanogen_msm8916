@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f287b81_873d18bd",
+        "filename": "drivers/input/misc/akm09911_wt.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 395,
+      "author": {
+        "id": 13409
+      },
+      "writtenOn": "2015-10-17T02:48:47Z",
+      "side": 1,
+      "message": "add a space betwee, SYN_TIME_SEC, and ts.tv_sec (and line below)",
+      "revId": "82f433f23628e107e1d83a3530fffdd8afdfc236",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
