@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_8cef9a86",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 5
+      },
+      "lineNbr": 286,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-10-23T06:36:12Z",
+      "side": 1,
+      "message": "remove the change here",
+      "range": {
+        "startLine": 286,
+        "startChar": 0,
+        "endLine": 286,
+        "endChar": 59
+      },
+      "revId": "c17c6499ffbbdb69a73f3203a9c53b52142bb825",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
