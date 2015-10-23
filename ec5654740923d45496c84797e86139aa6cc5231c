@@ -1,0 +1,191 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_cc1a4216",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Don\u0027t really need to add this.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_6cd7ce25",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Don\u0027t really need this line, no? Or did the panel name change?",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_4cdc1246",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Unnecessary newline",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_2ce1c6ff",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 50,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "This is not used anyway, you can just delete the line.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_0ce60a18",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Same here.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_ece29e01",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 105,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Same here.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_ccefe2e7",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Same with this section.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_acec96f3",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 230,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "Unnecessary newline.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_6cc0ee51",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 247,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "This is done in the livedisplay-post-cmd on line 291. The panel on command should not be issued here, otherwise you\u0027ll see corruption with livedisplay.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_8cd2fa33",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 251,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "All of this stuff is commented out, these are now the livedisplay commands.",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_8cbb1ae4",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/dsi-panel-nt35596-yashi-otp-id22-auo-fhd-550-video.dtsi",
+        "patchSetId": 3
+      },
+      "lineNbr": 332,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-23T01:40:30Z",
+      "side": 1,
+      "message": "I think this doesn\u0027t do anything without the line above...",
+      "revId": "ec5654740923d45496c84797e86139aa6cc5231c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
