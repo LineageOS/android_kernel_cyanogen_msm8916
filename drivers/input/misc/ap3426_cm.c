@@ -72,7 +72,7 @@
 #define MIN_ALS_POLL_DELAY_MS		110
 #define MAX_ALS_POLL_DELAY_MS		10000
 #define DEFAULT_ALS_POLL_DELAY_MS	200
-
+#define POWER_ON_DELAY_MS		10
 
 #define AP3426_VDD_MIN_UV	2000000
 #define AP3426_VDD_MAX_UV	3300000
@@ -1441,8 +1441,6 @@ static int ap3426_als_poll_delay_set(struct sensors_classdev *sensors_cdev, unsi
 }
 
 #ifdef DI_AUTO_CAL
-static u8 ps_calibrated = 0;
-
 static inline void swap_at(u16 *x, u16 *y)
 {
 	u16 temp = *x;
@@ -1508,7 +1506,7 @@ int ap3426_ps_calibration(struct i2c_client *client)
 
 	PS_ENTRY("client:%p", client);
 
-	if (!ps_calibrated) {
+	if (!pdata->ps_calibrated) {
 		ap3426_set_ps_crosstalk_calibration(client, 0);		/* Baseline */
 
 		for (i = 0; i < CAL_SAMPLES; i++) {
@@ -1542,15 +1540,17 @@ int ap3426_ps_calibration(struct i2c_client *client)
 				samples++;
 			}
 			ave = total/samples;
+			pdata->ps_crosstalk_cal_value = ave;
 			PS_DBG("ave = %d\n", ave);
-			ap3426_set_ps_crosstalk_calibration(client, ave);
+			ap3426_set_ps_crosstalk_calibration(
+                                client, pdata->ps_crosstalk_cal_value);
 			msleep(50);
 			sample = ap3426_get_px_value(client);
 			PS_DBG("sample = %d\n", sample);
 			msleep(50);
 			sample = ap3426_get_px_value(client);
 			PS_DBG("sample = %d\n", sample);
-			ps_calibrated = 1;
+			pdata->ps_calibrated = 1;
 			rv = 1;
 		} else {
 			ave = pdata->ps_calibration_expected;
@@ -1591,7 +1591,7 @@ static int ap3426_ps_enable_set(struct sensors_classdev *sensors_cdev,
 	ap3426_lock_mutex(ps_data);
 
 #ifdef DI_AUTO_CAL
-	if (enabled == 1 && !ps_calibrated) {
+	if (enabled == 1 && !ps_data->ps_calibrated) {
 		struct i2c_client *client = ps_data->client;
 
 		/*
@@ -2425,6 +2425,10 @@ static int ap3426_init_client(struct i2c_client *client)
 		/*psensor high low thread*/
     di_ap3426_set_ps_thd_l(data, data->ps_thd_l);
     di_ap3426_set_ps_thd_h(data, data->ps_thd_h);
+    /* apply calibration if present */
+    if (data->ps_calibrated)
+        ap3426_set_ps_crosstalk_calibration(
+                client, data->ps_crosstalk_cal_value);
 
     /* read all the registers once to fill the cache.
      * if one of the reads fails, we consider the init failed */
@@ -2790,6 +2794,7 @@ static int ap3426_probe(struct i2c_client *client,
 	err = ap3426_power_ctl(data, true);
 	if (err)
 		goto err_power_ctl;
+        msleep(POWER_ON_DELAY_MS);
 
 	/* initialize the AP3426 chip - Makes sure interrupts are disabled. */
 	err = ap3426_init_client(data->client);
@@ -3101,6 +3106,8 @@ static int ap3426_suspend(struct device *dev)
 static int ap3426_resume(struct device *dev)
 {
 	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+	int rc;
+	bool retry = true;
 
 	ENTRY("dev:%p)", dev);
 
@@ -3113,9 +3120,21 @@ static int ap3426_resume(struct device *dev)
 	//
 	// ap3426_power_init(ps_data,true);
 	ap3426_power_ctl(ps_data, true);
-
-	 // Always re-iniialized our register cache and stuff.
-	ap3426_init_client(ps_data->client);
+	msleep(POWER_ON_DELAY_MS);
+again:
+	// Always re-initialize our register cache and stuff.
+	rc = ap3426_init_client(ps_data->client);
+	if (rc) {
+		if (retry) {
+			dev_warn(dev, "i2c error resuming device, retrying: %d\n",
+				rc);
+			retry = false;
+			msleep(POWER_ON_DELAY_MS);
+			goto again;
+		}
+		dev_err(dev, "failed resuming device. error: %d\n", rc);
+		return -EAGAIN;
+	}
 
 	if (ps_data->ps_re_enable ) {
 		ap3426_ps_enable(ps_data, 1);
