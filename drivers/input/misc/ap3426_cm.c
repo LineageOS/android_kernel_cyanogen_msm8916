@@ -3106,6 +3106,8 @@ static int ap3426_suspend(struct device *dev)
 static int ap3426_resume(struct device *dev)
 {
 	struct ap3426_data *ps_data = dev_get_drvdata(dev);
+	int rc;
+	bool retry = true;
 
 	ENTRY("dev:%p)", dev);
 
@@ -3118,9 +3120,21 @@ static int ap3426_resume(struct device *dev)
 	//
 	// ap3426_power_init(ps_data,true);
 	ap3426_power_ctl(ps_data, true);
-
-	 // Always re-iniialized our register cache and stuff.
-	ap3426_init_client(ps_data->client);
+again:
+	// Always re-initialize our register cache and stuff.
+	// Retry once if init fails
+	rc = ap3426_init_client(ps_data->client);
+	if (rc) {
+		if (retry) {
+			dev_warn(dev, "i2c error resuming device, retrying: %d\n",
+				rc);
+			retry = false;
+			msleep(POWER_ON_DELAY_MS);
+			goto again;
+		}
+		dev_err(dev, "failed resuming device. error: %d\n", rc);
+		return -EAGAIN;
+	}
 
 	if (ps_data->ps_re_enable ) {
 		ap3426_ps_enable(ps_data, 1);
