@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f2577a7_be61573c",
+        "filename": "drivers/input/misc/ap3426_cm.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2846,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-10-26T22:24:09Z",
+      "side": 0,
+      "message": "Erica: do you remember why we did this originally?",
+      "revId": "0a7d1cb54af43dd19d38843fbb5c846cbd133498",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
