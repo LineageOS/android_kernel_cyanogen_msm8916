@@ -52,6 +52,24 @@
       "revId": "0a7d1cb54af43dd19d38843fbb5c846cbd133498",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5f2577a7_c1c68417",
+        "filename": "drivers/input/misc/ap3426_cm.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2846,
+      "author": {
+        "id": 12941
+      },
+      "writtenOn": "2015-10-27T01:00:02Z",
+      "side": 0,
+      "message": "You\u0027re right, this line\u0027s from the original code when the proximity sensor was intended as a wake up driver. However all the supported devices of this driver at the time didn\u0027t have any wake up feature (the AP3426 part would require extra wiring) so in the revised code, we turned the power off in ap3426_suspend.",
+      "parentUuid": "5f2577a7_be61573c",
+      "revId": "0a7d1cb54af43dd19d38843fbb5c846cbd133498",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
