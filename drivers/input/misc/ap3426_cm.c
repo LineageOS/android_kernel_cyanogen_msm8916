@@ -771,13 +771,11 @@ done:
 static inline int ap3426_disable_ps_and_als_interrupts(struct i2c_client *client)
 {
 	int rv;
-
 	PS_ENTRY("client:%p", client);
 
 	rv = i2c_smbus_write_byte_data(client, AP3426_REG_SYS_INTCTRL, 0);
 
-	PS_RETURN("rv: %d", rv);
-
+	PS_RETURN("rv:%d", rv);
 	return rv;
 }
 
@@ -2397,53 +2395,59 @@ static const struct attribute_group ap3426_attr_group = {
 	.attrs = ap3426_attributes,
 };
 
+static int32_t di_ap3426_set_ps_thd_l(struct ap3426_data *ps_data, uint16_t thd_l)
+{
+	return i2c_smbus_write_word_data(ps_data->client, 0x2A, thd_l);
+}
+
+static int32_t di_ap3426_set_ps_thd_h(struct ap3426_data *ps_data, uint16_t thd_h)
+{
+	return i2c_smbus_write_word_data(ps_data->client, 0x2C, thd_h);
+}
+
+
 static int ap3426_init_client(struct i2c_client *client)
 {
 	struct ap3426_data *data = i2c_get_clientdata(client);
 	int rv = 0;
 	int i;
-	u16 cal;
-	u8 buf[16];
 
 	ENTRY("client:%p", client);
 
 	ap3426_verify_client_mutex_locked(client);
 
-	/**
-	 * Write the ALS low/high thresholds to:
-	 * AP3426_REG_ALS_THDL_L, AP3426_REG_ALS_THDL_H, AP3426_REG_ALS_THDH_L
-	 * AP3426_REG_ALS_THDH_H
-	 */
-	buf[0] = 0;
-	buf[1] = 0;
-	buf[2] = 0xFF;
-	buf[3] = 0XFF;
+		/*lsensor high low thread*/
+	rv = i2c_smbus_write_byte_data(client, 0x1A, 0);
+	if (rv)
+		goto err_light;
 
-	rv = i2c_smbus_write_block_data(client, AP3426_REG_ALS_THDL_L, 4, buf);
-	if (rv) {
-		dev_err(&client->dev, "error writing ALS config: %d\n", rv);
-		goto done;
-	}
+	rv = i2c_smbus_write_byte_data(client, 0x1B, 0);
+	if (rv)
+		goto err_light;
 
-	/**
-	 * Write the proximity sensor crosstalk, low and high threshold calibration
-	 * values
-	 *
-	 * AP3426_REG_PS_CAL_L, AP3426_REG_PS_CAL_H, AP3426_REG_PS_THDL_L
-	 * AP3426_REG_PS_THDL_H, AP3426_REG_PS_THDH_L, AP3426_REG_PS_THDH_H
-	 */
-	cal = data->ps_calibrated ? data->ps_crosstalk_cal_value : 0;
-	buf[0] = cal & 0xff;
-	buf[1] = cal >> 8;
-	buf[2] = data->ps_thd_l & 0xff;
-	buf[3] = data->ps_thd_l >> 8;
-	buf[4] = data->ps_thd_h & 0xff;
-	buf[5] = data->ps_thd_h >> 8;
+	rv = i2c_smbus_write_byte_data(client, 0x1C, 0xFF);
+	if (rv)
+		goto err_light;
 
-	rv = i2c_smbus_write_block_data(client, AP3426_REG_PS_CAL_L, 6, buf);
-	if (rv) {
-		dev_err(&client->dev, "error writing ALS config: %d\n", rv);
-		goto done;
+	rv = i2c_smbus_write_byte_data(client, 0x1D, 0XFF);
+	if (rv)
+		goto err_light;
+
+		/*psensor high low thread*/
+	rv = di_ap3426_set_ps_thd_l(data, data->ps_thd_l);
+	if (rv)
+		goto err_prox;
+
+	rv = di_ap3426_set_ps_thd_h(data, data->ps_thd_h);
+	if (rv)
+		goto err_prox;
+
+	/* apply calibration if present */
+	if (data->ps_calibrated) {
+		rv = ap3426_set_ps_crosstalk_calibration(
+			client, data->ps_crosstalk_cal_value);
+		if (rv)
+			goto err_prox;
 	}
 
 	/* read all the registers once to fill the cache.
@@ -2483,7 +2487,18 @@ static int ap3426_init_client(struct i2c_client *client)
 done:
 	RETURN("rv:%d", rv);
 	return rv;;
+
+err_light:
+	dev_err(&client->dev, "error writing light config: %d\n", rv);
+	RETURN("rv:%d", rv);
+	return rv;
+
+err_prox:
+	dev_err(&client->dev, "error writing prox config: %d\n", rv);
+	RETURN("rv:%d", rv);
+	return rv;
 }
+
 
 /*
  * Seems to be a probe stub function that wasn't implemented.
