@@ -763,6 +763,7 @@ void dpm_resume(pm_message_t state)
 	}
 
 	while (!list_empty(&dpm_suspended_list)) {
+		unsigned long j;
 		dev = to_device(dpm_suspended_list.next);
 		get_device(dev);
 		if (!is_async(dev)) {
@@ -770,6 +771,8 @@ void dpm_resume(pm_message_t state)
 
 			mutex_unlock(&dpm_list_mtx);
 
+			pr_info("pm resume: %s\n", dev_name(dev));
+			j = jiffies;
 			error = device_resume(dev, state, false);
 			if (error) {
 				suspend_stats.failed_resume++;
@@ -777,6 +780,10 @@ void dpm_resume(pm_message_t state)
 				dpm_save_failed_dev(dev_name(dev));
 				pm_dev_err(dev, state, "", error);
 			}
+			j = jiffies - j;
+			j = j * 1000 / HZ;
+			if (j > 25)
+				pr_info("%s: SLOW pm resume took: %5lu ms\n", dev_name(dev), j);
 
 			mutex_lock(&dpm_list_mtx);
 		}
