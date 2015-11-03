@@ -3434,6 +3434,8 @@ i2c_msm_frmwrk_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = (*xfer_mode->xfer)(ctrl);
 	ret = (*ctrl->ver.post_xfer)(ctrl, ret);
 
+	WARN(ret, "(in i2c driver) i2c xfer failed\n");
+
 	/* on success, return number of messages sent (which is index + 1)*/
 	if (!ret)
 		ret = xfer->cur_buf.msg_idx + 1;
