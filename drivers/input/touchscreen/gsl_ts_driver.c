@@ -1795,7 +1795,8 @@ static void gsl_report_work(struct work_struct *work)
 			else {
 				gsl_gesture_c = (char)(tmp_c & 0xff);
 				gsl_gesture_status = GE_WAKEUP;
-				print_info("gsl_obtain_gesture():tmp_c=%c\n",gsl_gesture_c);
+				dev_dbg(&client->dev, "wake up gesture: %#02x '%c'\n",
+					gsl_gesture_c, gsl_gesture_c);
 				//input_report_key(tpd->dev,key_data,1);
 				input_report_key(idev, KEY_POWER,1);
 				input_sync(idev);
