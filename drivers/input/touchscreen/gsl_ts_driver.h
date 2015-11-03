@@ -20,12 +20,11 @@
 #include <linux/gpio.h>
 #include <linux/mutex.h>
 #include <linux/sensors.h>
+#include <linux/wakelock.h>
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
 #endif
 
 //#define GSL_DEBUG		//调试信息开关，打开则输出调试信息
@@ -35,6 +34,7 @@
 //#define GSL_REPORT_POINT_SLOT
 //#define GSL_PROXIMITY_SENSOR //Proximity sensor replaced by touch panel
 #define GSL_GESTURE			 //Resuming the circcity by touch panel
+#define GSL_GESTURE_WAKELOCK_DUR msecs_to_jiffies(200)
 
 /*define i2c addr and device name*/
 #define GSL_TS_ADDR 				0x40
@@ -110,8 +110,6 @@ struct gsl_ts_data{
 #endif
 	#if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
-	#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	struct early_suspend pm;
 	#endif
 
 	struct gsl_touch_info		*cinfo;
@@ -133,6 +131,9 @@ struct gsl_ts_data{
 	#endif
 
 	struct mutex hw_lock;
+#ifdef GSL_GESTURE
+	struct wake_lock gesture_wake_lock;
+#endif
 };
 
 #ifdef GSL_PROXIMITY_SENSOR
