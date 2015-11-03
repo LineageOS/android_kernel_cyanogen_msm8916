@@ -1911,6 +1911,8 @@ static void gsl_ts_suspend(void)
 #ifndef GSL_GESTURE
 	struct i2c_client *client = ddata->client;
 #endif
+
+	mutex_lock(&ddata->hw_lock);
 	print_info("==gslX68X_ts_suspend=\n");
 	//version info
 	print_info("[tp-gsl]the last time of debug:%x\n",TPD_DEBUG_TIME);
@@ -1927,7 +1929,7 @@ static void gsl_ts_suspend(void)
   if(proximity_enable == 1)
   {
 	  flag_tp_down = 1;
-	  return;
+	  goto exit_unlock;
   }
   
   /*zhangpeng add start*/
@@ -1953,7 +1955,11 @@ static void gsl_ts_suspend(void)
 	gpio_set_value(GSL_RST_GPIO_NUM, 0);
 	gsl_power_on(client, false);
 #endif
-	
+
+#ifdef GSL_PROXIMITY_SENSOR
+exit_unlock:
+#endif
+	mutex_unlock(&ddata->hw_lock);
 	return;
 }
 
@@ -1961,6 +1967,8 @@ static void gsl_ts_resume(void)
 {	
 	struct i2c_client *client = ddata->client;
 	print_info("==gslX68X_ts_resume=\n");
+
+	mutex_lock(&ddata->hw_lock);
 	//if(1==ddata->gsl_sw_flag){
 	//	ddata->gsl_halt_flag = 0;
 	//	return;
@@ -1975,7 +1983,7 @@ static void gsl_ts_resume(void)
 			{
 				flag_tp_down = 0;
 			}
-			return;
+			goto exit_unlock;
 		}
 
 		//zhangpeng add start
@@ -2000,7 +2008,7 @@ static void gsl_ts_resume(void)
 	
 #ifdef TPD_PROC_DEBUG
 	if(gsl_proc_flag == 1){
-		return;
+		goto exit_unlock;
 	}
 #endif
 	
@@ -2009,6 +2017,11 @@ static void gsl_ts_resume(void)
 #endif
 
 	ddata->gsl_halt_flag = 0;
+
+#if defined(GSL_PROXIMITY_SENSOR) || defined(TPD_PROC_DEBUG)
+exit_unlock:
+#endif
+	mutex_unlock(&ddata->hw_lock);
 	return;
 
 }
