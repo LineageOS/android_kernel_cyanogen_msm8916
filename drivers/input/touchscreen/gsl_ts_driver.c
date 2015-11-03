@@ -44,8 +44,8 @@
     #include <linux/input/mt.h>
 #endif
 
+/** TODO don't need this anymore. ddata->hw_lock gives the same protection */
 static struct mutex gsl_i2c_lock;
-static struct mutex gsl_wake_config_lock;
 
 /* Print Information */
 #ifdef GSL_DEBUG 
@@ -66,7 +66,6 @@ static char int_1st[4] = {0};
 static char int_2nd[4] = {0};
 static char b0_counter = 0;
 static char bc_counter = 0;
-static char i2c_lock_flag = 0;
 #endif
 
 /* Gesture Resume */
@@ -805,10 +804,8 @@ static void gsl_timer_check_func(struct work_struct *work)
 
 	print_info("----------------gsl_monitor_worker------i2c_lock==%d-----------\n",i2c_lock_flag);	
 
-	if(i2c_lock_flag != 0)
+	if(!mutex_trylock(&ddata->hw_lock))
 		goto queue_monitor_work;
-	else
-		i2c_lock_flag = 1;
 
 	gsl_read_interface(gsl_client, 0xb0, read_buf, 4);
     	if(read_buf[3] != 0x5a || read_buf[2] != 0x5a || read_buf[1] != 0x5a || read_buf[0] != 0x5a)
@@ -882,7 +879,7 @@ queue_monitor_init_chip:
 		gsl_sw_init(gsl_client);
 	}
 	
-	i2c_lock_flag = 0;
+	mutex_unlock(&ddata->hw_lock);
 
 queue_monitor_work:	
 	queue_delayed_work(gsl_timer_workqueue, &gsl_timer_check_work,100);
@@ -1485,7 +1482,7 @@ static ssize_t gsl_sysfs_tpgesturet_store(struct device *dev,
 	struct i2c_client *gsl_client = ts->client;
 	int old_gesture_flag;
 
-	mutex_lock(&gsl_wake_config_lock);
+	mutex_lock(&ddata->hw_lock);
 	old_gesture_flag = gsl_gesture_flag;
 	if(buf[0] == '0'){
 		gsl_gesture_flag = 0;  
@@ -1501,7 +1498,7 @@ static ssize_t gsl_sysfs_tpgesturet_store(struct device *dev,
 		if (!old_gesture_flag)
 			enable_irq_wake(gsl_client->irq);
 	}
-	mutex_unlock(&gsl_wake_config_lock);
+	mutex_unlock(&ddata->hw_lock);
 
 	return count;
 }
@@ -1662,10 +1659,8 @@ static irqreturn_t gsl_ts_isr(int irq, void *priv)
 	//if(1 == ddata->gsl_sw_flag)
 	//	goto schedule;
     #ifdef GSL_TIMER
-	if(i2c_lock_flag != 0)
+	if(!mutex_trylock(&ddata->hw_lock))
 		goto i2c_lock_schedule;
-	else
-		i2c_lock_flag = 1;
     #endif
 	
 	#ifdef TPD_PROC_DEBUG
@@ -1831,7 +1826,7 @@ static irqreturn_t gsl_ts_isr(int irq, void *priv)
 	
 schedule:
 #ifdef GSL_TIMER
-	i2c_lock_flag = 0;
+	mutex_unlock(&ddata->hw_lock);
 i2c_lock_schedule:
 #endif	
 	return IRQ_HANDLED;
@@ -2226,7 +2221,7 @@ static int gsl_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		goto exit_alloc_cinfo_failed;
 	}
 	mutex_init(&gsl_i2c_lock);
-	mutex_init(&gsl_wake_config_lock);
+	mutex_init(&ddata->hw_lock);
 		
 	ddata->client = client;
 	i2c_set_clientdata(client, ddata);
