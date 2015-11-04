@@ -129,6 +129,7 @@ struct gsl_ts_data{
 	#endif
 
 	struct mutex hw_lock;
+	atomic_t i2c_suspend;
 };
 
 #ifdef GSL_PROXIMITY_SENSOR
