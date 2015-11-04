@@ -796,6 +796,7 @@ static void gsl_timer_check_func(struct work_struct *work)
 {
 	struct gsl_ts_data *ts = ddata;
 	struct i2c_client *gsl_client = ts->client;
+	int supend_check_count = 0;
 /*    
 	static int i2c_lock_flag = 0;
 	char read_buf[4]  = {0};
@@ -806,6 +807,14 @@ static void gsl_timer_check_func(struct work_struct *work)
 	char init_chip_flag = 0;
 
 	print_info("----------------gsl_monitor_worker------i2c_lock==%d-----------\n",i2c_lock_flag);	
+
+	while (atomic_read(&ts->i2c_suspend)) {
+		if (supend_check_count++ > 10) {
+			dev_warn(&gsl_client->dev, "giving waiting for to i2c to resume\n");
+		}
+		dev_dbg(&gsl_client->dev, "i2c is suspended while attempting gsl_timer_check_func\n");
+		msleep(50);
+	}
 
 	if(!mutex_trylock(&ddata->hw_lock))
 		goto queue_monitor_work;
@@ -1647,6 +1656,11 @@ static irqreturn_t gsl_ts_isr(int irq, void *priv)
 	#ifdef GSL_PROXIMITY_SENSOR
 	u8 tmp_prox = 0;
 	#endif
+
+	while (atomic_read(&ddata->i2c_suspend)) {
+		dev_dbg(&client->dev, "i2c is suspended while interrupt is ready\n");
+		msleep(50);
+	}
 	
 	//if(1 == ddata->gsl_sw_flag)
 	//	goto schedule;
@@ -2227,6 +2241,7 @@ static int gsl_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		err = -ENOMEM;
 		goto exit_alloc_cinfo_failed;
 	}
+	atomic_set(&ddata->i2c_suspend, 0);
 	mutex_init(&gsl_i2c_lock);
 	mutex_init(&ddata->hw_lock);
 		
@@ -2451,6 +2466,7 @@ static int gsl_ts_pm_suspend(struct device *dev)
 		return -EAGAIN;
 
 	disable_irq(ddata->client->irq);
+	atomic_set(&ddata->i2c_suspend, 1);
 
 #ifdef GSL_GESTURE
 	if (gsl_gesture_flag) {
@@ -2475,6 +2491,7 @@ static int gsl_ts_pm_resume(struct device *dev)
 		disable_irq_wake(ddata->client->irq);
 #endif
 
+	atomic_set(&ddata->i2c_suspend, 0);
 	enable_irq(ddata->client->irq);
 
 	dev_dbg(dev, "resume\n");

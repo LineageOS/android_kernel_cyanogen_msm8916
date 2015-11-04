@@ -134,6 +134,7 @@ struct gsl_ts_data{
 #ifdef GSL_GESTURE
 	struct wake_lock gesture_wake_lock;
 #endif
+	atomic_t i2c_suspend;
 };
 
 #ifdef GSL_PROXIMITY_SENSOR
