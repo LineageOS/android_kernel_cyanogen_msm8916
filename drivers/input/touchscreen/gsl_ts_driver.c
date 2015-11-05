@@ -475,8 +475,12 @@ static void gsl_reset_core(struct i2c_client *client)
 	u8 buf[4] = {0x00};
 	
 	gpio_set_value(GSL_RST_GPIO_NUM,0);
-	mdelay(2);
+	mdelay(20);
 	gpio_set_value(GSL_RST_GPIO_NUM,1);
+	mdelay(20);
+
+	buf[0] = 0x88;
+	gsl_write_interface(client,0xe0,buf,4);
 	mdelay(2);
 
 	buf[0] = 0x04;
@@ -496,9 +500,12 @@ static void gsl_reset_core_without_vddio(struct i2c_client *client)
 	u8 buf[4] = {0x00};
 	
 	gpio_set_value(GSL_RST_GPIO_NUM,0);
-	mdelay(2);
+	mdelay(20);
 	gpio_set_value(GSL_RST_GPIO_NUM,1);
+	mdelay(20);
 
+	buf[0] = 0x88;
+	gsl_write_interface(client,0xe0,buf,4);
 	mdelay(2);
 
 	buf[0] = 0x04;
@@ -516,11 +523,14 @@ static void gsl_clear_reg(struct i2c_client *client)
 	u8 buf[4]={0};
 
 	gpio_set_value(GSL_RST_GPIO_NUM,0);
-	mdelay(2);
+	mdelay(20);
 	gpio_set_value(GSL_RST_GPIO_NUM,1);
+	mdelay(20);
 
-	mdelay(10);
-	buf[0]=0x3;
+	buf[0]=0x88;
+	gsl_write_interface(client,0xe0,buf,4);
+	mdelay(2);
+	buf[0]=0x1;
 	gsl_write_interface(client,0x80,buf,4);
 	mdelay(2);
 	buf[0]=0x4;
@@ -1036,9 +1046,9 @@ static void gsl_hw_init(void)
 	gpio_direction_output(GSL_RST_GPIO_NUM,1);	
 	gpio_direction_input(GSL_IRQ_GPIO_NUM);
 
-	msleep(5);
+	msleep(20);
 	gpio_set_value(GSL_RST_GPIO_NUM,0);
-	msleep(10);	
+	msleep(20);	
 	gpio_set_value(GSL_RST_GPIO_NUM,1);
 	msleep(20);
 	//	
@@ -1054,9 +1064,9 @@ static void gsl_sw_init(struct i2c_client *client)
 	ddata->gsl_sw_flag = 1;
 	
 	gpio_set_value(GSL_RST_GPIO_NUM, 0);
-	mdelay(10);
+	mdelay(20);
 	gpio_set_value(GSL_RST_GPIO_NUM, 1);
-	mdelay(10);	
+	mdelay(20);	
 
 	gsl_clear_reg(client);
 	gsl_reset_core(client);
@@ -1441,7 +1451,7 @@ static void gsl_quit_doze(struct gsl_ts_data *ts)
 
 	gpio_direction_output(GSL_IRQ_GPIO_NUM,0);
 	gpio_set_value(GSL_RST_GPIO_NUM,0);
-	mdelay(5);
+	mdelay(20);
 	gpio_set_value(GSL_RST_GPIO_NUM,1);
 	mdelay(20);
 	gpio_direction_input(GSL_IRQ_GPIO_NUM);
