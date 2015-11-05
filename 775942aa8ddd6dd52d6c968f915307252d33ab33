@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1f2f7f8d_2321d54e",
+        "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 13409
+      },
+      "writtenOn": "2015-11-05T04:42:08Z",
+      "side": 1,
+      "message": "Are you going to roll a second patch and fold it into this one to fix this TODO?",
+      "revId": "775942aa8ddd6dd52d6c968f915307252d33ab33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
