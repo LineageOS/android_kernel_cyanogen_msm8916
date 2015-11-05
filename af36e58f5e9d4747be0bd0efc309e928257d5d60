@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "1f2f7f8d_a32a65e4",
+        "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 428,
+      "author": {
+        "id": 14090
+      },
+      "writtenOn": "2015-11-05T05:25:10Z",
+      "side": 1,
+      "message": "This was intentional. Having visibility in to this  issue would be good on release builds.",
+      "revId": "af36e58f5e9d4747be0bd0efc309e928257d5d60",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1f2f7f8d_63b59dee",
         "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
         "patchSetId": 3
