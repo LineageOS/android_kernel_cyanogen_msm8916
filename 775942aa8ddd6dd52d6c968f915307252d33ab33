@@ -16,6 +16,24 @@
       "revId": "775942aa8ddd6dd52d6c968f915307252d33ab33",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1f2f7f8d_237d551c",
+        "filename": "drivers/input/touchscreen/gsl_ts_driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 14090
+      },
+      "writtenOn": "2015-11-05T05:01:37Z",
+      "side": 1,
+      "message": "I\u0027m not 100% certain that ddata-\u003ehw_lock is protecting every entry point.\n\nWill do, after I am sure.",
+      "parentUuid": "1f2f7f8d_2321d54e",
+      "revId": "775942aa8ddd6dd52d6c968f915307252d33ab33",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
