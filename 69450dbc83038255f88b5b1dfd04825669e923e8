@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff5d4b2f_3056d008",
+        "filename": "drivers/input/misc/ltr553.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 440,
+      "author": {
+        "id": 14090
+      },
+      "writtenOn": "2015-11-17T07:11:21Z",
+      "side": 1,
+      "message": "should be value \u003e 0xf.",
+      "revId": "69450dbc83038255f88b5b1dfd04825669e923e8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
