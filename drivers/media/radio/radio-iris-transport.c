@@ -38,12 +38,17 @@ struct radio_data {
 	struct smd_channel  *fm_channel;
 };
 struct radio_data hs;
+#ifndef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
 static DEFINE_MUTEX(fm_smd_enable);
 static int fmsmd_set;
 static int hcismd_fm_set_enable(const char *val, struct kernel_param *kp);
 module_param_call(fmsmd_set, hcismd_fm_set_enable, NULL, &fmsmd_set, 0644);
-static struct work_struct *reset_worker;
 static void radio_hci_smd_deregister(void);
+#else
+int fmsmd_ready = -1;
+void radio_hci_smd_deregister(void);
+#endif
+static struct work_struct *reset_worker;
 
 static void radio_hci_smd_destruct(struct radio_hci_dev *hdev)
 {
@@ -199,18 +204,31 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 	return 0;
 }
 
+#ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
+void radio_hci_smd_deregister(void)
+#else
 static void radio_hci_smd_deregister(void)
+#endif
 {
 	smd_close(hs.fm_channel);
 	hs.fm_channel = 0;
+#ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
+	fmsmd_ready = -1;
+#else
 	fmsmd_set = 0;
+#endif
 }
 
+#ifdef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
+int radio_hci_smd_init(void)
+#else
 static int radio_hci_smd_init(void)
+#endif
 {
 	return radio_hci_smd_register_dev(&hs);
 }
 
+#ifndef CONFIG_RADIO_IRIS_TRANSPORT_NO_FIRMWARE
 static void radio_hci_smd_exit(void)
 {
 	radio_hci_smd_deregister();
@@ -238,6 +256,7 @@ done:
 	mutex_unlock(&fm_smd_enable);
 	return ret;
 }
+#endif
 MODULE_DESCRIPTION("FM SMD driver");
 MODULE_AUTHOR("Ankur Nandwani <ankurn@codeaurora.org>");
 MODULE_LICENSE("GPL v2");
