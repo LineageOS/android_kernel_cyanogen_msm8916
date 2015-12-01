@@ -1879,7 +1879,7 @@ static int msm_otg_notify_chg_type(struct msm_otg *motg)
 		return -EINVAL;
 	}
 
-	pr_debug("setting usb power supply type %d\n", charger_type);
+	dev_info(motg->phy.dev, "Setting usb power supply type %d\n", charger_type);
 	msm_otg_dbg_log_event(&motg->phy, "SET USB PWR SUPPLY TYPE",
 			motg->chg_type, charger_type);
 	power_supply_set_supply_type(psy, charger_type);
@@ -1894,12 +1894,14 @@ static int msm_otg_notify_power_supply(struct msm_otg *motg, unsigned mA)
 	}
 
 	if (motg->cur_power == 0 && mA > 2) {
+		dev_info(motg->phy.dev, "Enable charging");
 		/* Enable charging */
 		if (power_supply_set_online(psy, true))
 			goto psy_error;
 		if (power_supply_set_current_limit(psy, 1000*mA))
 			goto psy_error;
 	} else if (motg->cur_power >= 0 && (mA == 0 || mA == 2)) {
+		dev_info(motg->phy.dev, "Disable charging");
 		/* Disable charging */
 		if (power_supply_set_online(psy, false))
 			goto psy_error;
@@ -1907,6 +1909,7 @@ static int msm_otg_notify_power_supply(struct msm_otg *motg, unsigned mA)
 		if (power_supply_set_current_limit(psy, 1000*mA))
 			goto psy_error;
 	} else {
+		dev_info(motg->phy.dev, "Charger current change");
 		if (power_supply_set_online(psy, true))
 			goto psy_error;
 		/* Current has changed (100/2 --> 500) */
@@ -1940,6 +1943,8 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 
 	if (g && g->is_a_peripheral)
 		return;
+
+	dev_info(motg->phy.dev, "Charger type: %d\n", motg->chg_type);
 
 	if ((motg->chg_type == USB_ACA_DOCK_CHARGER ||
 		motg->chg_type == USB_ACA_A_CHARGER ||
