@@ -964,7 +964,7 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 			goto exit;
 		}
 
-		dev_dbg(&ltr->i2c->dev, "ps data: 0x%x 0x%x\n",
+		printk(KERN_INFO "ps data: 0x%x 0x%x\n",
 				ps_data[0], ps_data[1]);
 
 		tmp = (ps_data[1] << 8) | ps_data[0];
@@ -1012,7 +1012,7 @@ static int ltr553_process_data(struct ltr553_data *ltr, int als_ps)
 		ps_data[0] = PS_LOW_BYTE(tmp);
 		ps_data[1] = PS_HIGH_BYTE(tmp);
 
-		dev_dbg(&ltr->i2c->dev, "ps threshold: 0x%x 0x%x 0x%x 0x%x\n",
+		printk(KERN_INFO "ps threshold: 0x%x 0x%x 0x%x 0x%x\n",
 				ps_data[0], ps_data[1], ps_data[2], ps_data[3]);
 
 		rc = regmap_bulk_write(ltr->regmap, LTR553_REG_PS_THRES_UP_0,
