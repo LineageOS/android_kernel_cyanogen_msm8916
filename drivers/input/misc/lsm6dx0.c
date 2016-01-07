@@ -1672,6 +1672,8 @@ static int lsm6d_gyr_cdev_set_poll_delay(
 	struct lsm6dx0_status *stat =
 		container_of(sensors_cdev, struct lsm6dx0_status, gyr_cdev);
 
+	printk(KERN_INFO "%s: setting delay to %d", __func__, msecs);
+
 	stat->ktime_gyr = ktime_set(0, MS_TO_NS(msecs));
 
 	return 0;
