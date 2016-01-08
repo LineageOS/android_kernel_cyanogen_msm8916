@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fce034c_88343a4c",
+        "filename": "drivers/input/misc/st480.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 14090
+      },
+      "writtenOn": "2016-01-08T05:03:49Z",
+      "side": 1,
+      "message": "This should be a period in microseconds not a rate.\nI think it should be ST480_DEFAULT_DELAY * 1000",
+      "revId": "d8900cec808723651e25a196f88747d39c3e3731",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
