@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "3fce034c_d909b2dd",
+        "filename": "drivers/input/misc/lsm6dx0.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 848,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T05:07:17Z",
+      "side": 1,
+      "message": "Will use hrtimer_forward_now instead. I\u0027ll keep the call here though, so it still kind of matches what the original code does.",
+      "parentUuid": "3fce034c_f9b7ce39",
+      "revId": "b25a1ea17a25acb60ee75158ec03b8371216573d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3fce034c_f9626ed8",
         "filename": "drivers/input/misc/lsm6dx0.c",
         "patchSetId": 2
