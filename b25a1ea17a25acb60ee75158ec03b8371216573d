@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "3fce034c_79a43e09",
+        "filename": "drivers/input/misc/lsm6dx0.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2479,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-09T04:38:32Z",
+      "side": 1,
+      "message": "Probably not. Let me adjust that.",
+      "parentUuid": "3fce034c_f9626ed8",
+      "revId": "b25a1ea17a25acb60ee75158ec03b8371216573d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3fce034c_b99aa6c2",
         "filename": "drivers/input/misc/lsm6dx0.c",
         "patchSetId": 2
