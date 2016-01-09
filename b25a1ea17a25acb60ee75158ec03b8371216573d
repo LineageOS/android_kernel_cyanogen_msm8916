@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "3fce034c_f9b7ce39",
+        "filename": "drivers/input/misc/lsm6dx0.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 848,
+      "author": {
+        "id": 14090
+      },
+      "writtenOn": "2016-01-09T04:53:35Z",
+      "side": 1,
+      "message": "Don\u0027t do this. Use hrtimer_forward_now instead.\n\nIf you do this, you won\u0027t account for scheduling delays so your effective sampling rate will be less than what you wanted.\n\nThis impl might be OK because you\u0027re not doing anything time consuming (like i2c) before rescheduling the timer. Still, it\u0027s better to use the hrtimer_forward because that\u0027s what it\u0027s intended for.\n\nYou might want to consider moving the forward/start call to  the thread function after you finish the i2c read. I think the code would read a little better that way.",
+      "revId": "b25a1ea17a25acb60ee75158ec03b8371216573d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3fce034c_f9626ed8",
         "filename": "drivers/input/misc/lsm6dx0.c",
         "patchSetId": 2
