@@ -200,7 +200,7 @@
 
 	sound {
 		compatible = "qcom,msm8x16-audio-codec";
-		qcom,model = "msm8x16-t86519a1-snd-card";
+		qcom,model = "msm8x16-skui-snd-card";
 		qcom,msm-snd-card-id = <0>;
 		qcom,msm-ext-pa = "quaternary";
 		qcom,msm-codec-type = "internal";
