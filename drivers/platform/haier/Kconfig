@@ -1,5 +1,7 @@
 # Haier configuration options
 
+menu "Haier board selection"
+
 config MACH_HAIER
 	bool "Wingtech device"
 	depends on ARCH_MSM
@@ -12,8 +14,6 @@ config MACH_HAIER_MSM8916
 	select MACH_HAIER
 	help
 	  Support for MSM8916 Haier variants
-
-menu "Haier board selection"
 
 config MACH_RENDANG
 	bool "Rendang board"
