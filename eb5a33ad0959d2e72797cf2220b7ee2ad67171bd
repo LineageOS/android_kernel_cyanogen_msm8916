@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_54f3279f",
+        "filename": "drivers/platform/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-02-01T06:25:34Z",
+      "side": 1,
+      "message": "Is there a reason this needs to move?",
+      "revId": "eb5a33ad0959d2e72797cf2220b7ee2ad67171bd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
