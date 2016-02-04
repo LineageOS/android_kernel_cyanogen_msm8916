@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_af2b0ce9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-02-04T02:52:59Z",
+      "side": 1,
+      "message": "ARM: dts: g36c1h: ...",
+      "revId": "3e63f64de826840be4eec36e29712c4ef6021aef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1fcbff3d_0fefc0b0",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-02-04T02:52:59Z",
+      "side": 1,
+      "message": "Line break after title, otherwise git gets confused.",
+      "revId": "3e63f64de826840be4eec36e29712c4ef6021aef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
