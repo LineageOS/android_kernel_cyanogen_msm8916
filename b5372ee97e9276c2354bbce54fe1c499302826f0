@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_9d1a5315",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:36:09Z",
+      "side": 1,
+      "message": "ASoC: wcd: ...",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 5
+      },
+      "revId": "b5372ee97e9276c2354bbce54fe1c499302826f0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_fd1d8f0f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:36:09Z",
+      "side": 1,
+      "message": "Don\u0027t need this.",
+      "range": {
+        "startLine": 9,
+        "startChar": 0,
+        "endLine": 11,
+        "endChar": 24
+      },
+      "revId": "b5372ee97e9276c2354bbce54fe1c499302826f0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_3d2c8746",
+        "filename": "sound/soc/codecs/msm8x16-wcd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4101,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:36:09Z",
+      "side": 1,
+      "message": "true",
+      "range": {
+        "startLine": 4101,
+        "startChar": 21,
+        "endLine": 4101,
+        "endChar": 22
+      },
+      "revId": "b5372ee97e9276c2354bbce54fe1c499302826f0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_dd20cb4c",
+        "filename": "sound/soc/codecs/msm8x16-wcd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4118,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:36:09Z",
+      "side": 1,
+      "message": "false",
+      "range": {
+        "startLine": 4118,
+        "startChar": 21,
+        "endLine": 4118,
+        "endChar": 22
+      },
+      "revId": "b5372ee97e9276c2354bbce54fe1c499302826f0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
