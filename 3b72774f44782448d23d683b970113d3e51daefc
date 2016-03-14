@@ -1,0 +1,107 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_1d34234a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 1,
+      "message": "input: sensors: kionix_hq: ...",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 15
+      },
+      "revId": "3b72774f44782448d23d683b970113d3e51daefc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_3d39e740",
+        "filename": "drivers/input/misc/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 370,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 1,
+      "message": "space between accelerometer and (...)",
+      "revId": "3b72774f44782448d23d683b970113d3e51daefc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_dd3d2b2d",
+        "filename": "drivers/input/misc/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 1,
+      "message": "Should go above the LSM6DX0 line, and follow the KXTJ9 line.",
+      "revId": "3b72774f44782448d23d683b970113d3e51daefc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_bd44f7b8",
+        "filename": "include/linux/input/kionix_accel.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 14,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 1,
+      "message": "Consider adding an ifdef on the HQ variant for this part.",
+      "range": {
+        "startLine": 4,
+        "startChar": 0,
+        "endLine": 14,
+        "endChar": 33
+      },
+      "revId": "3b72774f44782448d23d683b970113d3e51daefc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_5d137bb9",
+        "filename": "include/linux/input/kionix_accel.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 1,
+      "message": "Consider adding an ifdef on the HQ variant for this part.",
+      "range": {
+        "startLine": 21,
+        "startChar": 0,
+        "endLine": 24,
+        "endChar": 27
+      },
+      "revId": "3b72774f44782448d23d683b970113d3e51daefc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_fd3a6f32",
+        "filename": "include/linux/input/kionix_accel.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 0,
+      "message": "Definitely don\u0027t delete the license!",
+      "range": {
+        "startLine": 1,
+        "startChar": 0,
+        "endLine": 19,
+        "endChar": 3
+      },
+      "revId": "5779aa01d84e3ea71c26ce713df307f0d093d01d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_9d47b3bd",
+        "filename": "include/linux/input/kionix_accel.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:55:28Z",
+      "side": 0,
+      "message": "Should probably not be changed.",
+      "range": {
+        "startLine": 24,
+        "startChar": 0,
+        "endLine": 25,
+        "endChar": 42
+      },
+      "revId": "5779aa01d84e3ea71c26ce713df307f0d093d01d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
