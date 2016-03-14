@@ -1,0 +1,205 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_fdf4afd1",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "input: touchscreen: gt9xx_hq: ...",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 5
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_3d132710",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "Don\u0027t really need this",
+      "range": {
+        "startLine": 9,
+        "startChar": 0,
+        "endLine": 11,
+        "endChar": 35
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_fd6fcf8f",
+        "filename": "drivers/input/touchscreen/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 1067,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "Maybe make this GT_9XX_HQ to match the path?",
+      "range": {
+        "startLine": 1067,
+        "startChar": 7,
+        "endLine": 1067,
+        "endChar": 27
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_dd720b7d",
+        "filename": "drivers/input/touchscreen/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 1076,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "Insert newline here",
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_bd69578c",
+        "filename": "drivers/input/touchscreen/gt9xx_hq/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "variant",
+      "range": {
+        "startLine": 6,
+        "startChar": 43,
+        "endLine": 6,
+        "endChar": 50
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_5d04dbc6",
+        "filename": "drivers/input/touchscreen/gt9xx_hq/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "gt9xx",
+      "range": {
+        "startLine": 19,
+        "startChar": 25,
+        "endLine": 19,
+        "endChar": 37
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_9d6c939d",
+        "filename": "drivers/input/touchscreen/gt9xx_hq/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "variant",
+      "range": {
+        "startLine": 22,
+        "startChar": 43,
+        "endLine": 22,
+        "endChar": 50
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_1d0e63e5",
+        "filename": "drivers/input/touchscreen/gt9xx_hq/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 38,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "variant",
+      "range": {
+        "startLine": 38,
+        "startChar": 32,
+        "endLine": 38,
+        "endChar": 39
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_7d099fdb",
+        "filename": "drivers/input/touchscreen/gt9xx_hq/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:33:40Z",
+      "side": 1,
+      "message": "gt9xx_tool",
+      "range": {
+        "startLine": 51,
+        "startChar": 25,
+        "endLine": 51,
+        "endChar": 37
+      },
+      "revId": "b56c7c0707a699e4938a8122d05bb4543939abb5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
