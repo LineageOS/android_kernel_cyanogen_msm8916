@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_5da05ba6",
+        "filename": "drivers/usb/phy/phy-msm-usb.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 117,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:41:21Z",
+      "side": 1,
+      "message": "#ifndef ?",
+      "range": {
+        "startLine": 117,
+        "startChar": 1,
+        "endLine": 117,
+        "endChar": 12
+      },
+      "revId": "bd4e821871a6871a9e5e9f84414ec97848c891a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_bd9ab76b",
+        "filename": "drivers/usb/phy/phy-msm-usb.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2252,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:41:21Z",
+      "side": 1,
+      "message": "#ifndef ?",
+      "range": {
+        "startLine": 2252,
+        "startChar": 0,
+        "endLine": 2252,
+        "endChar": 12
+      },
+      "revId": "bd4e821871a6871a9e5e9f84414ec97848c891a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_ddce8b82",
+        "filename": "include/linux/usb/msm_hsusb.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 229,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:41:21Z",
+      "side": 1,
+      "message": "Use 8 space hard tabs in the kernel.",
+      "range": {
+        "startLine": 229,
+        "startChar": 0,
+        "endLine": 229,
+        "endChar": 4
+      },
+      "revId": "bd4e821871a6871a9e5e9f84414ec97848c891a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_5d8e1b28",
+        "filename": "include/linux/usb/msm_hsusb.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 327,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:41:21Z",
+      "side": 1,
+      "message": "otg5v_en_gpio\n\nto match with the naming of other GPIO variables. I actually thought this was meant to be a boolean flag at first.",
+      "range": {
+        "startLine": 327,
+        "startChar": 5,
+        "endLine": 327,
+        "endChar": 13
+      },
+      "revId": "bd4e821871a6871a9e5e9f84414ec97848c891a9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
