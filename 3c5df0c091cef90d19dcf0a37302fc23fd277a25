@@ -1,0 +1,199 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_9d7573fd",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "power: qpnp-linear-charger-hq: ...\n\npower: qpnp-vm-bms-hq: ...",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 14
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_fd682f22",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Don\u0027t need this.",
+      "range": {
+        "startLine": 9,
+        "startChar": 0,
+        "endLine": 10,
+        "endChar": 29
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_9d2013fa",
+        "filename": "drivers/power/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 499,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Consider naming this QPNP_VM_BMS_HQ and moving this section below QPNP_VM_BMS to match the pattern elsewhere.",
+      "range": {
+        "startLine": 499,
+        "startChar": 7,
+        "endLine": 499,
+        "endChar": 21
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_bd1dd7be",
+        "filename": "drivers/power/Kconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 528,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Same as above, consider naming QPNP_LINEAR_CHARGER_HQ and moving below QPNP_LINEAR_CHARGER.",
+      "range": {
+        "startLine": 528,
+        "startChar": 7,
+        "endLine": 528,
+        "endChar": 29
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_5d785bf7",
+        "filename": "drivers/power/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 62,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Consider renaming to qpnp-vm-bms-hq.o, renaming the file accordingly, and moving below the QPNP_VM_BMS_HQ entry.",
+      "range": {
+        "startLine": 62,
+        "startChar": 32,
+        "endLine": 62,
+        "endChar": 48
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_7d7d1fe6",
+        "filename": "drivers/power/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Consider renaming to qpnp-linear-charger-hq.o, renaming the file accordingly, and moving below the QPNP_LINEAR_CHARGER entry.",
+      "range": {
+        "startLine": 66,
+        "startChar": 40,
+        "endLine": 66,
+        "endChar": 64
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_1d82e3c9",
+        "filename": "drivers/power/qpnp-hq-linear-charger.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "I didn\u0027t examine this driver closely the first time, but I really wonder if the delta is really that far off the standard qpnp-linear-charger.c driver.",
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_3d87a7da",
+        "filename": "drivers/power/qpnp-hq-vm-bms.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Same, I wonder if the delta is that far off the qpnp-vm-bms.c driver.",
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_dd6beb1c",
+        "filename": "include/linux/batterydata-lib.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 146,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T22:12:34Z",
+      "side": 1,
+      "message": "Consider renaming to match the other renames. Also, check for other CONFIG_QPNP_VM_BMS usages that this may need to be added to.",
+      "range": {
+        "startLine": 146,
+        "startChar": 9,
+        "endLine": 146,
+        "endChar": 30
+      },
+      "revId": "3c5df0c091cef90d19dcf0a37302fc23fd277a25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
