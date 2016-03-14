@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dfbec78f_dd49ab32",
+        "filename": "arch/arm/boot/dts/qcom/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 82,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:24:36Z",
+      "side": 1,
+      "message": "Trailing whitespace",
+      "revId": "467275ba0f5522f87a2795e75a161e7c5b37b5cd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfbec78f_fd46ef21",
+        "filename": "arch/arm/boot/dts/qcom/Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 83,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-14T21:24:36Z",
+      "side": 1,
+      "message": "Dependent on Huaqin platform support, may be better to move this to that commit.",
+      "revId": "467275ba0f5522f87a2795e75a161e7c5b37b5cd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
