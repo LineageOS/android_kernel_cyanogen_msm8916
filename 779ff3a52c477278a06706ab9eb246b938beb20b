@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_ad34bedf",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-18T19:53:13Z",
+      "side": 1,
+      "message": "There\u0027s nothing CPU related about this commit.",
+      "range": {
+        "startLine": 7,
+        "startChar": 32,
+        "endLine": 7,
+        "endChar": 35
+      },
+      "revId": "779ff3a52c477278a06706ab9eb246b938beb20b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_0d3872d1",
+        "filename": "arch/arm/boot/dts/qcom/t86519a1/msm8916-t86519a1.dtsi",
+        "patchSetId": 1
+      },
+      "lineNbr": 257,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-03-18T19:53:13Z",
+      "side": 1,
+      "message": "This shouldn\u0027t be a tab.",
+      "revId": "779ff3a52c477278a06706ab9eb246b938beb20b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
