@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_97bd486a",
+        "filename": "drivers/platform/msm/qpnp-vibrator.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 76,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-03-22T18:34:31Z",
+      "side": 1,
+      "message": "Use tabs for indentation",
+      "range": {
+        "startLine": 76,
+        "startChar": 0,
+        "endLine": 76,
+        "endChar": 8
+      },
+      "revId": "5d8d0c2a1a690a8cd2f4858a755c6426aa7341a2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_b7c2c4e8",
+        "filename": "drivers/platform/msm/qpnp-vibrator.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 488,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-03-22T18:34:31Z",
+      "side": 1,
+      "message": "Wrong indentation",
+      "range": {
+        "startLine": 488,
+        "startChar": 1,
+        "endLine": 488,
+        "endChar": 2
+      },
+      "revId": "5d8d0c2a1a690a8cd2f4858a755c6426aa7341a2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
