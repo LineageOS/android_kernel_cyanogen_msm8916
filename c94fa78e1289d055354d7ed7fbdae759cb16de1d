@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_0997f792",
+        "filename": "arch/arm/boot/dts/qcom/msm8939-cp8675-i01-p0.dts",
+        "patchSetId": 1
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-03-24T15:35:35Z",
+      "side": 1,
+      "message": "This needs some testing",
+      "revId": "c94fa78e1289d055354d7ed7fbdae759cb16de1d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
