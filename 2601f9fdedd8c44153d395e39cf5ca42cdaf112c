@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_09405735",
+        "filename": "drivers/hwmon/qpnp-adc-common.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-03-24T15:24:03Z",
+      "side": 1,
+      "message": "The ifdef could be moved below like other devices",
+      "revId": "2601f9fdedd8c44153d395e39cf5ca42cdaf112c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
