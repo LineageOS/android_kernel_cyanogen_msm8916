@@ -673,8 +673,9 @@ struct lpm_cluster *parse_cluster(struct device_node *node,
 		}
 	}
 
+#ifndef CONFIG_MACH_YULONG
 	c->last_level = c->nlevels-1;
-
+#endif
 	return c;
 
 failed_parse_cluster:
