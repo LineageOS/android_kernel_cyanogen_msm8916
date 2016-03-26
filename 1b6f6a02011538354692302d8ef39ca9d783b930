@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_34948744",
+        "filename": "drivers/sensors/hall/coolpad_hall.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 11690
+      },
+      "writtenOn": "2016-03-26T10:22:08Z",
+      "side": 1,
+      "message": "error: linux/sysdev.h: No such file or directory",
+      "revId": "1b6f6a02011538354692302d8ef39ca9d783b930",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
