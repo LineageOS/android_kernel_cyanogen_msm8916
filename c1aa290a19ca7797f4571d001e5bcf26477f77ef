@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_df93e35b",
+        "filename": "sound/soc/codecs/msm8x16-wcd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4315,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-17T21:28:45Z",
+      "side": 0,
+      "message": "This is code used by other devices.",
+      "range": {
+        "startLine": 4315,
+        "startChar": 1,
+        "endLine": 4315,
+        "endChar": 65
+      },
+      "revId": "c1aa290a19ca7797f4571d001e5bcf26477f77ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_ff901f51",
+        "filename": "sound/soc/codecs/msm8x16-wcd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4322,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-17T21:28:45Z",
+      "side": 0,
+      "message": "This is code used by other devices.",
+      "range": {
+        "startLine": 4322,
+        "startChar": 0,
+        "endLine": 4322,
+        "endChar": 65
+      },
+      "revId": "c1aa290a19ca7797f4571d001e5bcf26477f77ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}

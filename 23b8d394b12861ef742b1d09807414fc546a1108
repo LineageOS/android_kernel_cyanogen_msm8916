@@ -1,0 +1,61 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_3faf9795",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-17T21:28:45Z",
+      "side": 1,
+      "message": "Match commit message formatting used by other commits modifying this driver.",
+      "revId": "23b8d394b12861ef742b1d09807414fc546a1108",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_1faadb84",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-17T21:28:45Z",
+      "side": 1,
+      "message": "Need a newline here",
+      "revId": "23b8d394b12861ef742b1d09807414fc546a1108",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_9f9d6b68",
+        "filename": "sound/soc/codecs/msm8x16-wcd.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4069,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-17T21:28:45Z",
+      "side": 1,
+      "message": "This is probably the only real change needed.",
+      "range": {
+        "startLine": 4059,
+        "startChar": 1,
+        "endLine": 4069,
+        "endChar": 2
+      },
+      "revId": "23b8d394b12861ef742b1d09807414fc546a1108",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
