@@ -3460,16 +3460,12 @@ static int msm8x16_wcd_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 				snd_soc_update_bits(codec,
 					MSM8X16_WCD_A_ANALOG_TX_1_2_ATEST_CTL_2,
 					0x02, 0x02);
-#ifndef CONFIG_MACH_SPIRIT
 			snd_soc_update_bits(codec, micb_int_reg, 0x80, 0x80);
-#endif
 		} else if (strnstr(w->name, internal2_text, strlen(w->name))) {
 			snd_soc_update_bits(codec, micb_int_reg, 0x10, 0x10);
 			snd_soc_update_bits(codec, w->reg, 0x60, 0x00);
 		} else if (strnstr(w->name, internal3_text, strlen(w->name))) {
-#ifndef CONFIG_MACH_SPIRIT
 			snd_soc_update_bits(codec, micb_int_reg, 0x2, 0x2);
-#endif
 		}
 		if (!strnstr(w->name, external_text, strlen(w->name)))
 			snd_soc_update_bits(codec,
@@ -4054,12 +4050,23 @@ static int msm8x16_wcd_hphr_dac_event(struct snd_soc_dapm_widget *w,
 static int enable_ext_spk(struct snd_soc_dapm_widget *w, bool enable)
 {
 	struct snd_soc_codec *codec = w->codec;
+	struct msm8x16_wcd_priv *msm8x16_wcd = snd_soc_codec_get_drvdata(codec);
 	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(codec->card);
 
 	if (!gpio_is_valid(pdata->ext_spk_amp_gpio))
 		return -EINVAL;
 
-	gpio_direction_output(pdata->ext_spk_amp_gpio, enable);
+	if (enable) {
+		int i;
+		for (i = 0; i < msm8x16_wcd->ext_spk_mode; i++) {
+			gpio_direction_output(pdata->ext_spk_amp_gpio, 0);
+			udelay(1);
+			gpio_direction_output(pdata->ext_spk_amp_gpio, 1);
+			udelay(1);
+		}
+	} else {
+		gpio_direction_output(pdata->ext_spk_amp_gpio, 0);
+	}
 
 	return 0;
 }
@@ -4098,7 +4105,7 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 				MSM8X16_WCD_A_CDC_RX2_B6_CTL, 0x01, 0x00);
 #ifdef CONFIG_MACH_JALEBI
-			enable_ext_spk(w, true);
+			enable_ext_spk(w, 1);
 #endif
 		}
 		break;
@@ -4115,7 +4122,7 @@ static int msm8x16_wcd_hph_pa_event(struct snd_soc_dapm_widget *w,
 					WCD_EVENT_PRE_HPHL_PA_OFF);
 		} else if (w->shift == 4) {
 #ifdef CONFIG_MACH_JALEBI
-			enable_ext_spk(w, false);
+			enable_ext_spk(w, 0);
 #endif
 			snd_soc_update_bits(codec,
 				MSM8X16_WCD_A_CDC_RX2_B6_CTL, 0x01, 0x01);
@@ -4312,16 +4319,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"IIR2 INP1 MUX", "DEC2", "DEC2 MUX"},
 	{"MIC BIAS Internal1", NULL, "INT_LDO_H"},
 	{"MIC BIAS Internal2", NULL, "INT_LDO_H"},
-#if defined(CONFIG_MACH_LONGCHEER) || defined(CONFIG_MACH_SPIRIT)
-	{"MIC BIAS Internal3", NULL, "INT_LDO_H"},
-#endif
 	{"MIC BIAS External", NULL, "INT_LDO_H"},
 	{"MIC BIAS External2", NULL, "INT_LDO_H"},
 	{"MIC BIAS Internal1", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS Internal2", NULL, "MICBIAS_REGULATOR"},
-#if defined(CONFIG_MACH_LONGCHEER) || defined(CONFIG_MACH_SPIRIT)
-	{"MIC BIAS Internal3", NULL, "MICBIAS_REGULATOR"},
-#endif
 	{"MIC BIAS External", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS External2", NULL, "MICBIAS_REGULATOR"},
 };
