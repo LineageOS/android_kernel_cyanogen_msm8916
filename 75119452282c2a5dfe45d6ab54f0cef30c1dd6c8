@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_a2035e0d",
+        "filename": "drivers/platform/msm/qpnp-vibrator.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 358,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-24T05:11:25Z",
+      "side": 1,
+      "message": "Probably needs some wrapping here.",
+      "revId": "75119452282c2a5dfe45d6ab54f0cef30c1dd6c8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_42086a27",
+        "filename": "drivers/platform/msm/qpnp-vibrator.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 361,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-24T05:11:25Z",
+      "side": 1,
+      "message": "Wrapping",
+      "revId": "75119452282c2a5dfe45d6ab54f0cef30c1dd6c8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
