@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_6d04777c",
+        "filename": "arch/arm/boot/dts/qcom/Makefile",
+        "patchSetId": 2
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-25T10:00:41Z",
+      "side": 1,
+      "message": "Extraneous newline.",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_0df9437f",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/msm-pm8916-cp8675.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-25T10:00:41Z",
+      "side": 1,
+      "message": "Maybe these can be removed? Not sure why anyone would want to merely comment it out.",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_2df67f91",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/msm8939-cp8675.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 284,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-25T10:00:41Z",
+      "side": 1,
+      "message": "Remove?",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_cdf24b9b",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/msm8939-cp8675.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 287,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-25T10:00:41Z",
+      "side": 1,
+      "message": "Remove?",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_edef07ae",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/msm8939-panels-cp8675.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-04-25T10:00:41Z",
+      "side": 1,
+      "message": "Can\u0027t these includes just be placed in the main DTS file?",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
