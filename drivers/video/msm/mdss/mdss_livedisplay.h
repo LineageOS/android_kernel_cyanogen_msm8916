@@ -33,9 +33,13 @@ struct mdss_livedisplay_ctx {
 	uint8_t aco_value;
 
 	const uint8_t *ce_off_cmds;
-	const uint8_t *ce_on_cmds;
+	const uint8_t *ce_weak_cmds;
+	const uint8_t *ce_medium_cmds;
+	const uint8_t *ce_strong_cmds;
 	unsigned int ce_off_cmds_len;
-	unsigned int ce_on_cmds_len;
+	unsigned int ce_weak_cmds_len;
+	unsigned int ce_medium_cmds_len;
+	unsigned int ce_strong_cmds_len;
 
 	const uint8_t *presets[MAX_PRESETS];
 	unsigned int presets_len[MAX_PRESETS];
@@ -49,8 +53,8 @@ struct mdss_livedisplay_ctx {
 	unsigned int preset;
 	unsigned int cabc_level;
 	unsigned int sre_level;
+	unsigned int ce_level;
 	bool aco_enabled;
-	bool ce_enabled;
 
 	unsigned int num_presets;
 	unsigned int caps;
@@ -81,6 +85,14 @@ enum {
 	SRE_MEDIUM,
 	SRE_STRONG,
 	SRE_MAX
+};
+
+enum {
+	CE_OFF,
+	CE_WEAK,
+	CE_MEDIUM,
+	CE_STRONG,
+	CE_MAX
 };
 
 enum {
