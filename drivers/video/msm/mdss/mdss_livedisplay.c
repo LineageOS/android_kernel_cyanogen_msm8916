@@ -39,14 +39,13 @@
  *      in the panel devicetree. Up to three levels.
  * sre: Sunlight Readability Enhancement. Must be configured in
  *      the panel devicetree. Up to three levels.
+ * color_enhance: Hardware color enhancement. Must be configured
+ *      in the panel devicetree. Up to three levels.
  * aco: Automatic Contrast Optimization. Must be configured in
  *      the panel devicetree. Boolean.
  *
  * preset: Arbitrary DSI commands, up to 10 may be configured.
  *      Useful for gamma calibration.
- *
- * color_enhance: Hardware color enhancement. Must be configured
- *      in the panel devicetree. Boolean.
  */
 
 extern void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
@@ -196,8 +195,23 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 	if ((mlc->caps & MODE_PRESET) && (mlc->updated & MODE_PRESET))
 		len += mlc->presets_len[mlc->preset];
 
-	if ((mlc->caps & MODE_COLOR_ENHANCE) && (mlc->updated & MODE_COLOR_ENHANCE))
-		len += mlc->ce_enabled ? mlc->ce_on_cmds_len : mlc->ce_off_cmds_len;
+	if ((mlc->caps & MODE_COLOR_ENHANCE) && (mlc->updated & MODE_COLOR_ENHANCE)) {
+		switch (mlc->ce_level) {
+		case CE_WEAK:
+			len += mlc->ce_weak_cmds_len;
+			break;
+		case CE_MEDIUM:
+			len += mlc->ce_medium_cmds_len;
+			break;
+		case CE_STRONG:
+			len += mlc->ce_strong_cmds_len;
+			break;
+		case CE_OFF:
+		default:
+			len += mlc->ce_off_cmds_len;
+			break;
+		}
+	}
 
 	if (is_cabc_cmd(mlc->updated) && is_cabc_cmd(mlc->caps)) {
 
@@ -243,12 +257,24 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 
 	// Color enhancement
 	if ((mlc->caps & MODE_COLOR_ENHANCE) && (mlc->updated & MODE_COLOR_ENHANCE)) {
-		if (mlc->ce_enabled) {
-			memcpy(mlc->cmd_buf + dlen, mlc->ce_on_cmds, mlc->ce_on_cmds_len);
-			dlen += mlc->ce_on_cmds_len;
-		} else {
+		switch (mlc->ce_level) {
+		case CE_WEAK:
+			memcpy(mlc->cmd_buf + dlen, mlc->ce_weak_cmds, mlc->ce_weak_cmds_len);
+			dlen += mlc->ce_weak_cmds_len;
+			break;
+		case CE_MEDIUM:
+			memcpy(mlc->cmd_buf + dlen, mlc->ce_medium_cmds, mlc->ce_medium_cmds_len);
+			dlen += mlc->ce_medium_cmds_len;
+			break;
+		case CE_STRONG:
+			memcpy(mlc->cmd_buf + dlen, mlc->ce_strong_cmds, mlc->ce_strong_cmds_len);
+			dlen += mlc->ce_strong_cmds_len;
+			break;
+		case CE_OFF:
+		default:
 			memcpy(mlc->cmd_buf + dlen, mlc->ce_off_cmds, mlc->ce_off_cmds_len);
 			dlen += mlc->ce_off_cmds_len;
+			break;
 		}
 	}
 
@@ -361,23 +387,23 @@ static ssize_t mdss_livedisplay_get_color_enhance(struct device *dev,
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 	struct mdss_livedisplay_ctx *mlc = get_ctx(mfd);
 
-	return sprintf(buf, "%d\n", mlc->ce_enabled);
+	return sprintf(buf, "%d\n", mlc->ce_level);
 }
 
 static ssize_t mdss_livedisplay_set_color_enhance(struct device *dev,
 							   struct device_attribute *attr,
 							   const char *buf, size_t count)
 {
-	int value = 0;
+	int level = 0;
 	struct fb_info *fbi = dev_get_drvdata(dev);
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 	struct mdss_livedisplay_ctx *mlc = get_ctx(mfd);
 
-	sscanf(buf, "%du", &value);
-	if ((value == 0 || value == 1)
-			&& value != mlc->ce_enabled) {
+	sscanf(buf, "%du", &level);
+	if (level >= CE_OFF && level < CE_MAX
+			&& level != mlc->ce_level) {
 		mutex_lock(&mlc->lock);
-		mlc->ce_enabled = value;
+		mlc->ce_level = level;
 		mutex_unlock(&mlc->lock);
 		mdss_livedisplay_update(mlc, MODE_COLOR_ENHANCE);
 	}
@@ -566,11 +592,15 @@ int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pi
 		}
 	}
 
-	mlc->ce_on_cmds = of_get_property(np,
-			"cm,mdss-livedisplay-color-enhance-on", &mlc->ce_on_cmds_len);
-	if (mlc->ce_on_cmds_len) {
+	mlc->ce_medium_cmds = of_get_property(np,
+			"cm,mdss-livedisplay-ce-medium-cmd", &mlc->ce_medium_cmds_len);
+	if (mlc->ce_medium_cmds_len) {
+		mlc->ce_weak_cmds = of_get_property(np,
+				"cm,mdss-livedisplay-ce-weak-cmd", &mlc->ce_weak_cmds_len);
+		mlc->ce_strong_cmds = of_get_property(np,
+				"cm,mdss-livedisplay-ce-strong-cmd", &mlc->ce_strong_cmds_len);
 		mlc->ce_off_cmds = of_get_property(np,
-				"cm,mdss-livedisplay-color-enhance-off", &mlc->ce_off_cmds_len);
+				"cm,mdss-livedisplay-ce-off-cmd", &mlc->ce_off_cmds_len);
 		if (mlc->ce_off_cmds_len)
 			mlc->caps |= MODE_COLOR_ENHANCE;
 	}
