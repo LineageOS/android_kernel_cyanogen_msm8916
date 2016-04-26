@@ -216,8 +216,8 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 	if (is_cabc_cmd(mlc->updated) && is_cabc_cmd(mlc->caps)) {
 
 		// The CABC command on most modern panels is also responsible for
-		// other features such as SRE and ACO.  The register fields are bits
-		// and are OR'd together and sent in a single DSI command.
+		// other features such as SRE, CE and ACO.  The register fields
+		// are bits and are OR'd together and sent in a single DSI command.
 		if (mlc->cabc_level == CABC_UI)
 			cabc_value |= mlc->cabc_ui_value;
 		else if (mlc->cabc_level == CABC_IMAGE)
@@ -232,14 +232,21 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 		else if (mlc->sre_level == SRE_STRONG)
 			cabc_value |= mlc->sre_strong_value;
 
+		if (mlc->ce_level == CE_WEAK)
+			cabc_value |= mlc->ce_weak_value;
+		else if (mlc->ce_level == CE_MEDIUM)
+			cabc_value |= mlc->ce_medium_value;
+		else if (mlc->ce_level == CE_STRONG)
+			cabc_value |= mlc->ce_strong_value;
+
 		if (mlc->aco_enabled)
 			cabc_value |= mlc->aco_value;
 
 		len += mlc->cabc_cmds_len;
 
-		pr_info("%s cabc=%d sre=%d aco=%d cmd=%d\n", __func__,
-				mlc->cabc_level, mlc->sre_level, mlc->aco_enabled,
-				cabc_value);
+		pr_info("%s cabc=%d sre=%d ce=%d aco=%d cmd=%d\n", __func__,
+				mlc->cabc_level, mlc->sre_level, mlc->ce_level,
+				mlc->aco_enabled, cabc_value);
 	}
 
 	len += mlc->post_cmds_len;
@@ -278,8 +285,8 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 		}
 	}
 
-	// CABC/SRE/ACO features
-	if (is_cabc_cmd(mlc->updated) && mlc->cabc_cmds_len) {
+	// CABC/SRE/CE_CABC/ACO features
+	if (is_cabc_cmd(mlc->updated) && mlc->cabc_cmds_len)) {
 		memcpy(mlc->cmd_buf + dlen, mlc->cabc_cmds, mlc->cabc_cmds_len);
 		dlen += mlc->cabc_cmds_len;
 		// The CABC command parameter is the last value in the sequence
@@ -405,7 +412,8 @@ static ssize_t mdss_livedisplay_set_color_enhance(struct device *dev,
 		mutex_lock(&mlc->lock);
 		mlc->ce_level = level;
 		mutex_unlock(&mlc->lock);
-		mdss_livedisplay_update(mlc, MODE_COLOR_ENHANCE);
+		mdss_livedisplay_update(mlc,
+				MODE_COLOR_ENHANCE | MODE_COLOR_ENHANCE_CABC);
 	}
 
 	return count;
@@ -585,6 +593,15 @@ int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pi
 			of_property_read_u32(np, "cm,mdss-livedisplay-sre-strong-value", &tmp);
 			mlc->sre_strong_value = (uint8_t)(tmp & 0xFF);
 		}
+		rc = of_property_read_u32(np, "cm,mdss-livedisplay-ce-medium-value", &tmp);
+		if (rc == 0) {
+			mlc->caps |= MODE_COLOR_ENHANCE_CABC;
+			mlc->ce_medium_value = (uint8_t)(tmp & 0xFF);
+			of_property_read_u32(np, "cm,mdss-livedisplay-ce-weak-value", &tmp);
+			mlc->ce_weak_value = (uint8_t)(tmp & 0xFF);
+			of_property_read_u32(np, "cm,mdss-livedisplay-ce-strong-value", &tmp);
+			mlc->ce_strong_value = (uint8_t)(tmp & 0xFF);
+		}
 		rc = of_property_read_u32(np, "cm,mdss-livedisplay-aco-value", &tmp);
 		if (rc == 0) {
 			mlc->caps |= MODE_AUTO_CONTRAST;
@@ -592,17 +609,19 @@ int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pi
 		}
 	}
 
-	mlc->ce_medium_cmds = of_get_property(np,
-			"cm,mdss-livedisplay-ce-medium-cmd", &mlc->ce_medium_cmds_len);
-	if (mlc->ce_medium_cmds_len) {
-		mlc->ce_weak_cmds = of_get_property(np,
-				"cm,mdss-livedisplay-ce-weak-cmd", &mlc->ce_weak_cmds_len);
-		mlc->ce_strong_cmds = of_get_property(np,
-				"cm,mdss-livedisplay-ce-strong-cmd", &mlc->ce_strong_cmds_len);
-		mlc->ce_off_cmds = of_get_property(np,
-				"cm,mdss-livedisplay-ce-off-cmd", &mlc->ce_off_cmds_len);
-		if (mlc->ce_off_cmds_len)
-			mlc->caps |= MODE_COLOR_ENHANCE;
+	if (!(mlc->caps & MODE_COLOR_ENHANCE_CABC)) {
+		mlc->ce_medium_cmds = of_get_property(np,
+				"cm,mdss-livedisplay-ce-medium-cmd", &mlc->ce_medium_cmds_len);
+		if (mlc->ce_medium_cmds_len) {
+			mlc->ce_weak_cmds = of_get_property(np,
+					"cm,mdss-livedisplay-ce-weak-cmd", &mlc->ce_weak_cmds_len);
+			mlc->ce_strong_cmds = of_get_property(np,
+					"cm,mdss-livedisplay-ce-strong-cmd", &mlc->ce_strong_cmds_len);
+			mlc->ce_off_cmds = of_get_property(np,
+					"cm,mdss-livedisplay-ce-off-cmd", &mlc->ce_off_cmds_len);
+			if (mlc->ce_off_cmds_len)
+				mlc->caps |= MODE_COLOR_ENHANCE;
+		}
 	}
 
 	for (i = 0; i < MAX_PRESETS; i++) {
@@ -665,7 +684,7 @@ int mdss_livedisplay_create_sysfs(struct msm_fb_data_type *mfd)
 			goto sysfs_err;
 	}
 
-	if (mlc->caps & MODE_COLOR_ENHANCE) {
+	if (mlc->caps & (MODE_COLOR_ENHANCE | MODE_COLOR_ENHANCE_CABC)) {
 		rc = sysfs_create_file(&mfd->fbi->dev->kobj, &dev_attr_color_enhance.attr);
 		if (rc)
 			goto sysfs_err;
