@@ -259,10 +259,16 @@
 		cm,mdss-livedisplay-cabc-image-value = <2>;
 		cm,mdss-livedisplay-cabc-video-value = <3>;
 */
-		cm,mdss-livedisplay-color-enhance-on = [
-			29 01 00 00 00 00 02 55 80
+		cm,mdss-livedisplay-ce-weak-cmd = [
+			29 01 00 00 00 00 02 55 83
 		];
-		cm,mdss-livedisplay-color-enhance-off = [
+		cm,mdss-livedisplay-ce-medium-cmd = [
+			29 01 00 00 00 00 02 55 93
+		];
+		cm,mdss-livedisplay-ce-strong-cmd = [
+			29 01 00 00 00 00 02 55 B3
+		];
+		cm,mdss-livedisplay-ce-off-cmd = [
 			29 01 00 00 00 00 02 55 00
 		];
 		cm,mdss-livedisplay-post-cmd = [

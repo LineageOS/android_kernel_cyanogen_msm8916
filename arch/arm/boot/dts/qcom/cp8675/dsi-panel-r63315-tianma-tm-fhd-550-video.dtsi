@@ -64,10 +64,16 @@
 		cm,mdss-livedisplay-cabc-ui-value = <1>;
 		cm,mdss-livedisplay-cabc-image-value = <2>;
 		cm,mdss-livedisplay-cabc-video-value = <3>;
-		cm,mdss-livedisplay-color-enhance-on = [
+		cm,mdss-livedisplay-ce-weak-cmd = [
+			29 01 00 00 00 00 02 81 80
+		];
+		cm,mdss-livedisplay-ce-medium-cmd = [
 			29 01 00 00 00 00 02 81 81
 		];
-		cm,mdss-livedisplay-color-enhance-off = [
+		cm,mdss-livedisplay-ce-strong-cmd = [
+			29 01 00 00 00 00 02 81 83
+		];
+		cm,mdss-livedisplay-ce-off-cmd = [
 			29 01 00 00 00 00 02 81 00
 		];
 		cm,mdss-livedisplay-post-cmd = [
