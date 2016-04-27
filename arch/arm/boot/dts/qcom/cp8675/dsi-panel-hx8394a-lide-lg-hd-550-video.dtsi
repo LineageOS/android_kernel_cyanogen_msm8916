@@ -70,12 +70,22 @@
 		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
 		cm,mdss-livedisplay-cabc-image-value = <0x2>;
 		cm,mdss-livedisplay-cabc-video-value = <0x3>;
-		cm,mdss-livedisplay-color-enhance-on = [
+		cm,mdss-livedisplay-ce-weak-cmd = [
 			39 01 00 00 00 00 04 B9 FF 83 94
 			39 01 00 00 00 00 02 E4 11
 			39 01 00 00 00 00 02 B9 00
 		];
-		cm,mdss-livedisplay-color-enhance-off = [
+		cm,mdss-livedisplay-ce-medium-cmd = [
+			39 01 00 00 00 00 04 B9 FF 83 94
+			39 01 00 00 00 00 02 E4 12
+			39 01 00 00 00 00 02 B9 00
+		];
+		cm,mdss-livedisplay-ce-strong-cmd = [
+			39 01 00 00 00 00 04 B9 FF 83 94
+			39 01 00 00 00 00 02 E4 13
+			39 01 00 00 00 00 02 B9 00
+		];
+		cm,mdss-livedisplay-ce-off-cmd = [
 			39 01 00 00 00 00 04 B9 FF 83 94
 			39 01 00 00 00 00 02 E4 00
 			39 01 00 00 00 00 02 B9 00
