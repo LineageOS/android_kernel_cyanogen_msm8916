@@ -250,27 +250,15 @@
 			05 01 00 00 14 00 02 28 00
 			05 01 00 00 78 00 02 10 00
 		];
-/*
-		// Disabled, since it interferes with CE
 		cm,mdss-livedisplay-cabc-cmd = [
 			29 01 00 00 00 00 02 55 00
 		];
 		cm,mdss-livedisplay-cabc-ui-value = <0x01>;
 		cm,mdss-livedisplay-cabc-image-value = <0x02>;
 		cm,mdss-livedisplay-cabc-video-value = <0x03>;
-*/
-		cm,mdss-livedisplay-ce-weak-cmd = [
-			29 01 00 00 00 00 02 55 83
-		];
-		cm,mdss-livedisplay-ce-medium-cmd = [
-			29 01 00 00 00 00 02 55 93
-		];
-		cm,mdss-livedisplay-ce-strong-cmd = [
-			29 01 00 00 00 00 02 55 B3
-		];
-		cm,mdss-livedisplay-ce-off-cmd = [
-			29 01 00 00 00 00 02 55 00
-		];
+		cm,mdss-livedisplay-ce-weak-value = <0x80>;
+		cm,mdss-livedisplay-ce-medium-value = <0x90>;
+		cm,mdss-livedisplay-ce-strong-value = <0xB0>;
 		cm,mdss-livedisplay-post-cmd = [
 			05 01 00 00 00 00 02 29 00
 		];
