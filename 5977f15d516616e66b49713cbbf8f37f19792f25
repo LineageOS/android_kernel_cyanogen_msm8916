@@ -36,6 +36,24 @@
     },
     {
       "key": {
+        "uuid": "5faad753_bd9e1305",
+        "filename": "arch/arm/boot/dts/qcom/cp8675/msm-pm8916-cp8675.dtsi",
+        "patchSetId": 2
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-04-28T22:41:04Z",
+      "side": 1,
+      "message": "http://devicetree.org/Device_Tree_Usage\n\nThese are supposed to be there",
+      "parentUuid": "5faad753_0df9437f",
+      "revId": "5977f15d516616e66b49713cbbf8f37f19792f25",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5faad753_2df67f91",
         "filename": "arch/arm/boot/dts/qcom/cp8675/msm8939-cp8675.dtsi",
         "patchSetId": 2
