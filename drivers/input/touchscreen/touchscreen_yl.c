@@ -37,9 +37,11 @@
 #include <linux/power_supply.h>
 
 
-/*begin to transplant TW charge status detect code from 8675_C00,
- you must include linux/power_supply.h,the TW add charger status detect function, 0 is charger offline,1 is charger online
-by liushilong@yulong.com on 2014-11-6 11:10*/
+/* Transplant TW charge status detect code from 8675_C00,
+	you must include linux/power_supply.h,
+	the TW add charger status detect function,
+	0 is charger offline,1 is charger online
+	by liushilong@yulong.com on 2014-11-6 11:10 */
 void (*touch_charger_notify)(void);
 static int charger_status=0;
 
@@ -49,23 +51,19 @@ static int charger_status=0;
  *****************************************************/
 unsigned int touch_get_charger_status(void)
 {
-	if(charger_status)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
+	return charger_status;
 }
+
 void touch_register_charger_notify(void (*fn)(void))
 {
 	touch_charger_notify = fn;
 }
+
 void touch_unregister_charger_notify(void)
 {
 	touch_charger_notify = NULL;
 }
+
 void touch_charger_status_changed(struct power_supply *psy)
 {
 	union power_supply_propval value;
@@ -74,7 +72,7 @@ void touch_charger_status_changed(struct power_supply *psy)
 	pr_debug("%s: enter touch_charger_status_changed(), psy->type = %d.\n",
 			__func__, psy->type);
 
-	if(psy->type != POWER_SUPPLY_TYPE_USB &&
+	if (psy->type != POWER_SUPPLY_TYPE_USB &&
 			psy->type != POWER_SUPPLY_TYPE_MAINS &&
 			psy->type != POWER_SUPPLY_TYPE_USB_DCP &&
 			psy->type != POWER_SUPPLY_TYPE_USB_CDP &&
@@ -82,34 +80,22 @@ void touch_charger_status_changed(struct power_supply *psy)
 		return;
 
 	ret = psy->get_property(psy, POWER_SUPPLY_PROP_ONLINE, &value);
-	if(ret < 0)
-	{
+	if (ret < 0) {
 		pr_err("%s: get_property failed.\n", __func__);
 		return;
 	}
 
-	if(value.intval)
-	{
-		charger_status |= 1<<psy->type;
-	}
+	if (value.intval)
+		charger_status |= 1 << psy->type;
 	else
-	{
-		charger_status &= ~(1<<psy->type);
-	}
-
+		charger_status &= ~(1 << psy->type);
 
 	pr_debug("%s:  charger_status = %d.\n", __func__, charger_status);
 
 	if (touch_charger_notify)
-	{
 		touch_charger_notify();
-	}
 
 }
-/*end to transplant TW charge status detect code from 8675_C00,
- you must include linux/power_supply.h,the TW add charger status detect function, 0 is charger offline,1 is charger online
-by liushilong@yulong.com on 2014-11-6 11:10*/
-
 
 touchscreen_ops_tpye *touchscreen_ops[2];
 
@@ -135,19 +121,18 @@ static DEFINE_MUTEX(touchscreen_mutex);
 **********************************************************************/
 int touchscreen_set_ops(touchscreen_ops_tpye *ops)
 {
-	if(ops==NULL || ops->touch_id>1 )
-	{
+	if (ops == NULL || ops->touch_id > 1) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:ops error!\n");
 		return -EBUSY;
 	}
+
 	mutex_lock(&touchscreen_mutex);
-	if(touchscreen_ops[ops->touch_id]!=NULL)
-	{
+	if (touchscreen_ops[ops->touch_id] != NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:ops has been used!\n");
 		mutex_unlock(&touchscreen_mutex);
 		return -EBUSY;
 	}
-       touchscreen_ops[ops->touch_id] = ops;
+	touchscreen_ops[ops->touch_id] = ops;
 	mutex_unlock(&touchscreen_mutex);
 	printk("BJ_BSP_Driver:CP_Touchscreen:ops add success!\n");
 	return 0;
@@ -170,23 +155,20 @@ int touchscreen_set_ops(touchscreen_ops_tpye *ops)
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_type_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_type_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	int ret=0;
+	int ret = 0;
 
-	if (buf==NULL)
-	{
+	if (buf == NULL) {
 		dev_dbg(dev, "BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if (TOUCH_IN_ACTIVE(0))
-	{
+	if (TOUCH_IN_ACTIVE(0)) {
 		ret = touchscreen_ops[0]->touch_type;
-	}
-	else if (TOUCH_IN_ACTIVE(1))
-	{
+	} else if (TOUCH_IN_ACTIVE(1)) {
 		ret = touchscreen_ops[1]->touch_type;
 	}
 	mutex_unlock(&touchscreen_mutex);
@@ -212,31 +194,28 @@ static ssize_t  touchscreen_type_show(struct device *dev,struct device_attribute
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_active_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_active_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	int ret=0;
-	int ret1=0;
+	int ret = 0;
+	int ret1 = 0;
 
-	if(buf==NULL)
-	{
+	if (buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
 	if (touchscreen_ops[0] && touchscreen_ops[0]->active)
-	{
 		ret = touchscreen_ops[0]->active();
-	}
 
 	if (touchscreen_ops[1] && touchscreen_ops[1]->active)
-	{
 		ret1 = touchscreen_ops[1]->active();
-	}
 	mutex_unlock(&touchscreen_mutex);
 
-	printk("BJ_BSP_Driver:CP_Touchscreen:%d,%d in %s\n",ret,ret1,__FUNCTION__);
-	return sprintf(buf, "%d,%d\n",ret,ret1);
+	printk("BJ_BSP_Driver: CP_Touchscreen: %d, %d in %s\n",
+			ret, ret1, __FUNCTION__);
+	return sprintf(buf, "%d, %d\n", ret, ret1);
 }
 
 /**********************************************************************
@@ -270,12 +249,12 @@ static ssize_t touchscreen_firmware_update_show(struct device *dev,struct device
 	if(TOUCH_IN_ACTIVE(0))
 	{
 		if(touchscreen_ops[0]->firmware_need_update)
-	       	ret = touchscreen_ops[0]->firmware_need_update();
+			ret = touchscreen_ops[0]->firmware_need_update();
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->firmware_need_update)
-	       	ret = touchscreen_ops[1]->firmware_need_update();
+			ret = touchscreen_ops[1]->firmware_need_update();
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -319,17 +298,17 @@ static ssize_t  touchscreen_firmware_update_store(struct device *dev,struct devi
 	mutex_lock(&touchscreen_mutex);
 	if(TOUCH_IN_ACTIVE(0))
 	{
-	     if(touchscreen_ops[0]->firmware_need_update && touchscreen_ops[0]->firmware_need_update() && touchscreen_ops[0]->firmware_do_update)
+		 if(touchscreen_ops[0]->firmware_need_update && touchscreen_ops[0]->firmware_need_update() && touchscreen_ops[0]->firmware_do_update)
 		{
-                   ret = touchscreen_ops[0]->firmware_do_update();
-            	}
+				   ret = touchscreen_ops[0]->firmware_do_update();
+				}
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
-  	     if(touchscreen_ops[1]->firmware_need_update && touchscreen_ops[1]->firmware_need_update() && touchscreen_ops[1]->firmware_do_update)
+		 if(touchscreen_ops[1]->firmware_need_update && touchscreen_ops[1]->firmware_need_update() && touchscreen_ops[1]->firmware_do_update)
 		{
-                   ret = touchscreen_ops[1]->firmware_do_update();
-            	}
+				   ret = touchscreen_ops[1]->firmware_do_update();
+				}
 	}
 	mutex_unlock(&touchscreen_mutex);
 	return ret;
@@ -367,12 +346,12 @@ static ssize_t touchscreen_calibrate_show(struct device *dev,struct device_attri
 	if(TOUCH_IN_ACTIVE(0))
 	{
 		if(touchscreen_ops[0]->need_calibrate)
-	       	ret = touchscreen_ops[0]->need_calibrate();
+			ret = touchscreen_ops[0]->need_calibrate();
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->need_calibrate)
-	       	ret = touchscreen_ops[1]->need_calibrate();
+			ret = touchscreen_ops[1]->need_calibrate();
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -416,12 +395,12 @@ static ssize_t  touchscreen_calibrate_store(struct device *dev,struct device_att
 	if(TOUCH_IN_ACTIVE(0))
 	{
 		if(touchscreen_ops[0]->calibrate)
-	       	ret = touchscreen_ops[0]->calibrate();
+			ret = touchscreen_ops[0]->calibrate();
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->calibrate)
-	       	ret = touchscreen_ops[1]->calibrate();
+			ret = touchscreen_ops[1]->calibrate();
 	}
 	mutex_unlock(&touchscreen_mutex);
 	return ret;
@@ -460,12 +439,12 @@ static ssize_t  touchscreen_firmware_version_show(struct device *dev,struct devi
 	if(TOUCH_IN_ACTIVE(0))
 	{
 		if(touchscreen_ops[0]->get_firmware_version)
-	       	touchscreen_ops[0]->get_firmware_version(version);
+			touchscreen_ops[0]->get_firmware_version(version);
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->get_firmware_version)
-	       	touchscreen_ops[1]->get_firmware_version(version);
+			touchscreen_ops[1]->get_firmware_version(version);
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -512,12 +491,12 @@ static ssize_t  touchscreen_reset_store(struct device *dev,struct device_attribu
 	if(TOUCH_IN_ACTIVE(0))
 	{
 		if(touchscreen_ops[0]->reset_touchscreen)
-	       	ret = touchscreen_ops[0]->reset_touchscreen();
+			ret = touchscreen_ops[0]->reset_touchscreen();
 	}
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->reset_touchscreen)
-	       	ret = touchscreen_ops[1]->reset_touchscreen();
+			ret = touchscreen_ops[1]->reset_touchscreen();
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -542,61 +521,52 @@ static ssize_t  touchscreen_reset_store(struct device *dev,struct device_attribu
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_mode_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	int ret = 0;
-	char* mode;
+	char *mode;
 
-	if( NULL == buf )
-	{
+	if (buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
+	if (TOUCH_IN_ACTIVE(0)) {
 		if(touchscreen_ops[0]->get_mode)
 		ret = touchscreen_ops[0]->get_mode();
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-	{
+	} else if(TOUCH_IN_ACTIVE(1)) {
 		if(touchscreen_ops[1]->get_mode)
 		ret = touchscreen_ops[1]->get_mode();
 	}
 	mutex_unlock(&touchscreen_mutex);
 
 
-	switch( ret ){
-                case MODE_INVALID:
-			mode = "invalid";
-                        break;
+	switch (ret) {
+	case MODE_INVALID:
+		mode = "invalid";
+		break;
+	case MODE_NORMAL:
+		mode = "normal";
+		break;
+	case MODE_HANDWRITE:
+		mode = "handwrite";
+		break;
+	case MODE_GLOVE:
+		mode = "glove";
+		break;
+	case MODE_WINDOW:
+		mode = "window";
+		break;
 
-                case MODE_NORMAL:
-			mode = "normal";
-                        break;
-
-                case MODE_HANDWRITE:
-			mode = "handwrite";
-                        break;
-
-                case MODE_GLOVE:
-			mode = "glove";
-                        break;
-
-                case MODE_WINDOW:
-			mode = "window";
-                        break;
-
-                case MODE_MAX:
-			mode = "invalid";
-                        break;
-
-                default:
-			mode = "invalid";
-                        break;
-        }
-
+	case MODE_MAX:
+		mode = "invalid";
+		break;
+	default:
+		mode = "invalid";
+		break;
+	}
 
 	return sprintf(buf, "%s\n", mode);
 }
@@ -618,41 +588,37 @@ static ssize_t  touchscreen_mode_show(struct device *dev,struct device_attribute
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_mode_store(struct device *dev,struct device_attribute *attr,const char *buf, size_t count)
+static ssize_t touchscreen_mode_store(struct device *dev,
+		struct device_attribute *attr,const char *buf, size_t count)
 {
-	int ret=0;
-	int mode=0;
+	int ret = 0;
+	int mode = 0;
 
-	if(buf==NULL)
-	{
+	if (buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
-	if(strncmp(buf, "normal",count-1)==0)
-		mode=MODE_NORMAL;
-	else if(strncmp(buf, "handwrite",count-1)==0)
-		mode=MODE_HANDWRITE;
-	else if(strncmp(buf, "glove",count-1)==0)
-		mode=MODE_GLOVE;
-	else if(strncmp(buf, "window",count-1)==0)
-		mode=MODE_WINDOW;
-	else
-	{
+	if (strncmp(buf, "normal", count - 1) == 0) {
+		mode = MODE_NORMAL;
+	} else if (strncmp(buf, "handwrite",count - 1) == 0) {
+		mode = MODE_HANDWRITE;
+	} else if (strncmp(buf, "glove",count - 1) == 0) {
+		mode = MODE_GLOVE;
+	} else if (strncmp(buf, "window",count - 1) == 0) {
+		mode = MODE_WINDOW;
+	} else {
 		printk("BJ_BSP_Driver:CP_Touchscreen:Don't support %s mode!\n",buf);
 		return -EINVAL;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
-		if(touchscreen_ops[0]->set_mode)
-	       	ret = touchscreen_ops[0]->set_mode(mode);
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-	{
-		if(touchscreen_ops[1]->set_mode)
-	       	ret = touchscreen_ops[1]->set_mode(mode);
+	if (TOUCH_IN_ACTIVE(0)) {
+		if (touchscreen_ops[0]->set_mode)
+			ret = touchscreen_ops[0]->set_mode(mode);
+	} else if(TOUCH_IN_ACTIVE(1)) {
+		if (touchscreen_ops[1]->set_mode)
+			ret = touchscreen_ops[1]->set_mode(mode);
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -676,25 +642,22 @@ static ssize_t  touchscreen_mode_store(struct device *dev,struct device_attribut
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_oreitation_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_oreitation_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	int ret=0;
+	int ret = 0;
 
-	if(buf==NULL)
-	{
+	if(buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
-		if(touchscreen_ops[0]->get_oreitation)
+	if(TOUCH_IN_ACTIVE(0)) {
+		if (touchscreen_ops[0]->get_oreitation)
 			ret = touchscreen_ops[0]->get_oreitation();
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-	{
-		if(touchscreen_ops[1]->get_oreitation)
+	} else if(TOUCH_IN_ACTIVE(1)) {
+		if (touchscreen_ops[1]->get_oreitation)
 			ret = touchscreen_ops[1]->get_oreitation();
 	}
 	mutex_unlock(&touchscreen_mutex);
@@ -720,42 +683,37 @@ static ssize_t  touchscreen_oreitation_show(struct device *dev,struct device_att
 * --------------------------------------------------------------------
 * 2011/11/19	   冯春松                  创 建
 **********************************************************************/
-static ssize_t  touchscreen_oreitation_store(struct device *dev,struct device_attribute *attr,const char *buf, size_t count)
+static ssize_t touchscreen_oreitation_store(struct device *dev,
+		struct device_attribute *attr,const char *buf, size_t count)
 {
-	ssize_t ret=0;
-	int oreitation=0;
+	ssize_t ret = 0;
+	int oreitation = 0;
 
-	if(buf==NULL)
-	{
-		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
+	if (buf == NULL) {
+		printk("BJ_BSP_Driver: CP_Touchscreen: buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 
-	if(strncmp(buf, "oreitation",count-2))
-	{
-		printk("BJ_BSP_Driver:CP_Touchscreen:string is %s,not oreitation\n",buf);
+	if (strncmp(buf, "oreitation",count - 2)) {
+		printk("BJ_BSP_Driver: CP_Touchscreen:string is %s, not oreitation\n",buf);
 		return -EINVAL;
 	}
 
-	oreitation=buf[count-2]-'0';
-	printk("BJ_BSP_Driver:CP_Touchscreen:oreitation=%d",oreitation);
-	if(oreitation<0 || oreitation>3)
-	{
-		printk("BJ_BSP_Driver:CP_Touchscreen:oreitation[%d] is invalid\n",oreitation);
+	oreitation = buf[count - 2] - '0';
+	printk("BJ_BSP_Driver: CP_Touchscreen:oreitation=%d", oreitation);
+	if (oreitation < 0 || oreitation > 3) {
+		printk("BJ_BSP_Driver: CP_Touchscreen:oreitation[%d] is invalid\n",oreitation);
 		return -EINVAL;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
-		if(touchscreen_ops[0]->set_oreitation)
-	       	ret = touchscreen_ops[0]->set_oreitation(oreitation);
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-	{
-		if(touchscreen_ops[1]->set_oreitation)
-	       	ret = touchscreen_ops[1]->set_oreitation(oreitation);
+	if (TOUCH_IN_ACTIVE(0)) {
+		if (touchscreen_ops[0]->set_oreitation)
+			ret = touchscreen_ops[0]->set_oreitation(oreitation);
+	} else if(TOUCH_IN_ACTIVE(1)) {
+		if (touchscreen_ops[1]->set_oreitation)
+			ret = touchscreen_ops[1]->set_oreitation(oreitation);
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -911,51 +869,45 @@ static ssize_t  touchscreen_debug_store(struct device *dev,struct device_attribu
 * --------------------------------------------------------------------
 * 2013/7/10	   唐惠忠                 创 建
 **********************************************************************/
-static ssize_t  touchscreen_vendor_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_vendor_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	char vendor[32]={0};
 
-	if(buf==NULL)
-	{
+	if (buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
-		if(touchscreen_ops[0]->get_vendor)
-	       	touchscreen_ops[0]->get_vendor(vendor);
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-	{
-		if(touchscreen_ops[1]->get_vendor)
-	       	touchscreen_ops[1]->get_vendor(vendor);
+	if (TOUCH_IN_ACTIVE(0)) {
+		if (touchscreen_ops[0]->get_vendor)
+			touchscreen_ops[0]->get_vendor(vendor);
+	} else if (TOUCH_IN_ACTIVE(1)) {
+		if (touchscreen_ops[1]->get_vendor)
+			touchscreen_ops[1]->get_vendor(vendor);
 	}
 	mutex_unlock(&touchscreen_mutex);
 
 	return sprintf(buf, "%s\n",vendor);
 }
 
-static ssize_t  touchscreen_gesture_wakeup_show(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t touchscreen_gesture_wakeup_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
 {
-    char gesture[64]={0};
+	char gesture[64]={0};
 
-    if(buf==NULL)
-    {
-        printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
-        return -ENOMEM;
+	if (buf == NULL) {
+		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
+		return -ENOMEM;
 	}
 
-    mutex_lock(&touchscreen_mutex);
-    if(TOUCH_IN_ACTIVE(0))
-    {
-        if(touchscreen_ops[0]->get_wakeup_gesture)
-            touchscreen_ops[0]->get_wakeup_gesture(gesture);
-	}
-	else if(TOUCH_IN_ACTIVE(1))
-    {
-		if(touchscreen_ops[1]->get_wakeup_gesture)
+	mutex_lock(&touchscreen_mutex);
+	if (TOUCH_IN_ACTIVE(0)) {
+		if (touchscreen_ops[0]->get_wakeup_gesture)
+			touchscreen_ops[0]->get_wakeup_gesture(gesture);
+	} else if (TOUCH_IN_ACTIVE(1)) {
+		if (touchscreen_ops[1]->get_wakeup_gesture)
 			touchscreen_ops[1]->get_wakeup_gesture(gesture);
 	}
 	mutex_unlock(&touchscreen_mutex);
@@ -967,15 +919,13 @@ static ssize_t  touchscreen_gesture_ctrl_show(struct device *dev,struct device_a
 {
 	char gesture[64]={0};
 
-	if(buf==NULL)
-	{
+	if (buf == NULL) {
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&touchscreen_mutex);
-	if(TOUCH_IN_ACTIVE(0))
-	{
+	if (TOUCH_IN_ACTIVE(0)) {
 		if(touchscreen_ops[0]->get_gesture_ctrl)
 			touchscreen_ops[0]->get_gesture_ctrl(gesture);
 	}
@@ -1009,16 +959,16 @@ static ssize_t  touchscreen_gesture_ctrl_store(struct device *dev,struct device_
 	{
 		if(touchscreen_ops[1]->gesture_ctrl)
 			ret = touchscreen_ops[1]->gesture_ctrl(buf);
-      }
-     mutex_unlock(&touchscreen_mutex);
+	  }
+	 mutex_unlock(&touchscreen_mutex);
 
-    return count;
+	return count;
 }
 
 static ssize_t touchscreen_charger_state_show(struct device *dev,struct device_attribute *attr, char *buf)
 {
 	int ret=0;
-    char charger_state[16] = {0};
+	char charger_state[16] = {0};
 	if(buf==NULL)
 	{
 		printk("BJ_BSP_Driver:CP_Touchscreen:buf is NULL!\n");
@@ -1060,7 +1010,7 @@ static ssize_t  touchscreen_charger_state_store(struct device *dev,struct device
 	else if(TOUCH_IN_ACTIVE(1))
 	{
 		if(touchscreen_ops[1]->set_charger_state)
-	       	ret = touchscreen_ops[1]->set_charger_state(buf);
+			ret = touchscreen_ops[1]->set_charger_state(buf);
 	}
 	mutex_unlock(&touchscreen_mutex);
 
@@ -1132,7 +1082,7 @@ static struct class touchscreen_class = {
 static struct device *touchscreen_dev;
 struct device *touchscreen_get_dev(void)
 {
-    return touchscreen_dev;
+	return touchscreen_dev;
 }
 EXPORT_SYMBOL(touchscreen_get_dev);
 
