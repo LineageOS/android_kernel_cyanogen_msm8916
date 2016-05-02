@@ -1150,6 +1150,30 @@ static ssize_t pa12200001_show_flash(struct device *dev,
 static DEVICE_ATTR(readflash, S_IRUGO,
                    pa12200001_show_flash, NULL); //para 1:node name,/para 2:permission 3:permission function of read 4:permission function of write
 
+static void pa12200001_report_prox_event(struct pa12200001_data *data, int value)
+{
+	ktime_t timestamp = ktime_get_boottime();
+
+	input_event(data->proximity_input_dev, EV_SYN, SYN_TIME_SEC,
+		ktime_to_timespec(timestamp).tv_sec);
+	input_event(data->proximity_input_dev, EV_SYN, SYN_TIME_NSEC,
+		ktime_to_timespec(timestamp).tv_nsec);
+	input_event(data->proximity_input_dev, EV_MSC, MSC_SCAN, value);
+	input_sync(data->proximity_input_dev);
+}
+
+static void pa12200001_report_light_event(struct pa12200001_data *data, int value)
+{
+	ktime_t timestamp = ktime_get_boottime();
+
+	input_event(data->light_input_dev, EV_SYN, SYN_TIME_SEC,
+		ktime_to_timespec(timestamp).tv_sec);
+	input_event(data->light_input_dev, EV_SYN, SYN_TIME_NSEC,
+		ktime_to_timespec(timestamp).tv_nsec);
+	input_event(data->light_input_dev, EV_MSC, MSC_SCAN, value);
+	input_sync(data->proximity_input_dev);
+}
+
 /*work que function*/
 static void pa12200001_work_func_proximity(struct work_struct *work)
 {
@@ -1161,8 +1185,7 @@ static void pa12200001_work_func_proximity(struct work_struct *work)
 
     APS_LOG("PS value: %d\n", Pval);
 
-    input_event(data->proximity_input_dev, EV_MSC, MSC_SCAN, Pval);
-    input_sync(data->proximity_input_dev);
+    pa12200001_report_prox_event(data, Pval);
 
 }
 static void pa12200001_work_func_light(struct work_struct *work)
@@ -1173,8 +1196,7 @@ static void pa12200001_work_func_light(struct work_struct *work)
     Aval = pa12200001_get_lux_value(data->client);
     APS_DBG("ALS lux value: %d\n", Aval);
 
-    input_event(data->light_input_dev, EV_MSC, MSC_SCAN, Aval);
-    input_sync(data->light_input_dev);
+    pa12200001_report_light_event(data, Aval);
 }
 
 /* assume this is ISR */
@@ -1438,8 +1460,7 @@ static long pa12200001_ioctl(struct file *file, unsigned int cmd, unsigned long 
                 if(((1 == temp_flag)&&(1 == first_open_prox))||((temp_flag != 1)&&(temp_flag == val)))//temp is not exit the first time
                 {
                     if(temp_flag != 3){     //judge the state of proximity sensor is far
-                        input_event(this_data->proximity_input_dev, EV_MSC, MSC_SCAN, val);
-                        input_sync(this_data->proximity_input_dev);
+                        pa12200001_report_prox_event(this_data, val);
                     }
                 }
 
