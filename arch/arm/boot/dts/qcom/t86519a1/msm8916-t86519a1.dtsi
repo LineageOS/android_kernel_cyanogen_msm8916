@@ -267,6 +267,17 @@
 		compatible = "bq2022a";
 		status= "okay";
 	};
+
+	gpio_keys {
+		vol_down {
+			label = "volume_down";
+			gpios = <&msm_gpio 108 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
 };
 
 &pm8916_mpps {
