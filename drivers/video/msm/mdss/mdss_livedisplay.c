@@ -202,7 +202,7 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 	if (is_cabc_cmd(mlc->updated) && is_cabc_cmd(mlc->caps)) {
 
 		// The CABC command on most modern panels is also responsible for
-		// other features such as SRE and ACO.  The register fields are bits
+		// other features such as SRE, ACO and CE.  The register fields are bits
 		// and are OR'd together and sent in a single DSI command.
 		if (mlc->cabc_level == CABC_UI)
 			cabc_value |= mlc->cabc_ui_value;
@@ -221,11 +221,15 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 		if (mlc->aco_enabled)
 			cabc_value |= mlc->aco_value;
 
-		len += mlc->cabc_cmds_len;
+		if (mlc->ce_enabled)
+			cabc_value |= mlc->cabc_ce_value;
 
-		pr_info("%s cabc=%d sre=%d aco=%d cmd=%d\n", __func__,
+		if (cabc_value > 0)
+			len += mlc->cabc_cmds_len;
+
+		pr_info("%s cabc=%d sre=%d aco=%d ce=%d cmd=%d\n", __func__,
 				mlc->cabc_level, mlc->sre_level, mlc->aco_enabled,
-				cabc_value);
+				mlc->ce_enabled, cabc_value);
 	}
 
 	len += mlc->post_cmds_len;
@@ -252,8 +256,8 @@ static void mdss_livedisplay_worker(struct work_struct *work)
 		}
 	}
 
-	// CABC/SRE/ACO features
-	if (is_cabc_cmd(mlc->updated) && mlc->cabc_cmds_len) {
+	// CABC/SRE/ACO/CABC_CE features
+	if (is_cabc_cmd(mlc->updated) && mlc->cabc_cmds_len && cabc_value > 0) {
 		memcpy(mlc->cmd_buf + dlen, mlc->cabc_cmds, mlc->cabc_cmds_len);
 		dlen += mlc->cabc_cmds_len;
 		// The CABC command parameter is the last value in the sequence
@@ -561,6 +565,11 @@ int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pi
 		if (rc == 0) {
 			mlc->caps |= MODE_AUTO_CONTRAST;
 			mlc->aco_value = (uint8_t)(tmp & 0xFF);
+		}
+		rc = of_property_read_u32(np, "cm,mdss-livedisplay-cabc-ce-value", &tmp);
+		if (rc == 0) {
+			mlc->caps |= MODE_COLOR_ENHANCE;
+			mlc->cabc_ce_value = (uint8_t)(tmp & 0xFF);
 		}
 	}
 
