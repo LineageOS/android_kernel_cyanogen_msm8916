@@ -1300,9 +1300,8 @@ static int mdss_dsi_set_refresh_rate_range(struct device_node *pan_node,
 	rc = of_property_read_u32(pan_node,
 			"qcom,mdss-dsi-idle-refresh-rate",
 			&tmp);
-	if (rc == 0 && tmp >= pinfo->min_fps && tmp <= pinfo->max_fps) {
-		pinfo->idle_fps = tmp;
-	}
+	if (rc == 0 && tmp >= pinfo->min_fps)
+		pinfo->idle_fps = tmp <= pinfo->max_fps ? tmp : pinfo->max_fps;
 
 	pr_info("dyn_fps: min = %d, max = %d\n",
 			pinfo->min_fps, pinfo->max_fps);
