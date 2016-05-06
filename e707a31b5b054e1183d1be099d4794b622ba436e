@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_c582fbc8",
+        "filename": "drivers/cpuidle/Makefile",
+        "patchSetId": 4
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 7880
+      },
+      "writtenOn": "2016-05-06T22:11:54Z",
+      "side": 1,
+      "message": "How about this?\n\n\nobj-$(CONFIG_MSM_PM) +\u003d lpm-levels.o  lpm-levels-of.o\n\nifdef CONFIG_MACH_YULONG\n\nobj-$(CONFIG_MSM_PM) +\u003d lpm-workarounds-yl.o\n\nelse\n\nobj-$(CONFIG_MSM_PM) +\u003d lpm-workarounds.o\n\nendif",
+      "revId": "e707a31b5b054e1183d1be099d4794b622ba436e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
