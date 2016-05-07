@@ -28,8 +28,11 @@
 
 #define L2_HS_STS_SET	0x200
 
+static struct regulator *lpm_cx_reg;
+static struct work_struct lpm_cx_unvote_work;
 static struct work_struct lpm_wa_work;
 static struct workqueue_struct *lpm_wa_wq;
+static bool lpm_wa_cx_turbo_unvote;
 static bool skip_l2_spm;
 static bool enable_dynamic_clock_gating;
 static bool is_l1_l2_gcc_secure;
@@ -87,7 +90,7 @@ static void process_lpm_workarounds(struct work_struct *w)
 	 * performance cluster cores. Enable it via SW to reduce power
 	 * impact.
 	 */
-	if (enable_dynamic_clock_gating) {
+	if (w == &lpm_wa_work && enable_dynamic_clock_gating) {
 
 		/* Skip enabling L1/L2 clock gating if perf l2 is not in low
 		 * power mode.
@@ -130,7 +133,24 @@ static void process_lpm_workarounds(struct work_struct *w)
 		enable_dynamic_clock_gating = false;
 		unregister_hotcpu_notifier(&lpm_wa_nblk);
 	}
+
+	if (w == &lpm_cx_unvote_work && lpm_cx_reg) {
+		regulator_set_voltage(lpm_cx_reg,
+				RPM_REGULATOR_CORNER_SUPER_TURBO,
+				RPM_REGULATOR_CORNER_SUPER_TURBO);
+
+		regulator_set_voltage(lpm_cx_reg,
+				RPM_REGULATOR_CORNER_NONE,
+				RPM_REGULATOR_CORNER_SUPER_TURBO);
+	}
 }
+
+void lpm_wa_cx_unvote_send(void)
+{
+	if (lpm_wa_cx_turbo_unvote)
+		queue_work(lpm_wa_wq, &lpm_cx_unvote_work);
+}
+EXPORT_SYMBOL(lpm_wa_cx_unvote_send);
 
 /*
  * lpm_wa_skip_l2_spm: Dont program the l2 SPM as TZ is programming the
@@ -177,6 +197,18 @@ static int lpm_wa_probe(struct platform_device *pdev)
 	struct resource *res = NULL;
 	unsigned long cpu_mask = 0;
 	char *key;
+
+	lpm_wa_cx_turbo_unvote = of_property_read_bool(pdev->dev.of_node,
+			"qcom,lpm-wa-cx-turbo-unvote");
+	if (lpm_wa_cx_turbo_unvote) {
+		lpm_cx_reg = devm_regulator_get(&pdev->dev, "lpm-cx");
+		if (IS_ERR(lpm_cx_reg)) {
+			ret = PTR_ERR(lpm_cx_reg);
+			if (ret != -EPROBE_DEFER)
+				pr_err("Unable to get the CX regulator\n");
+			return ret;
+		}
+	}
 
 	skip_l2_spm = of_property_read_bool(pdev->dev.of_node,
 					"qcom,lpm-wa-skip-l2-spm");
@@ -274,6 +306,7 @@ static int lpm_wa_probe(struct platform_device *pdev)
 	}
 
 	INIT_WORK(&lpm_wa_work, process_lpm_workarounds);
+	INIT_WORK(&lpm_cx_unvote_work, process_lpm_workarounds);
 
 	lpm_wa_wq = alloc_workqueue("lpm-wa",
 			WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
