@@ -673,7 +673,9 @@ struct lpm_cluster *parse_cluster(struct device_node *node,
 		}
 	}
 
+#ifndef CONFIG_MSM_LEGACY_LPM
 	c->last_level = c->nlevels-1;
+#endif
 
 	return c;
 

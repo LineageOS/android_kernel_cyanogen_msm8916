@@ -31,6 +31,11 @@ config CPU_IDLE_GOV_MENU
 config ARCH_NEEDS_CPU_IDLE_COUPLED
 	def_bool n
 
+config MSM_LEGACY_LPM
+	bool "Legacy lpm-workarounds for devices with older firmware"
+	depends on MSM_PM
+	default n
+
 if CPU_IDLE
 
 config CPU_IDLE_CALXEDA
