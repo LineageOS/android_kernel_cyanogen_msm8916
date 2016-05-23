@@ -16,6 +16,24 @@
       "revId": "0f0879474e1b28c54469e0ff877afd3b6f51ddfd",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_bf5c7d7e",
+        "filename": "drivers/video/msm/mdss/mdss_livedisplay.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 222,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-05-23T14:32:45Z",
+      "side": 1,
+      "message": "The logic around the cabc_ce mode is a little shaky to me, because it\u0027s partly tying into the regular CABC mode logic. Maybe it would be best to enforce a separation between the two more strictly?",
+      "parentUuid": "5faad753_ff62f53d",
+      "revId": "0f0879474e1b28c54469e0ff877afd3b6f51ddfd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
