@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_ff62f53d",
+        "filename": "drivers/video/msm/mdss/mdss_livedisplay.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 222,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-05-23T14:31:25Z",
+      "side": 1,
+      "message": "I think this is OK, since cabc_ce_value defaults to 0 when MODE_COLOR_ENHANCE is on and MODE_CABC_COLOR_ENHANCE is off, but there\u0027s no support for having both command types active at once.",
+      "revId": "0f0879474e1b28c54469e0ff877afd3b6f51ddfd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
