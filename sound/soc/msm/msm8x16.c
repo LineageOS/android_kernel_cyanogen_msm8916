@@ -122,7 +122,11 @@ static struct wcd_mbhc_config mbhc_cfg = {
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = false,
 	.key_code[0] = KEY_MEDIA,
+#ifdef CONFIG_MACH_CP8675
+	.key_code[1] = KEY_VOLUMEUP,
+#else
 	.key_code[1] = KEY_VOICECOMMAND,
+#endif
 	.key_code[2] = KEY_VOLUMEUP,
 	.key_code[3] = KEY_VOLUMEDOWN,
 	.key_code[4] = 0,
