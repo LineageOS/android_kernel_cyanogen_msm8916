@@ -16,7 +16,7 @@
 #ifndef __THUNDERCHARGE_CONTROL_H__
 #define __THUNDERCHARGE_CONTROL_H__
 #define DEFAULT_USB_CURRENT 500
-extern int custom_ac_current;
+extern int custom_current;
 extern int custom_usb_current;
 extern int mswitch;
 #endif

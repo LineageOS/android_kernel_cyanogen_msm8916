@@ -1364,8 +1364,8 @@ static void bq24157_external_power_changed(struct power_supply *psy)
                     chip->set_ivbus_max = custom_usb_current;
                 }
                 else {
-                    pr_info("Using custom AC current %d", custom_ac_current);
-                    chip->set_ivbus_max = custom_ac_current;
+                    pr_info("Using custom AC current %d", custom_current);
+                    chip->set_ivbus_max = custom_current;
                 }
             }
             else {
@@ -1468,7 +1468,7 @@ static int bq24157_parse_dt(struct bq24157_chip *chip)
 		return -EINVAL;
 
 #ifdef CONFIG_THUNDERCHARGE_CONTROL
-	chip->chg_curr_max = custom_ac_current;
+	chip->chg_curr_max = custom_current;
 #else
 	rc = of_property_read_u32(node, "yl,max-charge-current-mA", &chip->chg_curr_max);
 	if (rc < 0)

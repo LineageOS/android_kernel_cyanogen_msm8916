@@ -26,7 +26,7 @@
 #define THUNDERCHARGE       "thundercharge"
 
 int mswitch = ENABLED;
-int custom_ac_current = AC_CURRENT;
+int custom_current = AC_CURRENT;
 int custom_usb_current = USB_CURRENT;
 
 #define DRIVER_VERSION  2
@@ -57,7 +57,7 @@ return count;
 
 static ssize_t cust_ac_current_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d", custom_ac_current);
+	return sprintf(buf, "%d", custom_current);
 }
 
 static ssize_t cust_usb_current_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -81,7 +81,7 @@ static ssize_t cust_ac_current_store(struct kobject *kobj, struct kobj_attribute
 	int newcurr;
 	sscanf(buf, "%d", &newcurr);
 	if(mswitch == 1 && newcurr <= MAX_VBUS_CURRENT)
-		custom_ac_current = newcurr;
+		custom_current = newcurr;
 	else
 		pr_info("%s: disabled or limit reached, ignoring\n", THUNDERCHARGE);
 	return count;
@@ -104,7 +104,7 @@ static struct kobj_attribute chgr_ctrl_ver_attribute =
 		chgr_ver_show, NULL);
 
 static struct kobj_attribute cust_ac_current_attribute =
-	__ATTR(custom_ac_current,
+	__ATTR(custom_current,
 		0666,
 		cust_ac_current_show,
 		cust_ac_current_store);
