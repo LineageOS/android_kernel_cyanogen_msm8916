@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_7d17c946",
+        "filename": "arch/arm64/configs/cyanogenmod_tomato-64_defconfig",
+        "patchSetId": 2
+      },
+      "lineNbr": 284,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2016-06-08T10:44:13Z",
+      "side": 0,
+      "message": "Should keep this and add to other devices too. Used in lots of cheap usb ethernet adapters.",
+      "revId": "55c98ba62993a5cd63fe2b596732e921db4d5181",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
