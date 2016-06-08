@@ -12,6 +12,8 @@
 #ifndef _MSM_DTS_SRS_TM_CONFIG_H_
 #define _MSM_DTS_SRS_TM_CONFIG_H_
 
+#ifdef CONFIG_DTS_SRS_TM
+
 #include <sound/soc.h>
 
 #ifdef CONFIG_DTS_SRS_TM
@@ -31,6 +33,8 @@ void msm_dts_srs_tm_add_controls(struct snd_soc_platform *platform);
 void msm_dts_srs_tm_init(int port_id, int copp_idx) { }
 void msm_dts_srs_tm_deinit(int port_id) { }
 void msm_dts_srs_tm_add_controls(struct snd_soc_platform *platform) { }
+
+#endif
 
 #endif
 
