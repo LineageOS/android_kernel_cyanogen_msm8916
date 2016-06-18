@@ -1499,9 +1499,12 @@ static int akm_compass_suspend(struct device *dev)
 			cancel_delayed_work_sync(&akm->dwork);
 	}
 
-	ret = AKECS_SetMode(akm, AKM_MODE_POWERDOWN);
-	if (ret)
-		dev_warn(&akm->i2c->dev, "Failed to set to POWERDOWN mode.\n");
+	if (akm->enable_flag) {
+		ret = AKECS_SetMode(akm, AKM_MODE_POWERDOWN);
+		if (ret)
+			dev_warn(&akm->i2c->dev,
+					"Failed to set to POWERDOWN mode.\n");
+	}
 
 	akm->state.power_on = akm->power_enabled;
 	if (akm->state.power_on)
