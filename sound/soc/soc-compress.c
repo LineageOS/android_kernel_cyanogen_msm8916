@@ -79,7 +79,8 @@ out:
 static int soc_compr_open_fe(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *fe = cstream->private_data;
-	struct snd_pcm_substream *fe_substream = fe->pcm->streams[0].substream;
+	struct snd_pcm_substream *fe_substream =
+		 fe->pcm->streams[cstream->direction].substream;
 	struct snd_soc_platform *platform = fe->platform;
 	struct snd_soc_dpcm *dpcm;
 	struct snd_soc_dapm_widget_list *list;
@@ -503,7 +504,8 @@ static int soc_compr_set_params_fe(struct snd_compr_stream *cstream,
 					struct snd_compr_params *params)
 {
 	struct snd_soc_pcm_runtime *fe = cstream->private_data;
-	struct snd_pcm_substream *fe_substream = fe->pcm->streams[0].substream;
+	struct snd_pcm_substream *fe_substream =
+		 fe->pcm->streams[cstream->direction].substream;
 	struct snd_soc_platform *platform = fe->platform;
 	struct snd_soc_pcm_runtime *be_list[DPCM_MAX_BE_USERS];
 	struct snd_soc_dpcm *dpcm;
@@ -826,8 +828,12 @@ int soc_new_compress(struct snd_soc_pcm_runtime *rtd, int num)
 		snprintf(new_name, sizeof(new_name), "(%s)",
 			rtd->dai_link->stream_name);
 
-		ret = snd_pcm_new_internal(rtd->card->snd_card, new_name, num,
-				1, 0, &be_pcm);
+		if (direction == SND_COMPRESS_PLAYBACK)
+			ret = snd_pcm_new_internal(rtd->card->snd_card,
+				 new_name, num, 1, 0, &be_pcm);
+		else if (direction == SND_COMPRESS_CAPTURE)
+			ret = snd_pcm_new_internal(rtd->card->snd_card,
+				 new_name, num, 0, 1, &be_pcm);
 		if (ret < 0) {
 			dev_err(rtd->card->dev, "ASoC: can't create compressed for %s\n",
 				rtd->dai_link->name);
@@ -836,10 +842,12 @@ int soc_new_compress(struct snd_soc_pcm_runtime *rtd, int num)
 
 		rtd->pcm = be_pcm;
 		rtd->fe_compr = 1;
-		be_pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].
+		if (direction == SND_COMPRESS_PLAYBACK)
+			be_pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].
 					substream->private_data = rtd;
-		/*be_pcm->streams[SNDRV_PCM_STREAM_CAPTURE].
-					substream->private_data = rtd;*/
+		if (direction == SND_COMPRESS_CAPTURE)
+			be_pcm->streams[SNDRV_PCM_STREAM_CAPTURE].
+					substream->private_data = rtd;
 		memcpy(compr->ops, &soc_compr_dyn_ops,
 						sizeof(soc_compr_dyn_ops));
 	} else
