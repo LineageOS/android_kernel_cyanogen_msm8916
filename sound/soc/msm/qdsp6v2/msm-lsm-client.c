@@ -100,7 +100,7 @@ static int msm_lsm_queue_lab_buffer(struct lsm_priv *prtd, int i)
 	struct snd_soc_pcm_runtime *rtd;
 
 	if (!prtd || !prtd->lsm_client) {
-		pr_err("%s: Invalid params prtd %p lsm client %p\n",
+		pr_err("%s: Invalid params prtd %pK lsm client %pK\n",
 			__func__, prtd, ((!prtd) ? NULL : prtd->lsm_client));
 		return -EINVAL;
 	}
@@ -114,7 +114,7 @@ static int msm_lsm_queue_lab_buffer(struct lsm_priv *prtd, int i)
 	if (!prtd->lsm_client->lab_buffer ||
 		i >= prtd->lsm_client->hw_params.period_count) {
 		dev_err(rtd->dev,
-			"%s: Lab buffer not setup %p incorrect index %d period count %d\n",
+			"%s: Lab buffer not setup %pK incorrect index %d period count %d\n",
 			__func__, prtd->lsm_client->lab_buffer, i,
 			prtd->lsm_client->hw_params.period_count);
 		return -EINVAL;
@@ -141,7 +141,7 @@ static int lsm_lab_buffer_sanity(struct lsm_priv *prtd,
 	struct snd_soc_pcm_runtime *rtd;
 
 	if (!prtd || !read_done || !index) {
-		pr_err("%s: Invalid params prtd %p read_done %p index %p\n",
+		pr_err("%s: Invalid params prtd %pK read_done %pK index %pK\n",
 			__func__, prtd, read_done, index);
 		return -EINVAL;
 	}
@@ -155,7 +155,7 @@ static int lsm_lab_buffer_sanity(struct lsm_priv *prtd,
 
 	if (!prtd->lsm_client->lab_enable || !prtd->lsm_client->lab_buffer) {
 		dev_err(rtd->dev,
-			"%s: Lab not enabled %d invalid lab buffer %p\n",
+			"%s: Lab not enabled %d invalid lab buffer %pK\n",
 			__func__, prtd->lsm_client->lab_enable,
 			prtd->lsm_client->lab_buffer);
 		return -EINVAL;
@@ -169,7 +169,7 @@ static int lsm_lab_buffer_sanity(struct lsm_priv *prtd,
 			(prtd->lsm_client->lab_buffer[i].mem_map_handle ==
 			read_done->mem_map_handle)) {
 			dev_dbg(rtd->dev,
-				"%s: Buffer found %pa memmap handle %d\n",
+				"%s: Buffer found %pK memmap handle %d\n",
 				__func__, &prtd->lsm_client->lab_buffer[i].phys,
 			prtd->lsm_client->lab_buffer[i].mem_map_handle);
 			if (read_done->total_size >
@@ -216,7 +216,7 @@ static void lsm_event_handler(uint32_t opcode, uint32_t token,
 		if (prtd->lsm_client->session != token ||
 		    !read_done) {
 			dev_err(rtd->dev,
-				"%s: EVENT_READ_DONE invalid callback, session %d callback %d payload %p",
+				"%s: EVENT_READ_DONE invalid callback, session %d callback %d payload %pK",
 				__func__, prtd->lsm_client->session,
 				token, read_done);
 			return;
@@ -315,7 +315,7 @@ static int msm_lsm_lab_buffer_alloc(struct lsm_priv *lsm, int alloc)
 	int ret = 0;
 	struct snd_dma_buffer *dma_buf = NULL;
 	if (!lsm) {
-		pr_err("%s: Invalid param lsm %p\n", __func__, lsm);
+		pr_err("%s: Invalid param lsm %pK\n", __func__, lsm);
 		return -EINVAL;
 	}
 	if (alloc) {
@@ -787,7 +787,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			   snd_model_v2.data, snd_model_v2.data_size)) {
 			dev_err(rtd->dev,
 				"%s: copy from user data failed\n"
-			       "data %p size %d\n", __func__,
+			       "data %pK size %d\n", __func__,
 			       snd_model_v2.data, snd_model_v2.data_size);
 			q6lsm_snd_model_buf_free(prtd->lsm_client);
 			rc = -EFAULT;
@@ -1111,6 +1111,7 @@ struct snd_lsm_detection_params_32 {
 	enum lsm_detection_mode detect_mode;
 	u8 num_confidence_levels;
 	bool detect_failure;
+	bool poll_enable;
 };
 
 struct lsm_params_info_32 {
@@ -1292,6 +1293,7 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 				det_params32.num_confidence_levels;
 			det_params.detect_failure =
 				det_params32.detect_failure;
+			det_params.poll_enable = det_params32.poll_enable;
 			cmd = SNDRV_LSM_SET_PARAMS;
 			err = msm_lsm_ioctl_shared(substream, cmd,
 					&det_params);
@@ -1850,7 +1852,7 @@ static int msm_lsm_hw_params(struct snd_pcm_substream *substream,
 
 	if (!prtd || !params) {
 		dev_err(rtd->dev,
-			"%s: invalid params prtd %p params %p",
+			"%s: invalid params prtd %pK params %pK",
 			 __func__, prtd, params);
 		return -EINVAL;
 	}
@@ -1892,7 +1894,7 @@ static snd_pcm_uframes_t msm_lsm_pcm_pointer(
 
 	if (!prtd) {
 		dev_err(rtd->dev,
-			"%s: Invalid param %p\n", __func__, prtd);
+			"%s: Invalid param %pK\n", __func__, prtd);
 		return 0;
 	}
 
@@ -1920,7 +1922,7 @@ static int msm_lsm_pcm_copy(struct snd_pcm_substream *substream, int ch,
 
 	if (!prtd) {
 		dev_err(rtd->dev,
-			"%s: Invalid param %p\n", __func__, prtd);
+			"%s: Invalid param %pK\n", __func__, prtd);
 		return -EINVAL;
 	}
 
