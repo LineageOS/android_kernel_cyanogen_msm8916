@@ -52,10 +52,10 @@
 #define MMC3X30_PRODUCT_ID	0x09
 
 /* POWER SUPPLY VOLTAGE RANGE */
-#define MMC3X30_VDD_MIN_UV	2000000
-#define MMC3X30_VDD_MAX_UV	3300000
-#define MMC3X30_VIO_MIN_UV	1750000
-#define MMC3X30_VIO_MAX_UV	1950000
+#define MMC3X30_VDD_MIN_UV	2600000
+#define MMC3X30_VDD_MAX_UV	3600000
+#define MMC3X30_VIO_MIN_UV	1620000
+#define MMC3X30_VIO_MAX_UV	1980000
 
 enum {
 	OBVERSE_X_AXIS_FORWARD = 0,
@@ -81,11 +81,11 @@ static char *mmc3x30_dir[MMC3X30_DIR_COUNT] = {
 };
 
 static s8 mmc3x30_rotation_matrix[MMC3X30_DIR_COUNT][9] = {
-	[OBVERSE_X_AXIS_FORWARD] = {0, -1, 0, 1, 0, 0, 0, 0, 1},
+	[OBVERSE_X_AXIS_FORWARD] = {0, 1, 0, 1, 0, 0, 0, 0, 1},
 	[OBVERSE_X_AXIS_RIGHTWARD] = {1, 0, 0, 0, 1, 0, 0, 0, 1},
 	[OBVERSE_X_AXIS_BACKWARD] = {0, 1, 0, -1, 0, 0, 0, 0, 1},
 	[OBVERSE_X_AXIS_LEFTWARD] = {-1, 0, 0, 0, -1, 0, 0, 0, 1},
-	[REVERSE_X_AXIS_FORWARD] = {0, 1, 0, 1, 0, 0, 0, 0, -1},
+	[REVERSE_X_AXIS_FORWARD] = {0, 1, 0, -1, 0, 0, 0, 0, -1},
 	[REVERSE_X_AXIS_RIGHTWARD] = {1, 0, 0, 0, -1, 0, 0, 0, -1},
 	[REVERSE_X_AXIS_BACKWARD] = {0, -1, 0, -1, 0, 0, 0, 0, -1},
 	[REVERSE_X_AXIS_LEFTWARD] = {-1, 0, 0, 0, 1, 0, 0, 0, -1},
@@ -195,9 +195,8 @@ static int mmc3x30_read_xyz(struct mmc3x30_data *memsic,
 		goto exit;
 	}
 
-
 	tmp.x = (((u8)data[1]) << 8 | (u8)data[0]) - 32768;
-	tmp.y = (((u8)data[3]) << 8 | (u8)data[2]) - (((u8)data[5]) << 8 | (u8)data[4]) ;
+	tmp.y = (((u8)data[3]) << 8 | (u8)data[2]) - (((u8)data[5]) << 8 | (u8)data[4]);
 	tmp.z = (((u8)data[3]) << 8 | (u8)data[2]) +  (((u8)data[5]) << 8 | (u8)data[4]) - 32768 - 32768;
 
 	vec->x = tmp.x;
@@ -253,7 +252,6 @@ static void mmc3x30_poll(struct work_struct *work)
 	input_report_abs(memsic->idev, ABS_Y, report.y);
 	input_report_abs(memsic->idev, ABS_Z, report.z);
 	input_sync(memsic->idev);
-
 exit:
 	schedule_delayed_work(&memsic->dwork,
 			msecs_to_jiffies(memsic->poll_interval));
@@ -277,10 +275,6 @@ static struct input_dev *mmc3x30_init_input(struct i2c_client *client)
 	input_set_abs_params(input, ABS_X, -1024*30, 1024*30, 0, 0);
 	input_set_abs_params(input, ABS_Y, -1024*30, 1024*30, 0, 0);
 	input_set_abs_params(input, ABS_Z, -1024*30, 1024*30, 0, 0);
-
-	//input_set_capability(input, EV_ABS, ABS_X);
-	//input_set_capability(input, EV_ABS, ABS_Y);
-	//input_set_capability(input, EV_ABS, ABS_Z);
 
 	status = input_register_device(input);
 	if (status) {
@@ -469,7 +463,6 @@ static int mmc3x30_check_device(struct mmc3x30_data *memsic)
 		memsic->device_id = MMC3524_DEVICE_ID;
 	else
 		return -ENODEV;
-
 	return 0;
 }
 
@@ -500,7 +493,7 @@ static int mmc3x30_parse_dt(struct i2c_client *client,
 	}
 
 	/*PLEASE CONFIRM WITH SENSOR PROVIDER*/
-	memsic->dir = 1;
+	memsic->dir = i;
 
 	if (of_property_read_bool(np, "memsic,auto-report"))
 		memsic->auto_report = 1;
@@ -1073,19 +1066,25 @@ static int mmc3x30_probe(struct i2c_client *client,
 	mutex_init(&memsic->ecompass_lock);
 	mutex_init(&memsic->ops_lock);
 
-	memsic->regmap = devm_regmap_init_i2c(client, &mmc3x30_regmap_config);
-	if (IS_ERR(memsic->regmap)) {
-		dev_err(&client->dev, "Init regmap failed.(%ld)",
-				PTR_ERR(memsic->regmap));
-		res = PTR_ERR(memsic->regmap);
-		goto out;
-	}
-
 	res = mmc3x30_power_init(memsic);
 	if (res) {
 		dev_err(&client->dev, "Power up mmc3x30 failed\n");
 		goto out;
 	}
+
+        res = mmc3x30_power_set(memsic, true);
+        if (res) {
+                dev_err(&client->dev, "Power up mmc3x30 failed\n");
+                goto out_check_device;
+        }
+
+        memsic->regmap = devm_regmap_init_i2c(client, &mmc3x30_regmap_config);
+        if (IS_ERR(memsic->regmap)) {
+                dev_err(&client->dev, "Init regmap failed.(%ld)",
+                                PTR_ERR(memsic->regmap));
+                res = PTR_ERR(memsic->regmap);
+                goto out_check_device;
+        }
 
 	res = mmc3x30_check_device(memsic);
 	if (res) {
@@ -1207,7 +1206,7 @@ static int mmc3x30_resume(struct device *dev)
 
 	dev_dbg(dev, "resumed\n");
 
-	if (!memsic->enable) {
+	if (memsic->enable) {
 		res = mmc3x30_power_set(memsic, true);
 		if (res) {
 			dev_err(&memsic->i2c->dev, "Power enable failed\n");

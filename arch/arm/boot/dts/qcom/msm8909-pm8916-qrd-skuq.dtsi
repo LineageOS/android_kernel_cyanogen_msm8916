@@ -182,7 +182,7 @@
 			reg = <0x30>;
 			vdd-supply = <&pm8916_l17>;
 			vio-supply = <&pm8916_l6>;
-			memsic,dir = "obverse-x-axis-forward";
+			memsic,dir = "reverse-x-axis-forward";
 			memsic,auto-report;
 		};
 
