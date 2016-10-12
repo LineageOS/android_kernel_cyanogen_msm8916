@@ -195,6 +195,7 @@ static struct sensors_classdev sensors_light_cdev = {
 	.fifo_max_event_count = 0,
 	.enabled = 0,
 	.delay_msec = 200,
+	.flags = 2,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
 };
@@ -213,6 +214,7 @@ static struct sensors_classdev sensors_proximity_cdev = {
 	.fifo_max_event_count = 0,
 	.enabled = 0,
 	.delay_msec = 200,
+	.flags =3,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
 };
