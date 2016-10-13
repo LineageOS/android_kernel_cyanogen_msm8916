@@ -51,6 +51,10 @@
 
 #define MMC3X30_PRODUCT_ID	0x09
 
+#define POLL_INTERVAL_MIN_MS    10
+#define POLL_INTERVAL_MAX_MS    1000
+
+
 /* POWER SUPPLY VOLTAGE RANGE */
 #define MMC3X30_VDD_MIN_UV	2600000
 #define MMC3X30_VDD_MAX_UV	3600000
@@ -128,8 +132,8 @@ static struct sensors_classdev sensors_cdev = {
 	.max_range = "1228.8",
 	.resolution = "0.09765625", /* 1024 */
 	.sensor_power = "0.35",
-	.min_delay = 20000,
-	.max_delay = 100000, /* 100ms */
+	.min_delay = POLL_INTERVAL_MIN_MS * 1000,
+	.max_delay = POLL_INTERVAL_MAX_MS, /* 100ms */
 	.fifo_reserved_event_count = 0,
 	.fifo_max_event_count = 0,
 	.enabled = 0,
@@ -143,7 +147,6 @@ static struct mmc3x30_data *mmc3x30_data_struct;
 static int mmc3x30_read_xyz(struct mmc3x30_data *memsic,
 		struct mmc3x30_vec *vec)
 {
-	//int count = 0;
 	unsigned char data[6];
 	//unsigned int status;
 	struct mmc3x30_vec tmp;
@@ -229,6 +232,7 @@ exit:
 static void mmc3x30_poll(struct work_struct *work)
 {
 	int ret;
+	ktime_t ts;
 	s8 *tmp;
 	struct mmc3x30_vec vec;
 	struct mmc3x30_vec report;
@@ -236,7 +240,7 @@ static void mmc3x30_poll(struct work_struct *work)
 			struct mmc3x30_data, dwork);
 
 	vec.x = vec.y = vec.z = 0;
-
+	ts = ktime_get_boottime();
 	ret = mmc3x30_read_xyz(memsic, &vec);
 	if (ret) {
 		dev_warn(&memsic->i2c->dev, "read xyz failed\n");
@@ -251,6 +255,10 @@ static void mmc3x30_poll(struct work_struct *work)
 	input_report_abs(memsic->idev, ABS_X, report.x);
 	input_report_abs(memsic->idev, ABS_Y, report.y);
 	input_report_abs(memsic->idev, ABS_Z, report.z);
+	input_event(memsic->idev, EV_SYN, SYN_TIME_SEC,
+			ktime_to_timespec(ts).tv_sec);
+	input_event(memsic->idev, EV_SYN, SYN_TIME_NSEC,
+			ktime_to_timespec(ts).tv_nsec);
 	input_sync(memsic->idev);
 exit:
 	schedule_delayed_work(&memsic->dwork,
@@ -567,6 +575,10 @@ static int mmc3x30_set_poll_delay(struct sensors_classdev *sensors_cdev,
 			struct mmc3x30_data, cdev);
 
 	mutex_lock(&memsic->ops_lock);
+        if (delay_msec < POLL_INTERVAL_MIN_MS)
+                delay_msec = POLL_INTERVAL_MIN_MS;
+        if (delay_msec > POLL_INTERVAL_MAX_MS)
+                delay_msec = POLL_INTERVAL_MAX_MS;
 	if (memsic->poll_interval != delay_msec)
 		memsic->poll_interval = delay_msec;
 

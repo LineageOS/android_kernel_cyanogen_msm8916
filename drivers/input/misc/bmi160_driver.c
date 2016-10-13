@@ -881,8 +881,10 @@ static void bmi_work_func(struct work_struct *work)
 		msecs_to_jiffies(atomic_read(&client_data->acc_delay));
 	struct bmi160_accel_t data;
 	struct bmi160_axis_data_t bmi160_udata;
+	ktime_t ts;
 	int err;
 
+	ts = ktime_get_boottime();
 	err = BMI_CALL_API(read_accel_xyz)(&data);
 	if (err < 0)
 		return;
@@ -896,6 +898,10 @@ static void bmi_work_func(struct work_struct *work)
 	input_event(client_data->input_accel, EV_ABS, ABS_X, bmi160_udata.x);
 	input_event(client_data->input_accel, EV_ABS, ABS_Y, bmi160_udata.y);
 	input_event(client_data->input_accel, EV_ABS, ABS_Z, bmi160_udata.z);
+	input_event(client_data->input_accel, EV_SYN, SYN_TIME_SEC,
+			ktime_to_timespec(ts).tv_sec);
+	input_event(client_data->input_accel, EV_SYN, SYN_TIME_NSEC,
+			ktime_to_timespec(ts).tv_nsec);
 	input_sync(client_data->input_accel);
 
 	schedule_delayed_work(&client_data->work, delay);
@@ -910,8 +916,10 @@ static void bmi_gyro_work_func(struct work_struct *work)
 		 msecs_to_jiffies(atomic_read(&client_data->gyro_delay));
 	struct bmi160_gyro_t data;
 	struct bmi160_axis_data_t bmi160_udata;
+	ktime_t ts;
 	int err;
 
+	ts = ktime_get_boottime();
 	err = BMI_CALL_API(read_gyro_xyz)(&data);
 	if (err < 0)
 		return;
@@ -925,6 +933,10 @@ static void bmi_gyro_work_func(struct work_struct *work)
 	input_event(client_data->input_gyro, EV_ABS, ABS_RX, -bmi160_udata.x);
 	input_event(client_data->input_gyro, EV_ABS, ABS_RY, bmi160_udata.y);
 	input_event(client_data->input_gyro, EV_ABS, ABS_RZ, -bmi160_udata.z);
+	input_event(client_data->input_gyro, EV_SYN, SYN_TIME_SEC,
+			ktime_to_timespec(ts).tv_sec);
+	input_event(client_data->input_gyro, EV_SYN, SYN_TIME_NSEC,
+			ktime_to_timespec(ts).tv_nsec);
 	input_sync(client_data->input_gyro);
 
 	schedule_delayed_work(&client_data->gyro_work, delay);
