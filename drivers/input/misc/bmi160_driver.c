@@ -41,6 +41,7 @@ static unsigned char g_fifo_data_arr[2048];/*1024 + 12*4*/
 /* Polling delay in msecs */
 #define POLL_INTERVAL_MIN_MS    10
 #define POLL_INTERVAL_MAX_MS    4000
+#define RETRY_COUNT             50
 
 
 static struct sensors_classdev accel_cdev = {
@@ -877,11 +878,13 @@ static void bmi_work_func(struct work_struct *work)
 		container_of((struct delayed_work *)work,
 			struct bmi_client_data, work);
 	unsigned long delay =
-		msecs_to_jiffies(atomic_read(&client_data->delay));
+		msecs_to_jiffies(atomic_read(&client_data->acc_delay));
 	struct bmi160_accel_t data;
 	struct bmi160_axis_data_t bmi160_udata;
+	ktime_t ts;
 	int err;
 
+	ts = ktime_get_boottime();
 	err = BMI_CALL_API(read_accel_xyz)(&data);
 	if (err < 0)
 		return;
@@ -895,6 +898,10 @@ static void bmi_work_func(struct work_struct *work)
 	input_event(client_data->input_accel, EV_ABS, ABS_X, bmi160_udata.x);
 	input_event(client_data->input_accel, EV_ABS, ABS_Y, bmi160_udata.y);
 	input_event(client_data->input_accel, EV_ABS, ABS_Z, bmi160_udata.z);
+	input_event(client_data->input_accel, EV_SYN, SYN_TIME_SEC,
+			ktime_to_timespec(ts).tv_sec);
+	input_event(client_data->input_accel, EV_SYN, SYN_TIME_NSEC,
+			ktime_to_timespec(ts).tv_nsec);
 	input_sync(client_data->input_accel);
 
 	schedule_delayed_work(&client_data->work, delay);
@@ -906,11 +913,13 @@ static void bmi_gyro_work_func(struct work_struct *work)
 		(struct delayed_work *)work,
 		struct bmi_client_data, gyro_work);
 	unsigned long delay =
-		 msecs_to_jiffies(atomic_read(&client_data->delay));
+		 msecs_to_jiffies(atomic_read(&client_data->gyro_delay));
 	struct bmi160_gyro_t data;
 	struct bmi160_axis_data_t bmi160_udata;
+	ktime_t ts;
 	int err;
 
+	ts = ktime_get_boottime();
 	err = BMI_CALL_API(read_gyro_xyz)(&data);
 	if (err < 0)
 		return;
@@ -921,9 +930,13 @@ static void bmi_gyro_work_func(struct work_struct *work)
 
 	bmi_remap_sensor_data(&bmi160_udata, client_data);
 	/*report current frame via input event*/
-	input_event(client_data->input_gyro, EV_ABS, ABS_RX, bmi160_udata.x);
+	input_event(client_data->input_gyro, EV_ABS, ABS_RX, -bmi160_udata.x);
 	input_event(client_data->input_gyro, EV_ABS, ABS_RY, bmi160_udata.y);
-	input_event(client_data->input_gyro, EV_ABS, ABS_RZ, bmi160_udata.z);
+	input_event(client_data->input_gyro, EV_ABS, ABS_RZ, -bmi160_udata.z);
+	input_event(client_data->input_gyro, EV_SYN, SYN_TIME_SEC,
+			ktime_to_timespec(ts).tv_sec);
+	input_event(client_data->input_gyro, EV_SYN, SYN_TIME_NSEC,
+			ktime_to_timespec(ts).tv_nsec);
 	input_sync(client_data->input_gyro);
 
 	schedule_delayed_work(&client_data->gyro_work, delay);
@@ -2217,7 +2230,7 @@ static ssize_t bmi160_enable_store(struct device *dev,
 			bmi160_set_acc_op_mode(client_data,
 							BMI_ACC_PM_NORMAL);
 			schedule_delayed_work(&client_data->work,
-			msecs_to_jiffies(atomic_read(&client_data->delay)));
+			msecs_to_jiffies(atomic_read(&client_data->acc_delay)));
 			atomic_set(&client_data->wkqueue_en, 1);
 		}
 
@@ -4773,9 +4786,12 @@ static int bmi160_self_calibration_xyz(struct sensors_classdev *sensors_cdev,
 			int axis, int apply_now)
 {
 	int err = 0;
+	int timeout = 0;
 	s8 accel_offset_x = 0;
 	s8 accel_offset_y = 0;
 	s8 accel_offset_z = 0;
+	u8 nvm_prog = 0;
+	u8 nvm_rdy = 0;
 
 	struct bmi_client_data *client_data = container_of(sensors_cdev,
 				struct bmi_client_data, accel_cdev);
@@ -4789,38 +4805,59 @@ static int bmi160_self_calibration_xyz(struct sensors_classdev *sensors_cdev,
 		err = -EINVAL;
 		goto exit;
 	}
-	err = BMI_CALL_API(set_accel_foc_trigger)(X_AXIS,
-				 1, &accel_offset_x);
-	if (!err)
-		client_data->calib_status |=
-			BMI_FAST_CALI_TRUE << BMI_ACC_X_FAST_CALI_RDY;
-	else {
+
+	err += BMI_CALL_API(set_accel_output_data_rate)(
+		BMI160_ACCEL_OUTPUT_DATA_RATE_100HZ);
+
+        /* set to 2G range*/
+	err += BMI_CALL_API(set_accel_range)(BMI160_ACCEL_RANGE_2G);
+	err = bmi160_set_acc_op_mode(client_data, BMI_ACC_PM_NORMAL);
+	if (err)
+		dev_err(&client_data->i2c->dev,
+			"the acc normal mode set fail\n");
+
+	err = BMI_CALL_API(accel_foc_trigger_xyz)(3, 3, 2,
+			&accel_offset_x, &accel_offset_y, &accel_offset_z);
+
+	err = BMI_CALL_API(get_nvm_prog_enable)(&nvm_prog);
+	if (err) {
 		err = -EIO;
 		goto exit;
 	}
-	err = BMI_CALL_API(set_accel_foc_trigger)(Y_AXIS,
-				 1, &accel_offset_y);
-	if (!err)
-		client_data->calib_status |=
-			BMI_FAST_CALI_TRUE << BMI_ACC_Y_FAST_CALI_RDY;
-	else {
-		err = -EIO;
-		goto exit;
+	/*set num program enable */
+	if (!nvm_prog) {
+		err = BMI_CALL_API(set_nvm_prog_enable)(0x1);
+		if (err) {
+			err = -EIO;
+			goto exit_power_off;
+		}
 	}
-	err = BMI_CALL_API(set_accel_foc_trigger)(Z_AXIS,
-					 1, &accel_offset_z);
-	if (!err)
-		client_data->calib_status |=
-			BMI_FAST_CALI_TRUE << BMI_ACC_Z_FAST_CALI_RDY;
-	else {
-		err = -EIO;
-		goto exit;
-	}
+	err = BMI_CALL_API(set_command_register)(0xA0);
+	do {
+		err = BMI_CALL_API(get_nvm_rdy)(&nvm_rdy);
+		if (err) {
+			dev_err(&client_data->i2c->dev,
+				"read nvm_ready error\n");
+			goto exit_power_off;
+		}
+		timeout++;
+		if (timeout == RETRY_COUNT) {
+			dev_err(&client_data->i2c->dev,
+				"get fast calibration ready error\n");
+			goto exit_power_off;
+		};
+	} while(nvm_rdy == 0);
+	/*set nvm disable */
+	err = BMI_CALL_API(set_nvm_prog_enable)(0x0);
+	snprintf(client_data->calibrate_buf, sizeof(client_data->calibrate_buf),
+		"%d,%d,%d", 0, 0, 0);
+	sensors_cdev->params = client_data->calibrate_buf;
+
+exit_power_off:
 	err = bmi160_power_ctl(client_data, false);
 	if (err) {
 		dev_err(&client_data->i2c->dev, "power down sensor failed.\n");
 		err = -EINVAL;
-		goto exit;
 	}
 exit:
 	if (acc_pre_enable)
@@ -4839,7 +4876,7 @@ static int bmi160_accel_poll_delay(struct sensors_classdev *sensors_cdev,
 		delay_ms = POLL_INTERVAL_MIN_MS;
 	if (delay_ms > POLL_INTERVAL_MAX_MS)
 		delay_ms = POLL_INTERVAL_MAX_MS;
-	atomic_set(&data->delay, (unsigned int) delay_ms);
+	atomic_set(&data->acc_delay, (unsigned int) delay_ms);
 	return 0;
 }
 
@@ -4862,7 +4899,7 @@ static int bmi160_gyro_poll_delay(struct sensors_classdev *sensors_cdev,
 		delay_ms = POLL_INTERVAL_MIN_MS;
 	if (delay_ms > POLL_INTERVAL_MAX_MS)
 		delay_ms = POLL_INTERVAL_MAX_MS;
-	atomic_set(&data->delay, (unsigned int) delay_ms);
+	atomic_set(&data->gyro_delay, (unsigned int) delay_ms);
 	return 0;
 }
 
@@ -5015,6 +5052,8 @@ int bmi_probe(struct bmi_client_data *client_data, struct device *dev)
 	INIT_DELAYED_WORK(&client_data->work, bmi_work_func);
 	INIT_DELAYED_WORK(&client_data->gyro_work, bmi_gyro_work_func);
 	atomic_set(&client_data->delay, BMI_DELAY_DEFAULT);
+	atomic_set(&client_data->acc_delay, BMI_DELAY_DEFAULT);
+	atomic_set(&client_data->gyro_delay, BMI_DELAY_DEFAULT);
 	atomic_set(&client_data->wkqueue_en, 0);
 	atomic_set(&client_data->gyro_en, 0);
 
@@ -5240,14 +5279,14 @@ static int bmi_post_resume(struct bmi_client_data *client_data)
 		bmi160_set_acc_op_mode(client_data, BMI_ACC_PM_NORMAL);
 		schedule_delayed_work(&client_data->work,
 				msecs_to_jiffies(
-					atomic_read(&client_data->delay)));
+				atomic_read(&client_data->acc_delay)));
 	}
 
 	if (atomic_read(&client_data->gyro_en) == 1) {
 		bmi160_set_gyro_op_mode(client_data, BMI_GYRO_PM_NORMAL);
 		schedule_delayed_work(&client_data->gyro_work,
 				msecs_to_jiffies(
-					atomic_read(&client_data->delay)));
+				atomic_read(&client_data->gyro_delay)));
         }
 	mutex_unlock(&client_data->mutex_enable);
 	if (client_data->is_timer_running) {
