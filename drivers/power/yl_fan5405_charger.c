@@ -1020,8 +1020,10 @@ static enum power_supply_property fan5405_battery_properties[] = {
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_YL_CRTL_CHG_INTERFACE,
+	POWER_SUPPLY_PROP_TECHNOLOGY,
 };
 
 
@@ -1133,6 +1135,14 @@ static int fan5405_get_prop_voltage_now(struct fan5405_chip *chip)
 	return ret.intval;
 }
 
+static int fan5405_get_prop_current_now(struct fan5405_chip *chip)
+{
+       union power_supply_propval ret = {0, };
+
+       ret.intval = chip->chg_curr_now;
+
+       return ret.intval;
+}
 
 static int fan5405_get_prop_batt_temp(struct fan5405_chip *chip)
 {
@@ -1242,12 +1252,18 @@ static int fan5405_battery_get_property(struct power_supply *psy,
 		case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 			val->intval = fan5405_get_prop_voltage_now(chip);
 			break;
+		case POWER_SUPPLY_PROP_CURRENT_NOW:
+			val->intval = fan5405_get_prop_current_now(chip);
+			break;
 		case POWER_SUPPLY_PROP_TEMP:
 			val->intval = fan5405_get_prop_batt_temp(chip);
 			break;
 		case POWER_SUPPLY_PROP_YL_CRTL_CHG_INTERFACE:
 			val->intval = 1;
 			val->strval = "yl crtl chg interface";
+			break;
+		case POWER_SUPPLY_PROP_TECHNOLOGY:
+			val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
 			break;
 		default:
 			return -EINVAL;
