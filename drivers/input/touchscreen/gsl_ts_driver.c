@@ -2277,7 +2277,7 @@ static int gsl_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	ret = sysfs_create_group(&client->dev.kobj,&gsl_attr_group);
 
 #ifdef GSL_GESTURE
-		input_set_capability(ddata->idev, EV_KEY, KEY_WAKEUP);//б┴бщ2иви║?ии?б┴ио?ж╠ик3
+		input_set_capability(ddata->idev, EV_KEY, KEY_WAKEUP);
 		input_set_capability(ddata->idev, EV_KEY, KEY_C);
 		input_set_capability(ddata->idev, EV_KEY, KEY_E);
 		input_set_capability(ddata->idev, EV_KEY, KEY_O);
