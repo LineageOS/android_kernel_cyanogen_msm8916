@@ -68,12 +68,10 @@ static struct workqueue_struct *gsl_timer_workqueue = NULL;
 /* Gesture Resume */
 //#define GSL_GESTURE
 #ifdef GSL_GESTURE
-typedef enum{
+typedef enum {
 	GE_DISABLE = 0,
 	GE_ENABLE = 1,
-	GE_WAKEUP = 2,
-	GE_NOWORK =3,
-}GE_T;
+} GE_T;
 static GE_T gsl_gesture_status = GE_DISABLE;
 static volatile unsigned int gsl_gesture_flag = 0;
 static char gsl_gesture_c = 0;
@@ -1394,8 +1392,9 @@ static void gsl_enter_doze(struct gsl_ts_data *ts, bool bCharacterGesture)
 	gsl_start_core(ts->client);
 	msleep(1000);		
 #endif
-	WARN_ON(dozing);
-	dozing = true;
+
+	if (dozing)
+		return;
 
 	buf[0] = 0xa;
 	buf[1] = 0;
@@ -1411,18 +1410,21 @@ static void gsl_enter_doze(struct gsl_ts_data *ts, bool bCharacterGesture)
 		buf[2] = 0x1;	
 	}
 	gsl_write_interface(ts->client,0x8,buf,4);
-	//gsl_gesture_status = GE_NOWORK;
 	gsl_gesture_status = GE_ENABLE;
 
 	dev_dbg(&ts->client->dev, "entering doze mode (gesture mode:%d)\n",
 		(int) bCharacterGesture);
+
+	dozing = true;
 }
+
 static void gsl_quit_doze(struct gsl_ts_data *ts)
 {
 	u8 buf[4] = {0};
 	//u32 tmp;
 
-	WARN_ON(!dozing);
+	if (!dozing)
+		return;
 
 	/* disable the IRQ while we go reset the peripheral */
 	disable_irq(ts->client->irq);
@@ -1455,12 +1457,13 @@ static void gsl_quit_doze(struct gsl_ts_data *ts)
 	gsl_load_fw(ddata->client,GSLX68X_FW_CONFIG,temp);
 	gsl_start_core(ddata->client);
 #endif
-	dozing = false;
 
 	/* all done, re-enable IRQ */
 	enable_irq(ts->client->irq);
 
 	dev_dbg(&ts->client->dev, "exiting doze mode\n");
+
+	dozing = false;
 }
 
 static void gsl_set_new_gesture_flag(void)
@@ -1843,7 +1846,6 @@ static irqreturn_t gsl_ts_isr(int irq, void *priv)
 			gsl_start_core(client);
 		} else {
 			gsl_gesture_c = (char)(tmp_c & 0xff);
-			gsl_gesture_status = GE_WAKEUP;
 			dev_dbg(&client->dev, "wake up gesture: %#02x '%c'\n",
 					gsl_gesture_c, gsl_gesture_c);
 			wake_lock_timeout(&ddata->gesture_wake_lock,
@@ -1854,6 +1856,9 @@ static irqreturn_t gsl_ts_isr(int irq, void *priv)
 			input_report_key(idev, key_data, 0);
 			input_sync(idev);
 		}
+
+		gsl_enter_doze(ddata, gsl_gesture_flag == 2);
+
 		goto schedule;
 	}
 #endif
