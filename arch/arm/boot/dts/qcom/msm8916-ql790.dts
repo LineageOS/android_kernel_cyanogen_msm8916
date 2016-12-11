@@ -21,3 +21,15 @@
 	compatible = "qcom,msm8916-qrd-skuid", "qcom,msm8916-qrd", "qcom,msm8916", "qcom,qrd";
 	qcom,board-id = <0x21010b 5>, <0x22010b 5>, <0x23010b 5>, <0x1000b 5>, <0x1000b 0>;
 };
+
+&soc {
+	qcom,ipc_router_modem_xprt {
+		/delete-property/ qcom,disable-pil-loading;
+	};
+
+	qcom,smem@86300000 {
+		qcom,smd-modem {
+			/delete-property/ qcom,not-loadable;
+		};
+	};
+};
