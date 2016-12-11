@@ -47,4 +47,14 @@
 	qcom,lpm-workarounds {
 		/delete-property/ qcom,lpm-wa-skip-l2-spm;
 	};
+
+	qcom,ipc_router_modem_xprt {
+		/delete-property/ qcom,disable-pil-loading;
+	};
+
+	qcom,smem@86300000 {
+		qcom,smd-modem {
+			/delete-property/ qcom,not-loadable;
+		};
+	};
 };

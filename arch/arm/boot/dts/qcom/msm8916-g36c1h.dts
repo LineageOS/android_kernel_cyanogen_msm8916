@@ -30,3 +30,15 @@
 &dsi_ili9806e_fwvga_hsd_hlt_vid {
 	qcom,cont-splash-enabled;
 };
+
+&soc {
+	qcom,ipc_router_modem_xprt {
+		/delete-property/ qcom,disable-pil-loading;
+	};
+
+	qcom,smem@86300000 {
+		qcom,smd-modem {
+			/delete-property/ qcom,not-loadable;
+		};
+	};
+};
