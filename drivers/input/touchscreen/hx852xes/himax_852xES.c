@@ -6264,7 +6264,8 @@ if (pdata == NULL) { /*Allocate Platform data space*/
 	ts->rst_gpio = pdata->gpio_reset;
 #endif
 
-himax_gpio_power_config(ts->client, pdata);
+	pdata->i2c_pull_up = true;
+	himax_gpio_power_config(ts->client, pdata, true);
 
 #ifndef CONFIG_OF
 	if (pdata->power) {
@@ -6552,6 +6553,7 @@ static int himax852xes_remove(struct i2c_client *client)
 #ifdef  HX_TP_PROC_FLASH_DUMP
 		destroy_workqueue(ts->flash_wq);
 #endif
+		himax_gpio_power_config(ts->client, ts->pdata, false);
 		kfree(ts);
 
 	return 0;
@@ -6687,6 +6689,16 @@ if (HX_ON_HAND_SHAKING)//chip on hand shaking,wait hand shaking
 	//ts->first_pressed = 0;
 	atomic_set(&ts->suspend_mode, 1);
 	ts->pre_finger_mask = 0;
+
+	ret = himax_power_on(ts->pdata, false);
+	if (ret) {
+		E("Failed to power on hardware\n");
+	}
+
+	if (gpio_is_valid(ts->pdata->gpio_reset)) {
+	gpio_direction_output(ts->pdata->gpio_reset, 0);
+	}
+
 	if (ts->pdata->powerOff3V3 && ts->pdata->power)
 		ts->pdata->power(0);
 
@@ -6695,8 +6707,8 @@ if (HX_ON_HAND_SHAKING)//chip on hand shaking,wait hand shaking
 
 static int himax852xes_resume(struct device *dev)
 {
-#ifdef HX_SMART_WAKEUP
 	int ret;
+#ifdef HX_SMART_WAKEUP
 	uint8_t buf[2] = {0};
 #endif
 #ifdef HX_CHIP_STATUS_MONITOR
@@ -6711,6 +6723,15 @@ static int himax852xes_resume(struct device *dev)
 
 	I("%s: enter \n", __func__);
 	ts = dev_get_drvdata(dev);
+
+	ret = himax_power_on(ts->pdata, true);
+	if (ret) {
+		E("Failed to power on hardware\n");
+	}
+
+        if (gpio_is_valid(ts->pdata->gpio_reset)) {
+                gpio_direction_output(ts->pdata->gpio_reset, 1);
+        }
 
 	if (ts->pdata->powerOff3V3 && ts->pdata->power)
 		ts->pdata->power(1);

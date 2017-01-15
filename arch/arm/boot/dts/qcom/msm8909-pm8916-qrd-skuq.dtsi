@@ -35,12 +35,36 @@
 
 };
 
+/{
+	qrd_batterydata: qcom,battery-data {
+		qcom,rpull-up-kohm = <0>;
+		qcom,vref-batt-therm = <1800000>;
+
+		#include "batterydata-qrd-skuq-4v35-2500mah.dtsi"
+	};
+};
+
 &pm8916_chg {
+	qcom,vddmax-mv = <4350>;
+	qcom,vddsafe-mv = <4380>;
+	qcom,vinmin-mv = <4470>;
+	qcom,tchg-mins = <360>;
+	qcom,disable-vbatdet-based-recharge;
 	status = "ok";
 };
 
 &pm8916_bms {
+	qcom,battery-data = <&qrd_batterydata>;
+	qcom,resume-soc = <95>;
+	qcom,use-reported-soc;
+	qcom,force-bms-active-on-charger;
 	status = "ok";
+};
+
+&pm8916_vadc {
+	chan@30 {
+		qcom,scale-function = <12>;
+	};
 };
 
 &soc {
@@ -158,7 +182,7 @@
 			reg = <0x30>;
 			vdd-supply = <&pm8916_l17>;
 			vio-supply = <&pm8916_l6>;
-			memsic,dir = "obverse-x-axis-forward";
+			memsic,dir = "reverse-x-axis-forward";
 			memsic,auto-report;
 		};
 

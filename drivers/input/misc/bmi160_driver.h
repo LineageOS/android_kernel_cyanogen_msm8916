@@ -49,6 +49,7 @@
 #define ABSMAX                      512
 #define GYRO_MIN_VALUE		-32768
 #define GYRO_MAX_VALUE		32767
+#define BMI_CAL_BUF_SIZE        99
 
 #define SENSOR_CHIP_ID_BMI (0xD0)
 #define SENSOR_CHIP_ID_BMI_C2 (0xD1)
@@ -339,7 +340,10 @@ struct bmi_client_data {
 	atomic_t wkqueue_en; /*TO DO acc gyro mag*/
 	atomic_t gyro_en;
 	atomic_t delay;
+	atomic_t acc_delay;
+	atomic_t gyro_delay;
 	atomic_t selftest_result;
+	char calibrate_buf[BMI_CAL_BUF_SIZE];
 
 	u8  fifo_data_sel;
 	u16 fifo_bytecount;

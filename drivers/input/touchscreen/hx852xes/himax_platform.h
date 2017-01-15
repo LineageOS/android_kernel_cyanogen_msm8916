@@ -23,14 +23,10 @@
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
-#if defined(CONFIG_HMX_DB)
 #include <linux/regulator/consumer.h>
-#endif
 
 #define QCT
 
-
-#if defined(CONFIG_HMX_DB)
 /* Analog voltage @2.7 V */
 #define HX_VTG_MIN_UV			2700000
 #define HX_VTG_MAX_UV			3300000
@@ -46,7 +42,6 @@
 #define HX_I2C_VTG_MAX_UV		1800000
 #define HX_I2C_LOAD_UA 			10000
 #define HX_I2C_LPM_LOAD_UA 		10
-#endif
 
 struct himax_i2c_platform_data {
 	int abs_x_min;
@@ -78,7 +73,6 @@ struct himax_i2c_platform_data {
 
 	struct himax_config *hx_config;
 	int hx_config_size;
-#if defined(CONFIG_HMX_DB)
 	bool	i2c_pull_up;
 	bool	digital_pwr_regulator;
 	int reset_gpio;
@@ -86,10 +80,9 @@ struct himax_i2c_platform_data {
 	int irq_gpio;
 	u32 irq_gpio_flags;
 
-	struct regulator *vcc_ana; //For Dragon Board
-	struct regulator *vcc_dig; //For Dragon Board
-	struct regulator *vcc_i2c; //For Dragon Board
-#endif
+	struct regulator *vcc_ana;
+	struct regulator *vcc_dig;
+	struct regulator *vcc_i2c;
 };
 
 extern int irq_enable_count;
@@ -103,6 +96,7 @@ extern int himax_ts_register_interrupt(struct i2c_client *client);
 extern void himax_rst_gpio_set(int pinnum, uint8_t value);
 extern uint8_t himax_int_gpio_read(int pinnum);
 
-extern int himax_gpio_power_config(struct i2c_client *client,struct himax_i2c_platform_data *pdata);
+extern int himax_gpio_power_config(struct i2c_client *client,struct himax_i2c_platform_data *pdata,bool on);
+extern int himax_power_on(struct himax_i2c_platform_data *pdata, bool on);
 
 #endif
