@@ -5645,10 +5645,13 @@ static int __iw_setint_getnone(struct net_device *dev,
         }
         case WE_SET_MAX_TX_POWER_2_4:
         {
+           if (NULL == hHal)
+               return -EINVAL;
+
            hddLog(VOS_TRACE_LEVEL_INFO,
                   "%s: Setting maximum tx power %d dBm for 2.4 GHz band",
                   __func__, set_value);
-           if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, set_value) !=
+           if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, set_value, hHal) !=
                                         eHAL_STATUS_SUCCESS)
            {
               hddLog(VOS_TRACE_LEVEL_ERROR,
@@ -5661,10 +5664,13 @@ static int __iw_setint_getnone(struct net_device *dev,
         }
         case WE_SET_MAX_TX_POWER_5_0:
         {
+           if (NULL == hHal)
+               return -EINVAL;
+
            hddLog(VOS_TRACE_LEVEL_INFO,
                   "%s: Setting maximum tx power %d dBm for 5.0 GHz band",
                   __func__, set_value);
-           if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, set_value) !=
+           if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, set_value, hHal) !=
                                         eHAL_STATUS_SUCCESS)
            {
               hddLog(VOS_TRACE_LEVEL_ERROR,
@@ -5949,7 +5955,7 @@ static int __iw_setint_getnone(struct net_device *dev,
                 if (txPwr > TX_PWR_MAX)
                     txPwr = TX_PWR_MAX;
 
-                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, txPwr) !=
+                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, txPwr, hHal) !=
                                         eHAL_STATUS_SUCCESS) {
                     hddLog(VOS_TRACE_LEVEL_ERROR,
                       FL("Setting tx power failed for 2.4GHz band %d"), txPwr);
@@ -5963,7 +5969,7 @@ static int __iw_setint_getnone(struct net_device *dev,
                 if (txPwr > TX_PWR_MAX)
                     txPwr = TX_PWR_MAX;
 
-                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, txPwr) !=
+                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, txPwr, hHal) !=
                                         eHAL_STATUS_SUCCESS) {
                     hddLog(VOS_TRACE_LEVEL_ERROR,
                       FL("setting tx power failed for 5GHz band %d"), txPwr);
@@ -5971,14 +5977,14 @@ static int __iw_setint_getnone(struct net_device *dev,
                 }
             }
             else if(FALSE == set_value) {
-                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, txPwr) !=
+                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_24, txPwr, hHal) !=
                                         eHAL_STATUS_SUCCESS) {
                     hddLog(VOS_TRACE_LEVEL_ERROR,
                       FL("Setting tx power failed for 2.4GHz band %d"), txPwr);
                     ret = -EIO;
                 }
 
-                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, txPwr) !=
+                if (sme_SetMaxTxPowerPerBand(eCSR_BAND_5G, txPwr, hHal) !=
                                         eHAL_STATUS_SUCCESS) {
                     hddLog(VOS_TRACE_LEVEL_ERROR,
                       FL("setting tx power failed for 5GHz band %d"), txPwr);
