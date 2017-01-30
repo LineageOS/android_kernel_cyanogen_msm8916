@@ -830,6 +830,16 @@ config SENSORS_AKM8963
 	  To compile this driver as a module, choose M here: the
 	  module will be called akm8963.
 
+config SENSORS_YAS537
+	tristate "YAS Geomagnetic Sensor"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the YAS537 magnetic sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called yas537.
+
 config SENSORS_STK3X1X
 	tristate "STK3X1X device driver"
 	depends on I2C
