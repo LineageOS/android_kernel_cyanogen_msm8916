@@ -34,6 +34,10 @@
 #ifdef CONFIG_MACH_CP8675
 #include "msm8x16_wcd_registers.h"
 #endif
+#ifdef CONFIG_MACH_WT88047
+#include "msm8x16_wcd_registers.h"
+#include "msm8x16-wcd.h"
+#endif
 
 #define WCD_MBHC_JACK_MASK (SND_JACK_HEADSET | SND_JACK_OC_HPHL | \
 			   SND_JACK_OC_HPHR | SND_JACK_LINEOUT | \
@@ -497,6 +501,9 @@ static bool wcd_mbhc_is_hph_pa_on(struct wcd_mbhc *mbhc)
 static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 {
 	u8 wg_time;
+#ifdef CONFIG_MACH_WT88047
+	u8 state = 0;
+#endif
 
 	WCD_MBHC_REG_READ(WCD_MBHC_HPH_CNP_WG_TIME, wg_time);
 	wg_time += 1;
@@ -510,7 +517,14 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	} else {
 		pr_debug("%s PA is off\n", __func__);
 	}
+#ifdef CONFIG_MACH_WT88047
+	state = gpio_get_value(EXT_SPK_AMP_GPIO);
+	pr_debug("%s external audio pa state:%d\n", __func__, state);
+	if (!state)
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPH_PA_EN, 0);
+#else
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_HPH_PA_EN, 0);
+#endif
 	usleep_range(wg_time * 1000, wg_time * 1000 + 50);
 }
 
@@ -569,6 +583,9 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			 jack_type, mbhc->hph_status);
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				mbhc->hph_status, WCD_MBHC_JACK_MASK);
+#ifdef CONFIG_MACH_WT88047
+		msm8x16_wcd_codec_set_headset_state(mbhc->hph_status);
+#endif
 		wcd_mbhc_set_and_turnoff_hph_padac(mbhc);
 		hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
@@ -672,6 +689,9 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
+#ifdef CONFIG_MACH_WT88047
+		msm8x16_wcd_codec_set_headset_state(mbhc->hph_status);
+#endif
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }
@@ -955,11 +975,22 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 	bool micbias1 = false;
 	int ret = 0;
 	int rc;
+#ifdef CONFIG_MACH_WT88047
+	u16 detection_type_read;
+	bool detection_type;
+#endif
 
 	pr_debug("%s: enter\n", __func__);
 
 	mbhc = container_of(work, struct wcd_mbhc, correct_plug_swch);
 	codec = mbhc->codec;
+
+#ifdef CONFIG_MACH_WT88047
+	WCD_MBHC_REG_READ(MSM8X16_WCD_A_ANALOG_MBHC_DET_CTL_1,detection_type_read);
+	detection_type = detection_type_read & 0x20;
+	if (detection_type)
+		return;
+#endif
 
 	/*
 	 * Enable micbias/pullup for detection in correct work.
@@ -1238,6 +1269,9 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 {
 	bool detection_type;
 	bool micbias1 = false;
+#ifdef CONFIG_MACH_WT88047
+	u8 state = 0;
+#endif
 	struct snd_soc_codec *codec = mbhc->codec;
 
 	dev_dbg(codec->dev, "%s: enter\n", __func__);
@@ -1298,6 +1332,11 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 			mbhc->mbhc_cb->enable_mb_source(codec, true);
 		mbhc->btn_press_intr = false;
 		wcd_mbhc_detect_plug_type(mbhc);
+#ifdef CONFIG_MACH_WT88047
+		state = gpio_get_value(EXT_SPK_AMP_GPIO);
+		if (!state)
+			gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, true);
+#endif
 	} else if ((mbhc->current_plug != MBHC_PLUG_TYPE_NONE)
 			&& !detection_type) {
 		/* Disable external voltage source to micbias if present */
@@ -1348,6 +1387,9 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_LINEOUT);
 		}
+#ifdef CONFIG_MACH_WT88047
+		gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
+#endif
 	} else if (!detection_type) {
 		/* Disable external voltage source to micbias if present */
 		if (mbhc->mbhc_cb->enable_mb_source)
@@ -1355,6 +1397,9 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		/* Disable HW FSM */
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
+#ifdef CONFIG_MACH_WT88047
+		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack, 0, WCD_MBHC_JACK_MASK);
+#endif
 	}
 
 	mbhc->in_swch_irq_handler = false;
@@ -1366,6 +1411,9 @@ static irqreturn_t wcd_mbhc_mech_plug_detect_irq(int irq, void *data)
 {
 	int r = IRQ_HANDLED;
 	struct wcd_mbhc *mbhc = data;
+#ifdef CONFIG_MACH_WT88047
+	msleep(100);
+#endif
 
 	pr_debug("%s: enter\n", __func__);
 	if (unlikely((mbhc->mbhc_cb->lock_sleep(mbhc, true)) == false)) {
