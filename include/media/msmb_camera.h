@@ -17,6 +17,7 @@
 #define MSM_CAM_V4L2_IOCTL_NOTIFY_ERROR \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 33, struct msm_v4l2_event_data)
 
+#ifndef CONFIG_WT88047_CAMERA
 #define MSM_CAM_V4L2_IOCTL_NOTIFY_FREEZE \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 34, struct msm_v4l2_event_data)
 
@@ -36,6 +37,7 @@
 #define MSM_CAM_V4L2_IOCTL_NOTIFY_FREEZE32 \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 34, struct v4l2_event32)
 
+#endif
 #endif
 
 #define QCAMERA_DEVICE_GROUP_ID	1
@@ -58,8 +60,10 @@
 #define MSM_CAMERA_SUBDEV_STROBE_FLASH 12
 #define MSM_CAMERA_SUBDEV_BUF_MNGR     13
 #define MSM_CAMERA_SUBDEV_SENSOR_INIT  14
+#ifndef CONFIG_WT88047_CAMERA
 #define MSM_CAMERA_SUBDEV_OIS          15
 #define MSM_CAMERA_SUBDEV_FLASH        16
+#endif
 
 #define MSM_MAX_CAMERA_SENSORS  5
 
