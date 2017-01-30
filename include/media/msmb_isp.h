@@ -9,6 +9,10 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#ifdef CONFIG_WT88047_CAMERA
+#include <media/msmb_isp_wt88047.h>
+#else
+
 #ifndef __MSMB_ISP__
 #define __MSMB_ISP__
 
@@ -612,3 +616,5 @@ struct msm_isp_event_data32 {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+21, struct msm_isp_event_data)
 #endif
 #endif /* __MSMB_ISP__ */
+
+#endif /* CONFIG_WT88047_CAMERA */
