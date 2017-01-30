@@ -18,7 +18,11 @@
 #include <linux/videodev2.h>
 #include <linux/dma-buf.h>
 
+#ifdef CONFIG_WT88047_CAMERA
+#define VB2_MAX_FRAME  32
+#else
 #define VB2_MAX_FRAME  64
+#endif
 
 struct vb2_alloc_ctx;
 struct vb2_fileio_data;
