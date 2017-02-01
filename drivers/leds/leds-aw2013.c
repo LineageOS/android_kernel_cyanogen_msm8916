@@ -42,8 +42,10 @@
 #define AW_LED_RESET_MASK		0x55
 
 #define AW_LED_RESET_DELAY		8
+#ifndef CONFIG_MACH_WT88047
 #define AW2013_VDD_MIN_UV		2600000
 #define AW2013_VDD_MAX_UV		3300000
+#endif
 #define AW2013_VI2C_MIN_UV		1800000
 #define AW2013_VI2C_MAX_UV		1800000
 
@@ -59,7 +61,9 @@ struct aw2013_led {
 	struct work_struct work;
 	struct workqueue_struct *workqueue;
 	struct mutex lock;
+#ifndef CONFIG_MACH_WT88047
 	struct regulator *vdd;
+#endif
 	struct regulator *vcc;
 	int num_leds;
 	int id;
@@ -91,12 +95,14 @@ static int aw2013_power_on(struct aw2013_led *led, bool on)
 	int rc;
 
 	if (on) {
+#ifndef CONFIG_MACH_WT88047
 		rc = regulator_enable(led->vdd);
 		if (rc) {
 			dev_err(&led->client->dev,
 				"Regulator vdd enable failed rc=%d\n", rc);
 			return rc;
 		}
+#endif
 
 		if (led->pdata->awgpio <= 0)  {
 			rc = regulator_enable(led->vcc);
@@ -108,12 +114,14 @@ static int aw2013_power_on(struct aw2013_led *led, bool on)
 		}
 		led->poweron = true;
 	} else {
+#ifndef CONFIG_MACH_WT88047
 		rc = regulator_disable(led->vdd);
 		if (rc) {
 			dev_err(&led->client->dev,
 				"Regulator vdd disable failed rc=%d\n", rc);
 			return rc;
 		}
+#endif
 
 		if (led->pdata->awgpio <= 0)  {
 			rc = regulator_disable(led->vcc);
@@ -128,18 +136,22 @@ static int aw2013_power_on(struct aw2013_led *led, bool on)
 	return rc;
 
 fail_enable_reg:
+#ifndef CONFIG_MACH_WT88047
 	rc = regulator_disable(led->vdd);
 	if (rc)
 		dev_err(&led->client->dev,
 			"Regulator vdd disable failed rc=%d\n", rc);
+#endif
 
 	return rc;
 
 fail_disable_reg:
+#ifndef CONFIG_MACH_WT88047
 	rc = regulator_enable(led->vdd);
 	if (rc)
 		dev_err(&led->client->dev,
 			"Regulator vdd enable failed rc=%d\n", rc);
+#endif
 
 	return rc;
 }
@@ -178,6 +190,7 @@ static int aw2013_power_init(struct aw2013_led *led, bool on)
 	int rc;
 
 	if (on) {
+#ifndef CONFIG_MACH_WT88047
 		led->vdd = regulator_get(&led->client->dev, "vdd");
 		if (IS_ERR(led->vdd)) {
 			rc = PTR_ERR(led->vdd);
@@ -196,6 +209,7 @@ static int aw2013_power_init(struct aw2013_led *led, bool on)
 				goto reg_vdd_put;
 			}
 		}
+#endif
 
 		if (led->pdata->awgpio > 0) {
 			rc = aw2013_configure_gpio(led, on);
@@ -225,10 +239,12 @@ static int aw2013_power_init(struct aw2013_led *led, bool on)
 			}
 		}
 	} else {
+#ifndef CONFIG_MACH_WT88047
 		if (regulator_count_voltages(led->vdd) > 0)
 			regulator_set_voltage(led->vdd, 0, AW2013_VDD_MAX_UV);
 
 		regulator_put(led->vdd);
+#endif
 
 		if (!led->pdata->awgpio <= 0) {
 			if (regulator_count_voltages(led->vcc) > 0)
@@ -242,10 +258,12 @@ static int aw2013_power_init(struct aw2013_led *led, bool on)
 reg_vcc_put:
 	regulator_put(led->vcc);
 reg_vdd_set_vtg:
+#ifndef CONFIG_MACH_WT88047
 	if (regulator_count_voltages(led->vdd) > 0)
 		regulator_set_voltage(led->vdd, 0, AW2013_VDD_MAX_UV);
 reg_vdd_put:
 	regulator_put(led->vdd);
+#endif
 	return rc;
 }
 
