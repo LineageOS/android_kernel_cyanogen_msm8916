@@ -21,4 +21,10 @@ config MACH_T86519A1
 	help
 	  Support for Wingtech T86519A1 variant
 
+config MACH_WT88047
+	bool "WT88047 board"
+	select MACH_WINGTECH_MSM8916
+	help
+	  Support for Wingtech WT88047 variant
+
 endmenu
