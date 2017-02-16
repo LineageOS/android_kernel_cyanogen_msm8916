@@ -2075,7 +2075,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK ){
 		blank = evdata->data;
 		print_info("fb_notifier_callback blank=%d\n",*blank);
-		if (*blank == FB_BLANK_UNBLANK) {
+		if (*blank == FB_BLANK_UNBLANK
+				|| *blank == FB_BLANK_NORMAL
+				|| *blank == FB_BLANK_VSYNC_SUSPEND) {
 			if (unblanked_once)
 				gsl_ts_resume();
 		} else if (*blank == FB_BLANK_POWERDOWN) {
