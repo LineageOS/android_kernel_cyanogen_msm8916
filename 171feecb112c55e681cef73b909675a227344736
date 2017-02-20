@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa5d592f_21231207",
+        "filename": "arch/arm64/configs/lineageos_tomato_defconfig",
+        "patchSetId": 1
+      },
+      "lineNbr": 591,
+      "author": {
+        "id": 11690
+      },
+      "writtenOn": "2017-02-20T11:54:47Z",
+      "side": 0,
+      "message": "https://github.com/LineageOS/android_kernel_cyanogen_msm8916/commit/88f6724fe9fd966c5002967c0c39d34db0d6c6b0",
+      "revId": "171feecb112c55e681cef73b909675a227344736",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
