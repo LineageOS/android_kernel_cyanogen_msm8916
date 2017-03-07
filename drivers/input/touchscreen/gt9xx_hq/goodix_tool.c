@@ -29,7 +29,7 @@
 #include "gt9xx.h"
 
 #define DATA_LENGTH_UINT    512
-#define CMD_HEAD_LENGTH     (sizeof(st_cmd_head) - sizeof(u8*))
+#define CMD_HEAD_LENGTH     (sizeof(st_cmd_head))
 static char procname[20] = {0};
 
 #define UPDATE_FUNCTIONS
@@ -58,10 +58,10 @@ typedef struct{
 	u8  addr_len;   //address length
 	u8  addr[2];    //address
 	u8  res[3];     //reserved
-	u8* data;       //data pointer
 }st_cmd_head;
 #pragma pack()
 st_cmd_head cmd_head;
+static u8 *cmd_data;
 
 static struct i2c_client *gt_client = NULL;
 
@@ -327,8 +327,8 @@ s32 init_wr_node(struct i2c_client *client)
 
 void uninit_wr_node(void)
 {
-	kfree(cmd_head.data);
-	cmd_head.data = NULL;
+	kfree(cmd_data);
+	cmd_data = NULL;
 	unregister_i2c_func();
 	remove_proc_entry(procname, NULL);
 }
@@ -424,7 +424,6 @@ Return write length.
 ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len, loff_t *off)
 {
 	s32 ret = 0;
-	u8 *dataptr = NULL;
 
 	GTP_DEBUG_FUNC();
 	GTP_DEBUG_ARRAY((u8*)buff, len);
@@ -448,16 +447,16 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 
 	if (1 == cmd_head.wr)
 	{
-		ret = copy_from_user(&cmd_head.data[GTP_ADDR_LENGTH], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
+		ret = copy_from_user(&cmd_data[GTP_ADDR_LENGTH], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 		if(ret)
 		{
 			GTP_ERROR("copy_from_user failed.");
 			ret = -EINVAL;
 			goto exit;
 		}
-		memcpy(&cmd_head.data[GTP_ADDR_LENGTH - cmd_head.addr_len], cmd_head.addr, cmd_head.addr_len);
+		memcpy(&cmd_data[GTP_ADDR_LENGTH - cmd_head.addr_len], cmd_head.addr, cmd_head.addr_len);
 
-		GTP_DEBUG_ARRAY(cmd_head.data, cmd_head.data_len + cmd_head.addr_len);
+		GTP_DEBUG_ARRAY(cmd_data, cmd_head.data_len + cmd_head.addr_len);
 		GTP_DEBUG_ARRAY((u8*)&buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 
 		if (1 == cmd_head.flag)
@@ -470,7 +469,7 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 			}
 		}
 
-		if (tool_i2c_write(&cmd_head.data[GTP_ADDR_LENGTH - cmd_head.addr_len],
+		if (tool_i2c_write(&cmd_data[GTP_ADDR_LENGTH - cmd_head.addr_len],
 					cmd_head.data_len + cmd_head.addr_len) <= 0)
 		{
 			GTP_ERROR("[WRITE]Write data failed!");
@@ -478,7 +477,7 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 			goto exit;
 		}
 
-		GTP_DEBUG_ARRAY(&cmd_head.data[GTP_ADDR_LENGTH - cmd_head.addr_len],cmd_head.data_len + cmd_head.addr_len);
+		GTP_DEBUG_ARRAY(&cmd_data[GTP_ADDR_LENGTH - cmd_head.addr_len],cmd_head.data_len + cmd_head.addr_len);
 		if (cmd_head.delay)
 		{
 			msleep(cmd_head.delay);
@@ -486,14 +485,14 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 	}
 	else if (3 == cmd_head.wr)
 	{
-		ret = copy_from_user(&cmd_head.data[0], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
+		ret = copy_from_user(&cmd_data[0], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 		if(ret)
 		{
 			GTP_ERROR("copy_from_user failed.");
 			ret = -EINVAL;
 			goto exit;
 		}
-		memcpy(IC_TYPE, cmd_head.data, cmd_head.data_len);
+		memcpy(IC_TYPE, cmd_data, cmd_head.data_len);
 
 		register_i2c_func();
 	}
@@ -516,14 +515,14 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 	else if(17 == cmd_head.wr)
 	{
 		struct goodix_ts_data *ts = i2c_get_clientdata(gt_client);
-		ret = copy_from_user(&cmd_head.data[GTP_ADDR_LENGTH], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
+		ret = copy_from_user(&cmd_data[GTP_ADDR_LENGTH], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 		if(ret)
 		{
 			GTP_DEBUG("copy_from_user failed.");
 			ret = -EINVAL;
 			goto exit;
 		}
-		if(cmd_head.data[GTP_ADDR_LENGTH])
+		if(cmd_data[GTP_ADDR_LENGTH])
 		{
 			GTP_INFO("gtp enter rawdiff.");
 			ts->gtp_rawdiff_mode = true;
@@ -551,10 +550,10 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 	{
 		show_len = 0;
 		total_len = 0;
-		memset(cmd_head.data, 0, cmd_head.data_len + 1);
-		memcpy(cmd_head.data, &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
+		memset(cmd_data, 0, cmd_head.data_len + 1);
+		memcpy(cmd_data, &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 
-		if (FAIL == gup_update_proc((void*)cmd_head.data))
+		if (FAIL == gup_update_proc((void*)cmd_data))
 		{
 			ret = -EBUSY;
 			goto exit;
@@ -564,10 +563,8 @@ ssize_t goodix_tool_write(struct file *filp, const char __user *buff, size_t len
 #endif
 
 exit:
-	dataptr = cmd_head.data;
 	memset(&cmd_head, 0, sizeof(cmd_head));
 	cmd_head.wr = 0xFF;
-	cmd_head.data = dataptr;
 
 	return ret;
 }
