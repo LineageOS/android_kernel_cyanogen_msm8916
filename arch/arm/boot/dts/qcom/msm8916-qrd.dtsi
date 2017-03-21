@@ -154,8 +154,8 @@
 	qcom,pm8916@1 {
 		qcom,vibrator@c000 {
 			status = "okay";
-			qcom,vib-timeout-ms = <15000>;
-			qcom,vib-vtg-level-mV = <3100>;
+			qcom,vib-timeout-ms = <10000>;
+			qcom,vib-vtg-level-mV = <2900>;
 		};
 	};
 };
