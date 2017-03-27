@@ -991,9 +991,8 @@ repeat:
 	if (kthread_should_stop())
 		return 0;
 
-	blk_start_plug(&plug);
-
 	mutex_lock(&dcc->cmd_lock);
+	blk_start_plug(&plug);
 	list_for_each_entry_safe(dc, tmp, pend_list, list) {
 		f2fs_bug_on(sbi, dc->state != D_PREP);
 
@@ -1003,6 +1002,7 @@ repeat:
 		if (iter++ > DISCARD_ISSUE_RATE)
 			break;
 	}
+	blk_finish_plug(&plug);
 
 	list_for_each_entry_safe(dc, tmp, wait_list, list) {
 		if (dc->state == D_DONE) {
@@ -1011,8 +1011,6 @@ repeat:
 		}
 	}
 	mutex_unlock(&dcc->cmd_lock);
-
-	blk_finish_plug(&plug);
 
 	iter = 0;
 	congestion_wait(BLK_RW_SYNC, HZ/50);
