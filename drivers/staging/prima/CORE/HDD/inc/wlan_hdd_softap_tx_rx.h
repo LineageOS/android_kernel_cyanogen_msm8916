@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -114,7 +114,7 @@ extern struct net_device_stats* hdd_softap_stats(struct net_device *dev);
   @return         : VOS_STATUS_E_FAILURE if any errors encountered 
                   : VOS_STATUS_SUCCESS otherwise
   ===========================================================================*/
-extern VOS_STATUS hdd_softap_init_tx_rx(hdd_adapter_t *pAdapter, bool re_init);
+extern VOS_STATUS hdd_softap_init_tx_rx( hdd_adapter_t *pAdapter );
 
 /**============================================================================
   @brief hdd_softap_deinit_tx_rx() - Deinit function to clean up Tx/RX
@@ -124,8 +124,7 @@ extern VOS_STATUS hdd_softap_init_tx_rx(hdd_adapter_t *pAdapter, bool re_init);
   @return         : VOS_STATUS_E_FAILURE if any errors encountered 
                   : VOS_STATUS_SUCCESS otherwise
   ===========================================================================*/
-extern VOS_STATUS hdd_softap_deinit_tx_rx(hdd_adapter_t *pAdapter,
-                                          bool re_init);
+extern VOS_STATUS hdd_softap_deinit_tx_rx( hdd_adapter_t *pAdapter );
 
 /**============================================================================
   @brief hdd_softap_init_tx_rx_sta() - Init function to initialize a station in Tx/RX
@@ -333,7 +332,7 @@ extern VOS_STATUS hdd_softap_GetConnectedStaId( hdd_adapter_t *pAdapter, v_U8_t 
   @return         : VOS_STATUS_E_FAILURE if any errors encountered
 
   ========================================================================== */
-VOS_STATUS hdd_start_trafficMonitor(hdd_adapter_t *pAdapter, bool re_init);
+VOS_STATUS hdd_start_trafficMonitor( hdd_adapter_t *pAdapter );
 
 /**==========================================================================
 
@@ -345,6 +344,6 @@ VOS_STATUS hdd_start_trafficMonitor(hdd_adapter_t *pAdapter, bool re_init);
   @return         : VOS_STATUS_E_FAILURE if any errors encountered
 
   ========================================================================== */
-VOS_STATUS hdd_stop_trafficMonitor( hdd_adapter_t *pAdapter, bool re_init);
+VOS_STATUS hdd_stop_trafficMonitor( hdd_adapter_t *pAdapter );
 
 #endif    // end #if !defined( WLAN_HDD_SOFTAP_TX_RX_H )
