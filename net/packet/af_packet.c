@@ -1317,16 +1317,13 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
 		return -EINVAL;
 	}
 
-	mutex_lock(&fanout_mutex);
-
-	err = -EINVAL;
 	if (!po->running)
-		goto out;
+		return -EINVAL;
 
-	err = -EALREADY;
 	if (po->fanout)
-		goto out;
+		return -EALREADY;
 
+	mutex_lock(&fanout_mutex);
 	match = NULL;
 	list_for_each_entry(f, &fanout_list, list) {
 		if (f->id == id &&
@@ -1382,10 +1379,12 @@ static void fanout_release(struct sock *sk)
 	struct packet_sock *po = pkt_sk(sk);
 	struct packet_fanout *f;
 
-	mutex_lock(&fanout_mutex);
 	f = po->fanout;
-	if (f)
-		po->fanout = NULL;
+	if (!f)
+		return;
+
+	mutex_lock(&fanout_mutex);
+	po->fanout = NULL;
 
 	if (atomic_dec_and_test(&f->sk_ref)) {
 		list_del(&f->list);
