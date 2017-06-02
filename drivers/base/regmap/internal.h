@@ -130,7 +130,7 @@ struct regmap {
 	unsigned long *cache_present;
 	unsigned int cache_present_nbits;
 
-	struct reg_default *patch;
+	struct reg_sequence *patch;
 	int patch_regs;
 
 	/* if set, converts bulk rw to single rw */
@@ -224,7 +224,7 @@ int _regmap_raw_write(struct regmap *map, unsigned int reg,
 		      const void *val, size_t val_len, bool async);
 
 int _regmap_raw_multi_reg_write(struct regmap *map,
-				const struct reg_default *regs,
+				const struct reg_sequence *regs,
 				size_t num_regs);
 
 void regmap_async_complete_cb(struct regmap_async *async, int ret);

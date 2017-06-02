@@ -1190,7 +1190,7 @@ static struct snd_soc_codec_driver soc_codec_dev_da7210 = {
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 
-static struct reg_default da7210_regmap_i2c_patch[] = {
+static struct reg_sequence da7210_regmap_i2c_patch[] = {
 
 	/* System controller master disable */
 	{ DA7210_STARTUP1, 0x00 },
@@ -1277,7 +1277,7 @@ static struct i2c_driver da7210_i2c_driver = {
 
 #if defined(CONFIG_SPI_MASTER)
 
-static struct reg_default da7210_regmap_spi_patch[] = {
+static struct reg_sequence da7210_regmap_spi_patch[] = {
 	/* Dummy read to give two pulses over nCS for SPI */
 	{ DA7210_AUX2, 0x00 },
 	{ DA7210_AUX2, 0x00 },

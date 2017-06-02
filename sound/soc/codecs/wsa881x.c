@@ -402,7 +402,7 @@ static const struct file_operations codec_debug_ops = {
 	.read = codec_debug_read,
 };
 
-static const struct reg_default wsa881x_pre_pmu_pa[] = {
+static const struct reg_sequence wsa881x_pre_pmu_pa[] = {
 	{WSA881X_SPKR_DRV_GAIN, 0x41},
 	{WSA881X_SPKR_MISC_CTL1, 0x01},
 	{WSA881X_ADC_EN_DET_TEST_I, 0x01},
@@ -411,25 +411,25 @@ static const struct reg_default wsa881x_pre_pmu_pa[] = {
 	{WSA881X_SPKR_PWRSTG_DBG, 0xA0},
 };
 
-static const struct reg_default wsa881x_pre_pmu_pa_2_0[] = {
+static const struct reg_sequence wsa881x_pre_pmu_pa_2_0[] = {
 	{WSA881X_SPKR_DRV_GAIN, 0x41},
 	{WSA881X_SPKR_MISC_CTL1, 0x87},
 };
 
-static const struct reg_default wsa881x_post_pmu_pa[] = {
+static const struct reg_sequence wsa881x_post_pmu_pa[] = {
 	{WSA881X_SPKR_PWRSTG_DBG, 0x00},
 	{WSA881X_ADC_EN_DET_TEST_V, 0x00},
 	{WSA881X_ADC_EN_MODU_V, 0x00},
 	{WSA881X_ADC_EN_DET_TEST_I, 0x00},
 };
 
-static const struct reg_default wsa881x_vi_txfe_en[] = {
+static const struct reg_sequence wsa881x_vi_txfe_en[] = {
 	{WSA881X_SPKR_PROT_FE_VSENSE_VCM, 0x85},
 	{WSA881X_SPKR_PROT_ATEST2, 0x0A},
 	{WSA881X_SPKR_PROT_FE_GAIN, 0xCF},
 };
 
-static const struct reg_default wsa881x_vi_txfe_en_2_0[] = {
+static const struct reg_sequence wsa881x_vi_txfe_en_2_0[] = {
 	{WSA881X_SPKR_PROT_FE_VSENSE_VCM, 0x85},
 	{WSA881X_SPKR_PROT_ATEST2, 0x0A},
 	{WSA881X_SPKR_PROT_FE_GAIN, 0xCF},
