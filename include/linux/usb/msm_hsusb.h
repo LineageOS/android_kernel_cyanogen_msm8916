@@ -104,6 +104,7 @@ enum msm_usb_phy_type {
 	SNPS_FEMTO_PHY,
 };
 
+/* CONFIG_MACH_JALEBI */
 #ifdef CONFIG_MACH_JALEBI
 #define IDEV_CHG_MAX	750
 #define IDEV_CHG_MIN	500
@@ -111,6 +112,16 @@ enum msm_usb_phy_type {
 
 #define IDEV_ACA_CHG_MAX	750
 #define IDEV_ACA_CHG_LIMIT	500
+
+/* CONFIG_MACH_WT88047 */
+#elif defined (CONFIG_MACH_WT88047)
+#define IDEV_CHG_MAX	1050
+#define IDEV_CHG_MIN	500
+#define IUNIT		100
+
+#define IDEV_ACA_CHG_MAX	1500
+#define IDEV_ACA_CHG_LIMIT	500
+
 #else
 #define IDEV_CHG_MAX	1500
 #define IDEV_CHG_MIN	500
@@ -118,7 +129,7 @@ enum msm_usb_phy_type {
 
 #define IDEV_ACA_CHG_MAX	1500
 #define IDEV_ACA_CHG_LIMIT	500
-#endif /* CONFIG_MACH_JALEBI */
+#endif
 #define IDEV_HVDCP_CHG_MAX	1800
 
 /**
