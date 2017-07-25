@@ -82,6 +82,7 @@ enum msm_vfe_frame_skip_pattern {
 	EVERY_6FRAME,
 	EVERY_7FRAME,
 	EVERY_8FRAME,
+#ifndef CONFIG_WT88047_CAMERA
 	EVERY_9FRAME,
 	EVERY_10FRAME,
 	EVERY_11FRAME,
@@ -89,6 +90,7 @@ enum msm_vfe_frame_skip_pattern {
 	EVERY_13FRAME,
 	EVERY_14FRAME,
 	EVERY_15FRAME,
+#endif
 	EVERY_16FRAME,
 	EVERY_32FRAME,
 	SKIP_ALL,
@@ -418,6 +420,14 @@ struct msm_vfe_axi_src_state {
 
 enum msm_isp_event_idx {
 	ISP_REG_UPDATE      = 0,
+#ifdef CONFIG_WT88047_CAMERA
+	ISP_START_ACK       = 1,
+	ISP_STOP_ACK        = 2,
+	ISP_IRQ_VIOLATION   = 3,
+	ISP_WM_BUS_OVERFLOW = 4,
+	ISP_STATS_OVERFLOW  = 5,
+	ISP_CAMIF_ERROR     = 6,
+#else
 	ISP_EPOCH_0         = 1,
 	ISP_EPOCH_1         = 2,
 	ISP_START_ACK       = 3,
@@ -426,6 +436,7 @@ enum msm_isp_event_idx {
 	ISP_WM_BUS_OVERFLOW = 6,
 	ISP_STATS_OVERFLOW  = 7,
 	ISP_CAMIF_ERROR     = 8,
+#endif
 	ISP_BUF_DONE        = 9,
 	ISP_FE_RD_DONE      = 10,
 	ISP_EVENT_MAX       = 11
@@ -435,25 +446,39 @@ enum msm_isp_event_idx {
 #define ISP_EVENT_BASE            (V4L2_EVENT_PRIVATE_START)
 #define ISP_BUF_EVENT_BASE        (ISP_EVENT_BASE + (1 << ISP_EVENT_OFFSET))
 #define ISP_STATS_EVENT_BASE      (ISP_EVENT_BASE + (2 << ISP_EVENT_OFFSET))
+#ifdef CONFIG_WT88047_CAMERA
+#define ISP_SOF_EVENT_BASE        (ISP_EVENT_BASE + (3 << ISP_EVENT_OFFSET))
+#define ISP_EOF_EVENT_BASE        (ISP_EVENT_BASE + (4 << ISP_EVENT_OFFSET))
+#else
 #define ISP_CAMIF_EVENT_BASE      (ISP_EVENT_BASE + (3 << ISP_EVENT_OFFSET))
 #define ISP_STREAM_EVENT_BASE     (ISP_EVENT_BASE + (4 << ISP_EVENT_OFFSET))
+#endif
 #define ISP_EVENT_REG_UPDATE      (ISP_EVENT_BASE + ISP_REG_UPDATE)
+#ifndef CONFIG_WT88047_CAMERA
 #define ISP_EVENT_EPOCH_0         (ISP_EVENT_BASE + ISP_EPOCH_0)
 #define ISP_EVENT_EPOCH_1         (ISP_EVENT_BASE + ISP_EPOCH_1)
+#endif
 #define ISP_EVENT_START_ACK       (ISP_EVENT_BASE + ISP_START_ACK)
 #define ISP_EVENT_STOP_ACK        (ISP_EVENT_BASE + ISP_STOP_ACK)
 #define ISP_EVENT_IRQ_VIOLATION   (ISP_EVENT_BASE + ISP_IRQ_VIOLATION)
 #define ISP_EVENT_WM_BUS_OVERFLOW (ISP_EVENT_BASE + ISP_WM_BUS_OVERFLOW)
 #define ISP_EVENT_STATS_OVERFLOW  (ISP_EVENT_BASE + ISP_STATS_OVERFLOW)
 #define ISP_EVENT_CAMIF_ERROR     (ISP_EVENT_BASE + ISP_CAMIF_ERROR)
+#ifdef CONFIG_WT88047_CAMERA
+#define ISP_EVENT_SOF             (ISP_SOF_EVENT_BASE)
+#define ISP_EVENT_EOF             (ISP_EOF_EVENT_BASE)
+#else
 #define ISP_EVENT_SOF             (ISP_CAMIF_EVENT_BASE)
 #define ISP_EVENT_EOF             (ISP_CAMIF_EVENT_BASE + 1)
+#endif
 #define ISP_EVENT_BUF_DONE        (ISP_EVENT_BASE + ISP_BUF_DONE)
 #define ISP_EVENT_BUF_DIVERT      (ISP_BUF_EVENT_BASE)
 #define ISP_EVENT_STATS_NOTIFY    (ISP_STATS_EVENT_BASE)
 #define ISP_EVENT_COMP_STATS_NOTIFY (ISP_EVENT_STATS_NOTIFY + MSM_ISP_STATS_MAX)
 #define ISP_EVENT_FE_READ_DONE    (ISP_EVENT_BASE + ISP_FE_RD_DONE)
+#ifndef CONFIG_WT88047_CAMERA
 #define ISP_EVENT_STREAM_UPDATE_DONE   (ISP_STREAM_EVENT_BASE)
+#endif
 
 /* The msm_v4l2_event_data structure should match the
  * v4l2_event.u.data field.
@@ -577,8 +602,10 @@ struct msm_isp_event_data32 {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+11, \
 	struct msm_vfe_stats_stream_release_cmd)
 
+#ifndef CONFIG_WT88047_CAMERA
 #define VIDIOC_MSM_ISP_REG_UPDATE_CMD \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+12, enum msm_vfe_input_src)
+#endif
 
 #define VIDIOC_MSM_ISP_UPDATE_STREAM \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+13, struct msm_vfe_axi_stream_update_cmd)
