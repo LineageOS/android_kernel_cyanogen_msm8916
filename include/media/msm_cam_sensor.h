@@ -272,7 +272,11 @@ struct msm_eeprom_cfg_data {
 	enum eeprom_cfg_type_t cfgtype;
 	uint8_t is_supported;
 	union {
+#ifdef CONFIG_WT88047_CAMERA
+		char eeprom_name[MAX_SENSOR_NAME];
+#else
 		char eeprom_name[MAX_EEPROM_NAME];
+#endif
 		struct eeprom_get_t get_data;
 		struct eeprom_read_t read_data;
 		struct eeprom_write_t write_data;
@@ -359,7 +363,11 @@ struct msm_eeprom_cfg_data32 {
 	enum eeprom_cfg_type_t cfgtype;
 	uint8_t is_supported;
 	union {
+#ifdef CONFIG_WT88047_CAMERA
+		char eeprom_name[MAX_SENSOR_NAME];
+#else
 		char eeprom_name[MAX_EEPROM_NAME];
+#endif
 		struct eeprom_get_t get_data;
 		struct eeprom_read_t32 read_data;
 		struct eeprom_write_t32 write_data;
