@@ -117,6 +117,7 @@ efi_head:
 	add	x13, x18, #0x16
 	b	stext
 #else
+arm64_head:
 	b	stext				// branch to kernel start, magic
 	.long	0				// reserved
 #endif
@@ -124,7 +125,12 @@ efi_head:
 	.quad	0				// reserved
 	.quad	0				// reserved
 	.quad	0				// reserved
+#ifndef CONFIG_EFI
+	.word	0				// reserved
+	.word	__bss_start - arm64_head	// Image size
+#else
 	.quad	0				// reserved
+#endif
 	.quad	0				// reserved
 	.byte	0x41				// Magic number, "ARM\x64"
 	.byte	0x52
