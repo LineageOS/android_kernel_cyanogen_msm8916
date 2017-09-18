@@ -277,7 +277,7 @@ struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p)
 	return f2fs_find_entry(dir, &dotdot, p);
 }
 
-ino_t f2fs_inode_by_name(struct inode *dir, struct qstr *qstr,
+ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
 							struct page **page)
 {
 	ino_t res = 0;
@@ -416,7 +416,8 @@ struct page *init_inode_metadata(struct inode *inode, struct inode *dir,
 	 * We lost i_pino from now on.
 	 */
 	if (is_inode_flag_set(inode, FI_INC_LINK)) {
-		file_lost_pino(inode);
+		if (!S_ISDIR(inode->i_mode))
+			file_lost_pino(inode);
 		/*
 		 * If link the tmpfile to alias through linkat path,
 		 * we should remove this inode from orphan list.
