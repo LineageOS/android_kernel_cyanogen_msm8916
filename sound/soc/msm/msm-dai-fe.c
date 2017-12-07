@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -102,7 +102,8 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 			.rates = (SNDRV_PCM_RATE_8000_48000|
 					SNDRV_PCM_RATE_KNOT),
 			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
-				    SNDRV_PCM_FMTBIT_S24_LE),
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
 			.channels_min = 1,
 			.channels_max = 4,
 			.rate_min =     8000,
@@ -227,8 +228,10 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 			.aif_name = "MM_UL4",
 			.rates = (SNDRV_PCM_RATE_8000_48000|
 					SNDRV_PCM_RATE_KNOT),
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-			.channels_min = 1,
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
+			.channels_min = 0,
 			.channels_max = 8,
 			.rate_min =     8000,
 			.rate_max =	48000,
@@ -256,7 +259,9 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 			.aif_name = "MM_UL5",
 			.rates = (SNDRV_PCM_RATE_8000_48000|
 					SNDRV_PCM_RATE_KNOT),
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
 			.channels_min = 1,
 			.channels_max = 8,
 			.rate_min =     8000,
@@ -1248,6 +1253,63 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_dai_ops,
 		.name = "VoiceMMode2",
+		.probe = fe_dai_probe,
+	},
+	{
+		.capture = {
+			.stream_name = "MultiMedia17 Capture",
+			.aif_name = "MM_UL17",
+			.rates = (SNDRV_PCM_RATE_8000_192000|
+					SNDRV_PCM_RATE_KNOT),
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_Multimedia_dai_ops,
+		.compress_dai = 1,
+		.name = "MultiMedia17",
+		.probe = fe_dai_probe,
+	},
+	{
+		.capture = {
+			.stream_name = "MultiMedia18 Capture",
+			.aif_name = "MM_UL18",
+			.rates = (SNDRV_PCM_RATE_8000_192000|
+					SNDRV_PCM_RATE_KNOT),
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_Multimedia_dai_ops,
+		.compress_dai = 1,
+		.name = "MultiMedia18",
+		.probe = fe_dai_probe,
+	},
+	{
+		.capture = {
+			.stream_name = "MultiMedia19 Capture",
+			.aif_name = "MM_UL19",
+			.rates = (SNDRV_PCM_RATE_8000_192000|
+					SNDRV_PCM_RATE_KNOT),
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE |
+				    SNDRV_PCM_FMTBIT_S24_3LE),
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_Multimedia_dai_ops,
+		.compress_dai = 1,
+		.name = "MultiMedia19",
 		.probe = fe_dai_probe,
 	},
 };
