@@ -1550,6 +1550,7 @@ static int msm_compr_capture_free(struct snd_compr_stream *cstream)
 	q6asm_audio_client_free(ac);
 
 	kfree(prtd);
+	runtime->private_data = NULL;
 
 	return 0;
 }
