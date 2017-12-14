@@ -5558,8 +5558,9 @@ __wlan_hdd_cfg80211_get_supported_features(struct wiphy *wiphy,
     }
 
     /* D2D RTT is not supported currently by default */
-    if (sme_IsFeatureSupportedByFW(RTT)) {
-        hddLog(LOG1, FL("RTT is supported by firmware"));
+    if (sme_IsFeatureSupportedByFW(RTT) &&
+              pHddCtx->cfg_ini->enable_rtt_support) {
+        hddLog(LOG1, FL("RTT is supported by firmware and framework"));
         fset |= WIFI_FEATURE_D2AP_RTT;
     }
 
@@ -5638,7 +5639,6 @@ wlan_hdd_cfg80211_get_supported_features(struct wiphy *wiphy,
                                          const void *data, int data_len)
 {
     int ret = 0;
-
     vos_ssr_protect(__func__);
     ret = __wlan_hdd_cfg80211_get_supported_features(wiphy, wdev, data, data_len);
     vos_ssr_unprotect(__func__);
@@ -11730,6 +11730,9 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
     VOS_STATUS vos_status;
     eHalStatus halStatus;
     hdd_context_t *pHddCtx;
+    uint8_t staid, i;
+    v_MACADDR_t *peerMacAddr;
+    u64 rsc_counter = 0;
 
     ENTER();
 
@@ -11763,15 +11766,24 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
         return -EINVAL;
     }
 
+    if (CSR_MAX_RSC_LEN < params->seq_len)
+    {
+        hddLog(VOS_TRACE_LEVEL_ERROR,"%s: Invalid seq length %d", __func__,
+                params->seq_len);
+    }
+
     hddLog(VOS_TRACE_LEVEL_INFO,
-           "%s: called with key index = %d & key length %d",
-           __func__, key_index, params->key_len);
+           "%s: called with key index = %d & key length %d & seq length %d",
+           __func__, key_index, params->key_len, params->seq_len);
+
+    peerMacAddr = (v_MACADDR_t *)mac_addr;
 
     /*extract key idx, key len and key*/
     vos_mem_zero(&setKey,sizeof(tCsrRoamSetKey));
     setKey.keyId = key_index;
     setKey.keyLength = params->key_len;
     vos_mem_copy(&setKey.Key[0],params->key, params->key_len);
+    vos_mem_copy(&setKey.keyRsc[0], params->seq, params->seq_len);
 
     switch (params->cipher)
     {
@@ -11907,6 +11919,8 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
             hdd_station_ctx_t *pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
             vos_status = wlan_hdd_check_ula_done(pAdapter);
 
+            staid = hdd_sta_id_find_from_mac_addr(pAdapter, peerMacAddr);
+
             if ( vos_status != VOS_STATUS_SUCCESS )
             {
                 VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
@@ -11967,6 +11981,8 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
                 hdd_PerformRoamSetKeyComplete(pAdapter);
             }
         }
+
+        staid = pHddStaCtx->conn_info.staId[0];
 
         pWextState->roamProfile.Keys.KeyLength[key_index] = (u8)params->key_len;
 
@@ -12073,6 +12089,14 @@ static int __wlan_hdd_cfg80211_add_key( struct wiphy *wiphy,
                 goto end;
             }
         }
+    }
+
+    if (pairwise) {
+       for (i = 0; i < params->seq_len; i++) {
+          rsc_counter |= (params->seq[i] << i*8);
+       }
+
+       WLANTL_SetKeySeqCounter(pVosContext, rsc_counter, staid);
     }
 
 end:
