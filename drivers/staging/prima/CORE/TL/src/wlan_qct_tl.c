@@ -13851,35 +13851,6 @@ void WLANTL_SetARPFWDatapath(void * pvosGCtx, bool flag)
 
 }
 
-
-void WLANTL_SetKeySeqCounter(void *pvosGCtx, u64 counter, uint8_t staid)
-{
-   WLANTL_CbType*  pTLCb = NULL;
-   uint8_t i;
-
-   pTLCb = VOS_GET_TL_CB(pvosGCtx);
-   if (NULL == pTLCb) {
-      TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
-             "%s: Invalid TL pointer from pvosGCtx", __func__));
-      return;
-   }
-
-   if (WLANTL_STA_ID_INVALID(staid)) {
-      TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
-             "%s: Invalid Sta id passed", __func__));
-      return;
-   }
-
-   if (NULL == pTLCb->atlSTAClients[staid]) {
-      TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
-             "%s: Station context is NULL", __func__));
-      return;
-   }
-
-   for(i = 0; i < WLANTL_MAX_TID; i++)
-      pTLCb->atlSTAClients[staid]->ullReplayCounter[i] = counter;
-}
-
 #ifdef WLAN_FEATURE_RMC
 VOS_STATUS WLANTL_RmcInit
 (
