@@ -149,7 +149,7 @@ static inline unsigned int VENUS_EXTRADATA_SIZE(int width, int height)
 	 * In the future, calculate the size based on the w/h but just
 	 * hardcode it for now since 16K satisfies all current usecases.
 	 */
-	return 16 * 1024;
+	return 8 * 1024;
 }
 
 static inline unsigned int VENUS_Y_STRIDE(int color_fmt, int width)

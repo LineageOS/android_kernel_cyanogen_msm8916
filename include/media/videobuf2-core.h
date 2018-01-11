@@ -9,6 +9,11 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation.
  */
+
+#ifdef CONFIG_SEED_CAMERA
+#include <media/videobuf2-core_seed.h>
+#else
+
 #ifndef _MEDIA_VIDEOBUF2_CORE_H
 #define _MEDIA_VIDEOBUF2_CORE_H
 
@@ -510,3 +515,4 @@ void vb2_ops_wait_prepare(struct vb2_queue *vq);
 void vb2_ops_wait_finish(struct vb2_queue *vq);
 
 #endif /* _MEDIA_VIDEOBUF2_CORE_H */
+#endif /* CONFIG_SEED_CAMERA */
