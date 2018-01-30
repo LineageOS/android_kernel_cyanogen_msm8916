@@ -1,7 +1,7 @@
 # Haier configuration options
 
 config MACH_HAIER
-	bool "Wingtech device"
+	bool "Haier device"
 	depends on ARCH_MSM
 	help
 	  Support for Haier products
