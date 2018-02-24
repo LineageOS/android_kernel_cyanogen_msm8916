@@ -2942,9 +2942,6 @@ static int ap3426_probe(struct i2c_client *client,
 
 	private_pl_data = data;
 
-	// init the ps event value because it may cause screen off at first call
-	ap3426_report_abs_ts(data->psensor_input_dev, ABS_DISTANCE, 1);
-
 	dev_info(&client->dev, "Driver version %s enabled\n", DRIVER_VERSION);
 
 #ifdef DI_AUTO_CAL
