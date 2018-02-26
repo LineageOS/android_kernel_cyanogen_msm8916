@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -60,6 +60,7 @@
 #define LPASS_BE_SLIMBUS_5_TX "SLIMBUS_5_TX"
 #define LPASS_BE_SLIMBUS_6_RX "SLIMBUS_6_RX"
 #define LPASS_BE_SLIMBUS_6_TX "SLIMBUS_6_TX"
+#define LPASS_BE_AFE_LOOPBACK_TX "AFE_LOOPBACK_TX"
 
 /* For multimedia front-ends, asm session is allocated dynamically.
  * Hence, asm session/multimedia front-end mapping has to be maintained.
@@ -84,6 +85,9 @@ enum {
 	MSM_FRONTEND_DAI_MULTIMEDIA14,
 	MSM_FRONTEND_DAI_MULTIMEDIA15,
 	MSM_FRONTEND_DAI_MULTIMEDIA16,
+	MSM_FRONTEND_DAI_MULTIMEDIA17,
+	MSM_FRONTEND_DAI_MULTIMEDIA18,
+	MSM_FRONTEND_DAI_MULTIMEDIA19,
 	MSM_FRONTEND_DAI_CS_VOICE,
 	MSM_FRONTEND_DAI_VOIP,
 	MSM_FRONTEND_DAI_AFE_RX,
@@ -109,8 +113,8 @@ enum {
 	MSM_FRONTEND_DAI_MAX,
 };
 
-#define MSM_FRONTEND_DAI_MM_SIZE (MSM_FRONTEND_DAI_MULTIMEDIA16 + 1)
-#define MSM_FRONTEND_DAI_MM_MAX_ID MSM_FRONTEND_DAI_MULTIMEDIA16
+#define MSM_FRONTEND_DAI_MM_SIZE (MSM_FRONTEND_DAI_MULTIMEDIA19 + 1)
+#define MSM_FRONTEND_DAI_MM_MAX_ID MSM_FRONTEND_DAI_MULTIMEDIA19
 
 enum {
 	MSM_BACKEND_DAI_PRI_I2S_RX = 0,
@@ -159,6 +163,7 @@ enum {
 	MSM_BACKEND_DAI_SPDIF_RX,
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX_SD1,
 	MSM_BACKEND_DAI_INT_BT_A2DP_RX,
+	MSM_BACKEND_DAI_AFE_LOOPBACK_TX,
 	MSM_BACKEND_DAI_MAX,
 };
 
@@ -253,5 +258,7 @@ void msm_pcm_routing_acquire_lock(void);
 void msm_pcm_routing_release_lock(void);
 
 void msm_pcm_routing_reg_stream_app_type_cfg(int fedai_id, int app_type,
-					int acdb_dev_id, int sample_rate);
+                                        int acdb_dev_id, int sample_rate, int session_type);
+int msm_pcm_routing_get_stream_app_type_cfg(int fedai_id, int session_type,
+                        int *app_type, int *acdb_dev_id, int *sample_rate);
 #endif /*_MSM_PCM_H*/

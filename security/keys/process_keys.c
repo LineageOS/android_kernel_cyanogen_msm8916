@@ -76,7 +76,9 @@ int install_user_keyrings(void)
 		if (IS_ERR(uid_keyring)) {
 			uid_keyring = keyring_alloc(buf, user->uid, INVALID_GID,
 						    cred, user_keyring_perm,
-						    KEY_ALLOC_IN_QUOTA, NULL);
+						    KEY_ALLOC_UID_KEYRING |
+							KEY_ALLOC_IN_QUOTA,
+						    NULL);
 			if (IS_ERR(uid_keyring)) {
 				ret = PTR_ERR(uid_keyring);
 				goto error;
@@ -92,7 +94,9 @@ int install_user_keyrings(void)
 			session_keyring =
 				keyring_alloc(buf, user->uid, INVALID_GID,
 					      cred, user_keyring_perm,
-					      KEY_ALLOC_IN_QUOTA, NULL);
+					      KEY_ALLOC_UID_KEYRING |
+						  KEY_ALLOC_IN_QUOTA,
+					      NULL);
 			if (IS_ERR(session_keyring)) {
 				ret = PTR_ERR(session_keyring);
 				goto error_release;
@@ -857,6 +861,7 @@ void key_change_session_keyring(struct callback_head *twork)
 	new->cap_inheritable	= old->cap_inheritable;
 	new->cap_permitted	= old->cap_permitted;
 	new->cap_effective	= old->cap_effective;
+	new->cap_ambient	= old->cap_ambient;
 	new->cap_bset		= old->cap_bset;
 
 	new->jit_keyring	= old->jit_keyring;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights 
+/* Copyright (c) 2012-2014, 2016-2018 The Linux Foundation. All rights
  * reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -51,6 +51,7 @@ struct adm_copp {
 	atomic_t bit_width[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	atomic_t app_type[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	atomic_t acdb_id[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
+	atomic_t session_type[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	wait_queue_head_t wait[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	wait_queue_head_t adm_delay_wait[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
 	atomic_t adm_delay_stat[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
@@ -198,7 +199,7 @@ static int adm_get_copp_id(int port_idx, int copp_idx)
 }
 
 static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
-				 int rate, int bit_width, int app_type)
+				 int rate, int bit_width, int app_type, int session_type)
 {
 	int idx;
 
@@ -212,6 +213,8 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 		    (rate == atomic_read(&this_adm.copp.rate[port_idx][idx])) &&
 		    (bit_width ==
 			atomic_read(&this_adm.copp.bit_width[port_idx][idx])) &&
+		    (session_type ==
+			atomic_read(&this_adm.copp.session_type[port_idx][idx])) &&
 		    (app_type ==
 			atomic_read(&this_adm.copp.app_type[port_idx][idx])))
 			return idx;
@@ -956,6 +959,8 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 					    &this_adm.copp.app_type[i][j], 0);
 					atomic_set(
 					   &this_adm.copp.acdb_id[i][j], 0);
+					atomic_set(
+					   &this_adm.copp.session_type[i][j], 0);
 				}
 			}
 			this_adm.apr = NULL;
@@ -1368,9 +1373,16 @@ fail_cmd:
 	return ret;
 }
 
-static void remap_cal_data(struct cal_block_data *cal_block, int cal_index)
+static int remap_cal_data(struct cal_block_data *cal_block, int cal_index)
 {
 	int ret = 0;
+
+	if (cal_block->map_data.ion_client == NULL) {
+		pr_err("%s: No ION allocation for cal index %d!\n",
+			__func__, cal_index);
+		ret = -EINVAL;
+		goto done;
+	}
 
 	if ((cal_block->map_data.map_size > 0) &&
 		(cal_block->map_data.q6map_handle == 0)) {
@@ -1391,7 +1403,7 @@ static void remap_cal_data(struct cal_block_data *cal_block, int cal_index)
 			mem_map_handles[cal_index]);
 	}
 done:
-	return;
+	return ret;
 }
 
 static void send_adm_custom_topology(void)
@@ -1415,7 +1427,13 @@ static void send_adm_custom_topology(void)
 
 	pr_debug("%s: Sending cal_index %d\n", __func__, cal_index);
 
-	remap_cal_data(cal_block, cal_index);
+	result = remap_cal_data(cal_block, cal_index);
+	if (result) {
+		pr_err("%s: Remap_cal_data failed for cal %d!\n",
+		__func__, cal_index);
+		goto unlock;
+	}
+
 	atomic_set(&this_adm.mem_map_index, cal_index);
 	atomic_set(&this_adm.mem_map_handles[cal_index],
 		cal_block->map_data.q6map_handle);
@@ -1789,7 +1807,8 @@ static bool is_vptx_topology(int topology)
 }
 
 int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
-	     int perf_mode, uint16_t bit_width, int app_type, int acdb_id)
+	      int perf_mode, uint16_t bit_width, int app_type, int acdb_id,
+	      int session_type)
 {
 	struct adm_cmd_device_open_v5	open;
 	struct adm_cmd_device_open_v6   open_v6;
@@ -1841,7 +1860,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		rate = 16000;
 
 	copp_idx = adm_get_idx_if_copp_exists(port_idx, topology, perf_mode,
-						rate, bit_width, app_type);
+						rate, bit_width, app_type, session_type);
 	if (copp_idx < 0) {
 		copp_idx = adm_get_next_available_copp(port_idx);
 		if (copp_idx >= MAX_COPPS_PER_PORT) {
@@ -1862,6 +1881,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 				   app_type);
 			atomic_set(&this_adm.copp.acdb_id[port_idx][copp_idx],
 				   acdb_id);
+			atomic_set(&this_adm.copp.session_type[port_idx][copp_idx],
+				   session_type);
 			if (path != ADM_PATH_COMPRESSED_RX)
 				send_adm_custom_topology();
 		}
@@ -1910,7 +1931,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		if (this_adm.ec_ref_cfg.port_id == -1) {
 			open.endpoint_id_2 = 0xFFFF;
 		} else if ((this_adm.ec_ref_cfg.port_id) &&
-			(path != ADM_PATH_PLAYBACK)) {
+			(path != ADM_PATH_PLAYBACK) &&
+			afe_get_port_type(tmp_port) == MSM_AFE_PORT_TYPE_TX) {
 			open.endpoint_id_2 = this_adm.ec_ref_cfg.port_id;
 			this_adm.ec_ref_cfg.port_id = -1;
 		}
@@ -2282,6 +2304,7 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 		atomic_set(&this_adm.copp.rate[port_idx][copp_idx], 0);
 		atomic_set(&this_adm.copp.bit_width[port_idx][copp_idx], 0);
 		atomic_set(&this_adm.copp.app_type[port_idx][copp_idx], 0);
+		atomic_set(&this_adm.copp.session_type[port_idx][copp_idx], 0);
 
 		ret = apr_send_pkt(this_adm.apr, (uint32_t *)&close);
 		if (ret < 0) {
@@ -2553,6 +2576,18 @@ static int adm_unmap_cal_data(int32_t cal_type,
 		pr_err("%s: could not get cal index %d!\n",
 			__func__, cal_index);
 		ret = -EINVAL;
+		goto done;
+	}
+
+	if (cal_block == NULL) {
+		pr_err("%s: Cal block is NULL!\n",
+						__func__);
+		goto done;
+	}
+
+	if (cal_block->map_data.q6map_handle == 0) {
+		pr_err("%s: Map handle is NULL, nothing to unmap\n",
+				__func__);
 		goto done;
 	}
 
@@ -3614,6 +3649,7 @@ static int __init adm_init(void)
 			atomic_set(&this_adm.copp.bit_width[i][j], 0);
 			atomic_set(&this_adm.copp.app_type[i][j], 0);
 			atomic_set(&this_adm.copp.acdb_id[i][j], 0);
+			atomic_set(&this_adm.copp.session_type[i][j], 0);
 			init_waitqueue_head(&this_adm.copp.wait[i][j]);
 			atomic_set(&this_adm.copp.adm_delay_stat[i][j], 0);
 			init_waitqueue_head(
