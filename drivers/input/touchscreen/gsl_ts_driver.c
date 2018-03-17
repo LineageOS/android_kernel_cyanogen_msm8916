@@ -217,6 +217,7 @@ static int gsl_read_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 nu
 	return (err == num) ? 0 : -EIO;
 }
 
+#ifdef GSL_TIMER
 static int gsl_read32(struct i2c_client *client, u8 reg, u32 *out) {
 	int rc = gsl_read_interface(client, reg, (u8 *) out, 4);
 	if (rc)
@@ -225,6 +226,7 @@ static int gsl_read32(struct i2c_client *client, u8 reg, u32 *out) {
 	*out  = le32_to_cpu(*out);
 	return 0;
 }
+#endif
 
 static int gsl_ito_read_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 {
@@ -2523,9 +2525,11 @@ static int gsl_ts_pm_suspend(struct device *dev)
 		return -EAGAIN;
 #endif
 
+#ifdef GSL_TIMER
 	/* there shouldn't be any pending delayed work when dozing */
 	if (WARN_ON(delayed_work_pending(&gsl_timer_check_work)))
 		return -EAGAIN;
+#endif
 
 	disable_irq(ddata->client->irq);
 
