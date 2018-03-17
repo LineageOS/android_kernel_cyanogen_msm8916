@@ -2205,8 +2205,6 @@ void create_ctp_proc(void)
 	struct proc_dir_entry *gsl_openshort_proc = NULL;
 	//struct proc_dir_entry *gsl_rawdata_proc = NULL;
 
-	printk("why>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-
 	gsl_device_proc = proc_mkdir(GSL_PARENT_PROC_NAME, NULL);
 	if(gsl_device_proc == NULL)
 	{
