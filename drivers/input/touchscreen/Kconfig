@@ -547,6 +547,17 @@ config TOUCHSCREEN_SYNAPTICS_RMI4_I2C
 	help
 	  This enables support for Synaptics RMI over I2C based touchscreens(ClearPad 3000).
 
+config TOUCHSCREEN_FT8716
+       tristate "focaltech touchscreens"
+       depends on I2C
+       help
+         Say Y here if you have a focaltech touchscreen.
+	  controllers are multi touch controllers which can
+	 report 5 touches at a time.
+         If unsure, say N.
+         To compile this driver as a module, choose M here: the
+         module will be called focaltech.
+
 config SYNA_MULTI_TOUCH
 	tristate "Synaptics i2c touchscreen(ClearPad 3000) MutilTouch support"
 	depends on TOUCHSCREEN_SYNAPTICS_RMI4_I2C
