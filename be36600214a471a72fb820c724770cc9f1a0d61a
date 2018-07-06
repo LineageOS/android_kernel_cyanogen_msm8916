@@ -1,0 +1,101 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f1cdd783_771a1285",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-07-06T07:46:35Z",
+      "side": 1,
+      "message": "This comment is just describing the code, not the reason",
+      "range": {
+        "startLine": 12,
+        "startChar": 0,
+        "endLine": 12,
+        "endChar": 40
+      },
+      "revId": "be36600214a471a72fb820c724770cc9f1a0d61a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "681c9808_a992ccac",
+        "filename": "drivers/input/touchscreen/ft8716/focaltech_core.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-07-06T07:46:35Z",
+      "side": 1,
+      "message": "whats up with the spaces? adding one before, but not after an eqgal-sign is very uncommon...",
+      "revId": "be36600214a471a72fb820c724770cc9f1a0d61a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "472ac7b4_4bdeba0e",
+        "filename": "drivers/input/touchscreen/ft8716/focaltech_core.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1935,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-07-06T07:46:35Z",
+      "side": 1,
+      "message": "change of whitespace not necessary",
+      "revId": "be36600214a471a72fb820c724770cc9f1a0d61a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2e2e7477_e005af6c",
+        "filename": "drivers/input/touchscreen/ft8716/focaltech_core.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2101,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-07-06T07:46:35Z",
+      "side": 1,
+      "message": "\"vaule\";\nmissing space after equal-sign;\nmissing space after comma",
+      "range": {
+        "startLine": 2101,
+        "startChar": 34,
+        "endLine": 2101,
+        "endChar": 42
+      },
+      "revId": "be36600214a471a72fb820c724770cc9f1a0d61a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "66cd01e5_a38bb8ef",
+        "filename": "drivers/input/touchscreen/ft8716/focaltech_core.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2107,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2018-07-06T07:46:35Z",
+      "side": 1,
+      "message": "missing space after the equal-sign",
+      "revId": "be36600214a471a72fb820c724770cc9f1a0d61a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
