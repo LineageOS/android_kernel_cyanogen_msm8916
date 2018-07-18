@@ -296,8 +296,8 @@
 
 		spi0_active {
 			/* MOSI, MISO, CLK */
-			qcom,pins = <&gp 8>, <&gp 9>, <&gp 11>;
-			qcom,num-grp-pins = <3>;
+			qcom,pins = <&gp 8>, <&gp 11>;// <&gp 9>,
+			qcom,num-grp-pins = <2>;
 			qcom,pin-func = <1>;
 			label = "spi0-active";
 			/* active state */
@@ -309,8 +309,8 @@
 
 		spi0_suspend {
 			/* MOSI, MISO, CLK */
-			qcom,pins = <&gp 8>, <&gp 9>, <&gp 11>;
-			qcom,num-grp-pins = <3>;
+			qcom,pins = <&gp 8>,<&gp 11>;// <&gp 9>, 
+			qcom,num-grp-pins = <2>;
 			qcom,pin-func = <0>;
 			label = "spi0-suspend";
 			/* suspended state */
@@ -321,7 +321,7 @@
 		};
 		spi0_cs0_active {
 			/* CS */
-			qcom,pins = <&gp 10>;
+			qcom,pins = <&gp 16>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <1>;
 			label = "spi0-cs0-active";
@@ -334,7 +334,7 @@
 
 		spi0_cs0_suspend {
 			/* CS */
-			qcom,pins = <&gp 10>;
+			qcom,pins = <&gp 16>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <0>;
 			label = "spi0-cs0-suspend";
@@ -751,7 +751,7 @@
 		};
 
 		tpiu_seta_2 {
-			qcom,pins = <&gp 9>;
+			qcom,pins = <&gp 16>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <2>;
 			label = "tpiu-seta-2";
@@ -762,7 +762,7 @@
 		};
 
 		tpiu_seta_3 {
-			qcom,pins = <&gp 10>;
+			qcom,pins = <&gp 16>;
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <3>;
 			label = "tpiu-seta-3";
@@ -1151,8 +1151,8 @@
 		};
 
 		gpio_led_pins {
-			qcom,pins = <&gp 8>, <&gp 9>, <&gp 10>;
-			qcom,num-grp-pins = <3>;
+			qcom,pins = <&gp 10>, <&gp 17>;//<&gp 9>,
+			qcom,num-grp-pins = <2>;
 			label = "gpio-led-pins";
 			gpio_led_off: led_off {
 				drive-strength = <2>;
@@ -1170,7 +1170,8 @@
 
 			ts_int_active: ts_int_active {
 				drive-strength = <16>;
-				bias-pull-up;
+				//bias-pull-up;
+				bias-disable;
 			};
 		};
 

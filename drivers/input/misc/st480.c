@@ -11,22 +11,37 @@
  * GNU General Public License for more details.
  *
  */
-
-#include <linux/input/st480.h>
+#include "st480.h"
 #include <linux/sensors.h>
-#include <linux/regulator/consumer.h>
+#include <linux/kthread.h>
+#include <linux/workqueue.h>
+
+
+#define VENDOR_NAME			"SENODIA"
+#define MODULE_NAME		"ST480"
+
+#define BIST_SINGLE_MEASUREMENT_MODE_CMD 0x38
+#define ONE_INIT_BIST_TEST 0x01
+#define BIST_READ_MEASUREMENT_CMD 0x48
+#define POLL_MS_100HZ 10
+
 
 struct st480_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-	struct platform_data_st480 *pdata;
-	struct delayed_work work;
+	struct delayed_work	work;
 	struct sensors_classdev cdev;
-	struct regulator *vdd;
-	struct regulator *vio;
+	struct class *st480_class;
+	struct device *factory_device;
 	unsigned int poll_interval;
 	rwlock_t lock;
 	atomic_t m_flag;
+	atomic_t enable;
+	struct hrtimer 		mag_timer;
+	int 			mag_wkp_flag;
+	bool 			mag_delay_change;
+	struct task_struct 	*mag_task;
+	wait_queue_head_t	mag_wq;
 };
 
 static struct sensors_classdev sensors_cdev = {
@@ -35,15 +50,15 @@ static struct sensors_classdev sensors_cdev = {
 	.version = 1,
 	.handle = SENSORS_MAGNETIC_FIELD_HANDLE,
 	.type = SENSOR_TYPE_MAGNETIC_FIELD,
-	.max_range = "4800",
+	.max_range = "45",//"3200",
 	.resolution = "0.1",
 	.sensor_power = "0.4",
-	.min_delay = ST480_DEFAULT_DELAY * 1000,
-	.max_delay = ST480_DEFAULT_DELAY,
+	.min_delay = 40000,//10000
+	//.max_delay = 10000,
 	.fifo_reserved_event_count = 0,
 	.fifo_max_event_count = 0,
 	.enabled = 0,
-	.delay_msec = ST480_DEFAULT_DELAY,
+	.delay_msec = 100,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
 };
@@ -60,6 +75,7 @@ static atomic_t open_flag;
 static atomic_t reserve_open_flag;
 
 volatile static short st480_delay = ST480_DEFAULT_DELAY;
+static s16 last_x;
 
 struct mag_3{
 	s16  mag_x,
@@ -67,8 +83,8 @@ struct mag_3{
 	mag_z;
 };
 volatile static struct mag_3 mag;
+static int mag_poll_thread(void *data);
 
-static int st480_power_ctrl(struct st480_data *st480, int on);
 
 //static struct kobject *st480_kobj;
 
@@ -236,72 +252,57 @@ static int st480_setup(struct i2c_client *client)
 
 	return 0;
 }
-#if 0
-static ssize_t show_chipinfo_value(struct device *dev, struct device_attribute *attr, char *buf)
+
+static void set_sensor_attr(struct device *dev,
+                struct device_attribute *attributes[])
 {
-	ssize_t ret = 0;
+        int i;
 
-	sprintf(buf, "st480 chip\n");
-	ret = strlen(buf) + 1;
-
-	return ret;
+        for (i = 0; attributes[i] != NULL; i++)
+                if ((device_create_file(dev, attributes[i])) < 0)
+                        pr_err("[SENSOR CORE] fail device_create_file"\
+                                "(dev, attributes[%d])\n", i);
 }
 
-static ssize_t show_status_value(struct device *dev, struct device_attribute *attr, char *buf)
+int sensors_register(struct class *st480_class, struct device *dev, void *drvdata,
+                struct device_attribute *attributes[], char *name)
 {
-	return sprintf(buf, "%d\n", atomic_read(&reserve_open_flag));
+        int ret = 0;
+
+        dev = device_create(st480_class, NULL, 0, drvdata, "%s", name);
+        if (IS_ERR(dev)) {
+                ret = PTR_ERR(dev);
+                pr_err("[SENSORS CORE] device_create failed![%d]\n", ret);
+                return ret;
+        }
+
+        set_sensor_attr(dev, attributes);
+
+        return ret;
 }
 
-static DEVICE_ATTR(chipinfo, S_IRUGO, show_chipinfo_value, NULL);
-static DEVICE_ATTR(status, S_IRUGO, show_status_value, NULL);
-static int st480_sysfs_init(void)
+void sensors_unregister(struct device *dev,
+                struct device_attribute *attributes[])
 {
-	int ret;
-//TODO: using client->dev.kobj instead
-	st480_kobj = kobject_create_and_add("st480", NULL);
-	if(st480_kobj == NULL)
-	{
-		printk("st480 sysfs init failed!\n");
-		ret = -ENOMEM;
-		goto err1;
-	}
+        int i;
 
-	if(sysfs_create_file(st480_kobj, &dev_attr_chipinfo.attr))
-	{
-		printk("device_create_file chipinfo error!\n");
-		ret = -EIO;
-		goto err2;
-	}
-
-	if(sysfs_create_file(st480_kobj, &dev_attr_status.attr))
-	{
-		printk("device_create_file status error!\n");
-		ret = -EIO;
-		goto err2;
-	}
-
-	return ret;
-err2:
-	kobject_del(st480_kobj);
-err1:
-	return ret;
+        for (i = 0; attributes[i] != NULL; i++)
+                device_remove_file(dev, attributes[i]);
 }
-#endif
+
 static void st480_work_func(void)
 {
 	char buffer[9];
 	int ret;
-	s16 hw_data[3];
 
 	memset(buffer, 0, 9);
-	memset(hw_data, 0, 3);
 
 	buffer[0] = READ_MEASUREMENT_CMD;
 	ret = 0;
 	while (st480_i2c_transfer_data(st480->client, 1, buffer, 9)!=0)
 	{
 		ret++;
-		msleep(1);
+		//msleep(1);
 		if (st480_i2c_transfer_data(st480->client, 1, buffer, 9)==0)
 		{
 			break;
@@ -313,31 +314,149 @@ static void st480_work_func(void)
 	}
 
 	if (!((buffer[0]>>4) & 0X01)) {
-		hw_data[0] = (buffer[3]<<8)|buffer[4];
-		hw_data[1] = (buffer[5]<<8)|buffer[6];
-		hw_data[2] = (buffer[7]<<8)|buffer[8];
-
-		mag.mag_x = ((st480->pdata->negate_x) ? (-hw_data[st480->pdata->axis_map_x])
-                : (hw_data[st480->pdata->axis_map_x]));
-		mag.mag_y = ((st480->pdata->negate_y) ? (-hw_data[st480->pdata->axis_map_y])
-                : (hw_data[st480->pdata->axis_map_y]));
-		mag.mag_z = ((st480->pdata->negate_z) ? (-hw_data[st480->pdata->axis_map_z])
-                        : (hw_data[st480->pdata->axis_map_z]));
+		if (ST480MB_SIZE_2X2)
+		{
+                #if defined (CONFIG_ST480_BOARD_LOCATION_FRONT)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_0)
+                                mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_90)
+                                mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_180)
+                                mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_270)
+                                mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #endif
+                #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_0)
+				mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_90)
+				mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_180)
+				mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_270)
+				mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #endif
+                #endif
+		}
+		else if(ST480MW_SIZE_1_6X1_6)
+		{
+		#if defined (CONFIG_ST480_BOARD_LOCATION_FRONT)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_0)
+                                mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_90)
+                                mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_180)
+                                mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_270)
+                                mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #endif
+                #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_0)
+                                mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_90)
+                                mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_180)
+                                mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_270)
+                                mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #endif
+                #endif
+		}
+		else if(ST480MC_SIZE_1_2X1_2)
+		{
+		#if defined (CONFIG_ST480_BOARD_LOCATION_FRONT)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_0)
+                                mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_90)
+                                mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_180)
+                                mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_FRONT_DEGREE_270)
+                                mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (-1)*((buffer[7]<<8)|buffer[8]);
+                        #endif
+                #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK)
+                        #if defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_0)
+                                mag.mag_x = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_y = (buffer[3]<<8)|buffer[4];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_90)
+                                mag.mag_x = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_y = (-1)*((buffer[5]<<8)|buffer[6]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_180)
+                                mag.mag_x = (buffer[5]<<8)|buffer[6];
+                                mag.mag_y = (-1)*((buffer[3]<<8)|buffer[4]);
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #elif defined (CONFIG_ST480_BOARD_LOCATION_BACK_DEGREE_270)
+                                mag.mag_x = (buffer[3]<<8)|buffer[4];
+                                mag.mag_y = (buffer[5]<<8)|buffer[6];
+                                mag.mag_z = (buffer[7]<<8)|buffer[8];
+                        #endif
+                #endif
+		}
 
 		if (((buffer[1]<<8)|(buffer[2])) > 46244)
 		{
 			mag.mag_x = mag.mag_x * (1 + (70/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 			mag.mag_y = mag.mag_y * (1 + (70/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 			mag.mag_z = mag.mag_z * (1 + (70/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 		}
 		else if (((buffer[1]<<8)|(buffer[2])) < 46244)
 		{
 			mag.mag_x = mag.mag_x * (1 + (60/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 			mag.mag_y = mag.mag_y * (1 + (60/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 			mag.mag_z = mag.mag_z * (1 + (60/128/4096) * (((buffer[1]<<8)|(buffer[2])) - 46244));
+
 		}
 
-		SENODIADBG("st480 raw data: x = %d, y = %d, z = %d \n",mag.mag_x,mag.mag_y,mag.mag_z);
+//		printk("st480 raw data: x = %d, y = %d, z = %d \n",mag.mag_x,mag.mag_y,mag.
+//mag_z);
+
 	} else
 		dev_err(&st480->client->dev, "ecc error detected!\n");
 
@@ -347,7 +466,7 @@ static void st480_work_func(void)
 	while (st480_i2c_transfer_data(st480->client, 1, buffer, 1)!=0)
 	{
 		ret++;
-		msleep(1);
+		//msleep(1);
 		if (st480_i2c_transfer_data(st480->client, 1, buffer, 1)==0)
 		{
 			break;
@@ -359,28 +478,101 @@ static void st480_work_func(void)
 	}
 }
 
+#if 0 
 static void st480_input_func(struct work_struct *work)
 {
-	struct st480_data *st480 = container_of((struct delayed_work *)work, struct st480_data, work);
-	ktime_t ts;
+	struct st480_data *st480 = container_of((struct delayed_work *)work, struct 
+st480_data, work);
+
+	ktime_t timestamp;
 
 	SENODIAFUNC("st480_input_func");
 	st480_work_func();
+	timestamp = ktime_get_boottime();
 
-	if (atomic_read(&st480->m_flag) || atomic_read(&mv_flag) || atomic_read(&rm_flag) || atomic_read(&mrv_flag)) {
-		ts = ktime_get_boottime();
+	if (atomic_read(&st480->m_flag) || atomic_read(&mv_flag) || atomic_read(&
+rm_flag) || atomic_read(&mrv_flag)) {
+
 		input_report_abs(st480->input_dev, ABS_X, mag.mag_x);
 		input_report_abs(st480->input_dev, ABS_Y, mag.mag_y);
 		input_report_abs(st480->input_dev, ABS_Z, mag.mag_z);
-		input_event(st480->input_dev, EV_SYN, SYN_TIME_SEC,
-				ktime_to_timespec(ts).tv_sec);
-		input_event(st480->input_dev, EV_SYN, SYN_TIME_NSEC,
-				ktime_to_timespec(ts).tv_nsec);
+		input_event(st480->input_dev,EV_SYN, SYN_TIME_SEC,ktime_to_timespec(
+timestamp).tv_sec);
+
+        	input_event(st480->input_dev, EV_SYN,SYN_TIME_NSEC,ktime_to_timespec(
+timestamp).tv_nsec);
+
 		input_sync(st480->input_dev);
 	}
 
 	schedule_delayed_work(&st480->work, msecs_to_jiffies(st480->poll_interval));
 }
+#else
+static enum hrtimer_restart mag_timer_handle(struct hrtimer *hrtimer)
+{
+	struct st480_data *sensor;
+	ktime_t ktime;
+
+	sensor = container_of(hrtimer, struct st480_data, mag_timer);
+	ktime = ktime_set(0,
+			sensor->poll_interval* NSEC_PER_MSEC);
+	hrtimer_forward_now(&sensor->mag_timer, ktime);
+	sensor->mag_wkp_flag = 1;
+	wake_up_interruptible(&sensor->mag_wq);
+
+	return HRTIMER_RESTART;
+}
+
+static int mag_poll_thread(void *data)
+{
+	int ret = 0;
+	struct st480_data *sensor = data;
+	ktime_t timestamp;
+
+	while (1) {
+		wait_event_interruptible(sensor->mag_wq,
+			((sensor->mag_wkp_flag != 0) || kthread_should_stop()));
+		sensor->mag_wkp_flag = 0;
+
+		if (kthread_should_stop())
+			break;
+
+		//mutex_lock(&sensor->val_mutex);
+		if (sensor->mag_delay_change) {
+			if (sensor->poll_interval<= POLL_MS_100HZ)
+				set_wake_up_idle(true);
+			else
+				set_wake_up_idle(false);
+			sensor->mag_delay_change = false;
+		}
+		//mutex_unlock(&sensor->val_mutex);
+
+		st480_work_func();
+		timestamp = ktime_get_boottime();
+
+		if (atomic_read(&st480->m_flag) || atomic_read(&mv_flag) || atomic_read(&
+rm_flag) || atomic_read(&mrv_flag)) {
+
+			if (last_x == mag.mag_x)
+				mag.mag_x += 1;
+			input_report_abs(st480->input_dev, ABS_X, mag.mag_x);
+			input_report_abs(st480->input_dev, ABS_Y, mag.mag_y);
+			input_report_abs(st480->input_dev, ABS_Z, mag.mag_z);
+			last_x = mag.mag_x;
+			input_event(st480->input_dev,EV_SYN, SYN_TIME_SEC,ktime_to_timespec(
+timestamp).tv_sec);
+
+	        	input_event(st480->input_dev, EV_SYN,SYN_TIME_NSEC,ktime_to_timespec
+(timestamp).tv_nsec);
+
+			input_sync(st480->input_dev);
+		}
+
+	}
+	return ret;
+}
+
+#endif 
 
 static void ecs_closedone(void)
 {
@@ -560,27 +752,33 @@ static int auto_test_read(void *unused)
 static int st480_set_enable(struct st480_data *st480, bool on)
 {
 	int retval = 0;
+	ktime_t ktime;
 	struct i2c_client *client = st480->client;
 
 	dev_info(&client->dev, "enable:%s\n", on ? "on" : "off");
 
 	if (on) {
-		st480_power_ctrl(st480, on);
-		schedule_delayed_work(&st480->work, msecs_to_jiffies(st480->poll_interval));
+		//schedule_delayed_work(&st480->work, msecs_to_jiffies(st480->poll_interval));
+
+		ktime = ktime_set(0, st480->poll_interval * NSEC_PER_MSEC);
+		hrtimer_start(&st480->mag_timer, ktime, HRTIMER_MODE_REL);
+		atomic_set(&st480->enable, 1);
 	} else {
-		cancel_delayed_work(&st480->work);
-		st480_power_ctrl(st480, on);
+		//cancel_delayed_work(&st480->work);
+		hrtimer_cancel(&st480->mag_timer);
+		atomic_set(&st480->enable, 0);
 	}
-
-
 	return retval;
 }
 
 static int st480_set_poll_delay(struct st480_data *st480, unsigned int msecs)
 {
-	msecs = ST480_DEFAULT_DELAY;
+	/* FIXME: must larger than ST480 minimun delay 28 ms, otherwise ecc error */
+	//if (msecs <= 28)
+	//	msecs = 28;
 
 	write_lock(&st480->lock);
+	st480->mag_delay_change = true;
 	st480->poll_interval = msecs;
 	write_unlock(&st480->lock);
 
@@ -608,116 +806,189 @@ static int st480_cdev_set_poll_delay(struct sensors_classdev *sensors_cdev,
 	return 0;
 }
 
-static int st480_power_ctrl(struct st480_data *st480, int on)
+static int st480_single_measure_mode_bist(void)
 {
-	int retval = 0;
-	struct i2c_client *client = st480->client;
+	char buffer[1];
+	int ret;
 
-	if (on) {
-		retval = regulator_enable(st480->vdd);
-		if (retval) {
-			dev_err(&client->dev, "regulator vdd enable failed!\n");
-			return retval;
-		}
-		retval = regulator_enable(st480->vio);
-		if (retval) {
-			dev_err(&client->dev, "regulator vio enable failed!\n");
-			retval = regulator_disable(st480->vdd);
-			return retval;
-		}
-	} else {
-		retval = regulator_disable(st480->vdd);
-		if (retval) {
-			dev_err(&client->dev, "regulator vdd disable failed!\n");
-			return retval;
-		}
-		retval = regulator_disable(st480->vio);
-		if (retval) {
-			dev_err(&client->dev, "regulator vio disable failed!\n");
-			retval = regulator_enable(st480->vdd);
-			return retval;
-		}
+	/*set mode config*/
+	buffer[0] = BIST_SINGLE_MEASUREMENT_MODE_CMD;
+	ret = 0;
+	while (st480_i2c_transfer_data(st480->client, 1, buffer, 1) != 0) {
+		ret++;
+		usleep_range(1000, 1100);
+		if (st480_i2c_transfer_data(st480->client, 1, buffer, 1) == 0)
+			break;
+		if (ret > MAX_FAILURE_COUNT)
+			return -EIO;
 	}
-	return retval;
+	return 0;
 }
 
-static int st480_power_init(struct st480_data *st480)
+static ssize_t st480_vendor_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	int retval = 0;
-	struct i2c_client *client = st480->client;
-
-	st480->vdd = devm_regulator_get(&client->dev, "vdd");
-	if (IS_ERR(st480->vdd)) {
-		retval = PTR_ERR(st480->vdd);
-		dev_err(&client->dev, "regulator get failed vdd retval=%d\n", retval);
-		return retval;
-	}
-
-	st480->vio = devm_regulator_get(&client->dev, "vio");
-	if (IS_ERR(st480->vio)) {
-		retval = PTR_ERR(st480->vio);
-		dev_err(&client->dev, "regulator get failed vio retval=%d\n", retval);
-		goto err_reg_vdd_put;
-	}
-
-	return retval;
-
-err_reg_vdd_put:
-	devm_regulator_put(st480->vdd);
-
-	return retval;
+	return snprintf(buf, PAGE_SIZE, "%s\n", VENDOR_NAME);
 }
 
+static ssize_t st480_name_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%s\n", MODULE_NAME);
+}
+
+static ssize_t st480_selftest(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	int sf_ret = 0;
+	char result[10];
+	unsigned char buffer[4] = {0,0,0,0};
+	s16 zh[3] = {0};
+
+	pr_info("[SENSOR]: %s start\n", __func__);
+
+	if (atomic_read(&st480->enable) == 1)
+		cancel_delayed_work(&st480->work);
+
+	usleep_range(30000, 30100);
+
+	zh[0] = mag.mag_z;
+
+/*self test*/
+	buffer[0] = WRITE_REGISTER_CMD;
+	buffer[1] = ONE_INIT_BIST_TEST;
+	buffer[2] = ONE_INIT_DATA_LOW;
+	buffer[3] = ONE_INIT_REG;
+	ret = 0;
+	while (st480_i2c_transfer_data(st480->client, 4, buffer, 1) != 0) {
+		ret++;
+		usleep_range(1000, 1100);
+		if (st480_i2c_transfer_data(st480->client, 4, buffer, 1) == 0)
+			break;
+		if (ret > MAX_FAILURE_COUNT) {
+			sf_ret = -1;
+			pr_err("[SENSOR]: %s i2c transfer data error\n",__func__);
+		}
+	}
+
+	usleep_range(150000, 150100);
+	st480_single_measure_mode_bist();
+
+	usleep_range(30000, 30100);
+
+	buffer[0] = BIST_READ_MEASUREMENT_CMD;
+	ret = 0;
+	while (st480_i2c_transfer_data(st480->client, 1, buffer, 3) != 0) {
+		ret++;
+		usleep_range(1000, 1100);
+		if (st480_i2c_transfer_data(st480->client, 1, buffer, 3) == 0)
+			break;
+		if (ret > MAX_FAILURE_COUNT) {
+			sf_ret = -1;
+			pr_err("[SENSOR]: %s i2c transfer data error\n",__func__);
+		}
+	}
+
+	if (((buffer[0]>>4) & 0X01)) {
+		sf_ret = -1;
+		pr_err("[SENSOR]: %s error\n", __func__);
+	}
+
+	zh[1] = (buffer[1]<<8)|buffer[2];
+
+	zh[2] = (abs(zh[1])) - (abs(zh[0]));
+
+	pr_info("[SENSOR]: %s zh[0] = %d, zh[1] = %d, zh[2] = %d\n",
+		__func__, zh[0], zh[1], zh[2]);
+
+/*Reduce to the initial setup*/
+	buffer[0] = WRITE_REGISTER_CMD;
+	buffer[1] = ONE_INIT_DATA_HIGH;
+	buffer[2] = ONE_INIT_DATA_LOW;
+	buffer[3] = ONE_INIT_REG;
+	ret = 0;
+	while (st480_i2c_transfer_data(st480->client, 4, buffer, 1) != 0) {
+		ret++;
+		usleep_range(1000, 1100);
+		if (st480_i2c_transfer_data(st480->client, 4, buffer, 1) == 0)
+			break;
+		if (ret > MAX_FAILURE_COUNT) {
+			sf_ret = -1;
+			pr_err("[SENSOR]: %s i2c transfer data error\n",__func__);
+		}
+	}
+
+/*set mode*/
+	buffer[0] = SINGLE_MEASUREMENT_MODE_CMD;
+	ret = 0;
+	while (st480_i2c_transfer_data(st480->client, 1, buffer, 1) != 0) {
+		ret++;
+		usleep_range(1000, 1100);
+		if (st480_i2c_transfer_data(st480->client, 1, buffer, 1) == 0)
+			break;
+
+		if (ret > MAX_FAILURE_COUNT){
+			sf_ret = -1;
+			pr_err("[SENSOR]: %s i2c transfer data error\n",__func__);
+		}
+	}
+
+	if ((abs(zh[2]) <= 90) || (abs(zh[2]) >= 180)) {
+		sf_ret = -1;
+		pr_err("[SENSOR]: %s BIST test error\n", __func__);
+	}
+	if (sf_ret == 0){
+		pr_info("[SENSOR]: %s success\n", __func__);
+		strcpy(result,"y");
+	}
+	else{
+		pr_info("[SENSOR]: %s fail\n", __func__);
+		strcpy(result,"n");
+	}
+	if (atomic_read(&st480->enable) == 1) {
+		schedule_delayed_work(&st480->work,
+				msecs_to_jiffies(st480->poll_interval));
+	}
+
+	return sprintf(buf, "%s\n", result);  
+}
+
+static DEVICE_ATTR(name, S_IRUGO, st480_name_show, NULL);
+static DEVICE_ATTR(vendor, S_IRUGO, st480_vendor_show, NULL);
+static DEVICE_ATTR(selftest, 0666, st480_selftest, NULL);
+
+static struct device_attribute *sensor_attrs[] = {
+	&dev_attr_name,
+	&dev_attr_vendor,
+	&dev_attr_selftest,
+	NULL,
+};
 #ifdef CONFIG_OF
-static int st480_parse_dt(struct i2c_client *client, struct platform_data_st480 *pdata)
+static int st480_compass_parse_dt(struct device *dev,
+				struct st480_data *pdata)
 {
-	struct device_node *np = client->dev.of_node;
-	int rc = 0;
 
-	if (!np) {
-		dev_err(&client->dev, "device don't have associateed dt data!\n");
-		return -EINVAL;
-	}
-
-	rc = of_property_read_u32(np, "senodia,axis-map-x", &pdata->axis_map_x);
-	if (rc && (rc != -EINVAL)) {
-		dev_err(&client->dev, "failed to get senodia,axis-map-x!\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "senodia,axis-map-y", &pdata->axis_map_y);
-	if (rc && (rc != -EINVAL)) {
-		dev_err(&client->dev, "failed to get senodia,axis-map-y!\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "senodia,axis-map-z", &pdata->axis_map_z);
-	if (rc && (rc != -EINVAL)) {
-		dev_err(&client->dev, "failed to get senodia,axis-map-z!\n");
-		return rc;
-	}
-	pdata->negate_x = of_property_read_bool(np, "senodia,negate-x");
-	pdata->negate_y = of_property_read_bool(np, "senodia,negate-y");
-	pdata->negate_z = of_property_read_bool(np, "senodia,negate-z");
-
-	return rc;
+	return 0;
 }
 #else
-static int st480_parse_dt(struct i2c_client *client, struct platform_data_st480 *pdata)
+static int st480_compass_parse_dt(struct device *dev,
+				struct st480_data *pdata)
 {
-	return -ENODEV;
+	return -EINVAL;
 }
-#endif /* CONFIG_OF */
+#endif /* !CONFIG_OF */
+
 
 static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int err = 0;
-	struct platform_data_st480 *pdata;
 #if ST480_AUTO_TEST
         struct task_struct *thread;
 #endif
 
 	SENODIAFUNC("st480_probe");
+	mdelay(50);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "SENODIA st480_probe: check_functionality failed.\n");
@@ -733,55 +1004,29 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 		goto exit1;
 	}
 
+	if (client->dev.of_node) {
+		err = st480_compass_parse_dt(&client->dev, st480);
+		if (err) {
+			dev_err(&client->dev,
+				"Unable to parse platfrom data err=%d\n", err);
+			return -1;
+		}
+	} 
+
 	st480->client = client;
 
 	i2c_set_clientdata(client, st480);
 
-	INIT_DELAYED_WORK(&st480->work, st480_input_func);
-
-	if (client->dev.of_node) {
-		pdata = kzalloc(sizeof(struct platform_data_st480), GFP_KERNEL);
-		if (!pdata) {
-			dev_err(&client->dev, "failed to allocate memory for st480 pdata\n");
-			err = -ENOMEM;
-			goto exit2;
-		}
-		err = st480_parse_dt(client, pdata);
-		if (err) {
-			dev_err(&client->dev, "parse device tree error!\n");
-			goto exit3;
-		}
-	} else {
-		pdata = dev_get_platdata(&client->dev);
-		if (!pdata) {
-			dev_err(&client->dev, "No platform data!\n");
-			goto exit2;
-		}
-	}
-	st480->pdata = pdata;
-
-	/* st480 power intialize */
-	err = st480_power_init(st480);
-	if (err < 0) {
-		dev_err(&client->dev, "failed to get regulator!\n");
-		goto exit2;
-	}
-	/* get the power and never put it unless driver remove */
-	err = st480_power_ctrl(st480, 1);
-	if (err) {
-		dev_err(&client->dev, "failed to set regulator!\n");
-		goto exit2;
-	}
+	//INIT_DELAYED_WORK(&st480->work, st480_input_func);
+	init_waitqueue_head(&st480->mag_wq);
+	st480->mag_wkp_flag = 0;
+	hrtimer_init(&st480->mag_timer, CLOCK_BOOTTIME, HRTIMER_MODE_REL);
+	st480->mag_timer.function = mag_timer_handle;
+	st480->mag_task = kthread_run(mag_poll_thread,st480, "mag_sns");
 
 	if (st480_setup(st480->client) != 0) {
 		dev_err(&client->dev, "st480 setup error!\n");
-		goto exit3;
-	}
-
-	err = st480_power_ctrl(st480, 0);
-	if (err) {
-		dev_err(&client->dev, "failed to set regulator!\n");
-		goto exit3;
+		goto exit2;
 	}
 
 	/* Declare input device */
@@ -809,6 +1054,7 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	err = input_register_device(st480->input_dev);
 	if (err) {
 		dev_err(&client->dev, "SENODIA st480_probe: Unable to register input device\n");
+
 		goto exit4;
 	}
 
@@ -831,15 +1077,24 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	err = sensors_classdev_register(&client->dev, &st480->cdev);
 	if (err) {
 		dev_err(&client->dev, "sensors class register failed!\n");
-		goto exit5;
+		goto exit6;
 	}
-/*
-	err = st480_sysfs_init();
-	if (err < 0) {
-		printk("st480 sysfs init error!\n");
-		goto exit5;
+
+	st480->st480_class = class_create(THIS_MODULE, "st480");
+	if (IS_ERR(st480->st480_class)) {
+		pr_err("%s, create st480_class is failed.(err=%ld)\n",
+				__func__, IS_ERR(st480->st480_class));
+		goto exit7;
 	}
-*/
+
+	err = sensors_register(st480->st480_class, st480->factory_device, st480, 
+				sensor_attrs, MODULE_NAME);
+	if (err) {
+		pr_err("%s, failed to sensors_register (%d)\n", 
+			__func__, err);
+		goto exit8;
+	}
+
 #if ST480_AUTO_TEST
 	thread=kthread_run(auto_test_read,NULL,"st480_read_test");
 #endif
@@ -847,14 +1102,19 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	printk("st480 probe done.");
 	return 0;
 
-exit5:
+exit8:
+	class_destroy(st480->st480_class);
+exit7:
+exit6:
 	misc_deregister(&st480_device);
+exit5:
 	input_unregister_device(st480->input_dev);
 exit4:
 	input_free_device(st480->input_dev);
 exit3:
-	kfree(st480->pdata);
 exit2:
+	hrtimer_cancel(&st480->mag_timer);
+	kthread_stop(st480->mag_task);
 	kfree(st480);
 exit1:
 exit0:
@@ -873,7 +1133,10 @@ static int st480_remove(struct i2c_client *client)
 	input_free_device(st480->input_dev);
 	cancel_delayed_work(&st480->work);
 	i2c_set_clientdata(client, NULL);
-	kfree(st480->pdata);
+	class_destroy(st480->st480_class);
+	sensors_unregister(st480->factory_device, sensor_attrs);
+	hrtimer_cancel(&st480->mag_timer);
+	kthread_stop(st480->mag_task);
 	kfree(st480);
 	return 0;
 }
@@ -916,3 +1179,4 @@ MODULE_AUTHOR("Tori Xu <xuezhi_xu@senodia.com>");
 MODULE_DESCRIPTION("senodia st480 linux driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("2.0.0");
+
