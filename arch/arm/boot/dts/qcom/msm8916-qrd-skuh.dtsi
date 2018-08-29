@@ -199,6 +199,17 @@
 	spi_0 {
 		status = "disabled";
 	};
+	
+	hall { 
+		compatible = "hall-switch";
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <9 0x2003>;
+		vddio-supply = <&pm8916_l6>;
+		linux,gpio-int = <&msm_gpio 9 0x1>;
+		linux,wakeup;
+		linux,min-uv = <1650000>;
+		linux,max-uv = <3300000>; 
+	};
 		
 	gpio-leds {
 		compatible = "gpio-leds";
