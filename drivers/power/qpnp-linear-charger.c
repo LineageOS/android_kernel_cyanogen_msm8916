@@ -1028,7 +1028,8 @@ static int qpnp_lbc_ibatsafe_set(struct qpnp_lbc_chip *chip, int safe_current)
 }
 
 #define QPNP_LBC_IBATMAX_MIN	90
-#define QPNP_LBC_IBATMAX_MAX	1440
+// 1440 -> 1000 from zb500kl original kernel
+#define QPNP_LBC_IBATMAX_MAX	1000
 /*
  * Set maximum current limit from charger
  * ibat =  System current + charging current
