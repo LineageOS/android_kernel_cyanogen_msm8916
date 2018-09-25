@@ -93,6 +93,11 @@
 
 
 &i2c_0 { /* BLSP1 QUP2 */
+	
+	/*
+	msm-tlmm-pinctrl 1000000.pinctrl: pin gp-113 already requested by 0-0039; cannot claim for 0-001e
+        msm-tlmm-pinctrl 1000000.pinctrl: pin-113 (0-001e) status -22
+        msm-tlmm-pinctrl 1000000.pinctrl: could not request pin 113 on device msm-pinctrl
 	avago@39 {
 		compatible = "avago,apds9930";
 		reg = <0x39>;
@@ -113,6 +118,7 @@
 		avago,als-D = <129>;
 		avago,ga-value = <313>;
 	};
+	*/
 
 	tps65132@3e {
 		compatible = "ti,tps65132";
