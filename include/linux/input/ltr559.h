@@ -12,7 +12,7 @@
 
 struct ltr559_platform_data {
 	unsigned int prox_threshold;
-	unsigned int prox_hsyteresis_threshold;
+	unsigned int prox_hysteresis_threshold;
 
 	unsigned int als_poll_interval;
 

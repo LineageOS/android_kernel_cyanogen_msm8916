@@ -42,19 +42,7 @@
 
 #define SYS_AUTHORITY		(S_IRUGO|S_IWUGO)
 
-struct ps_thre {
-	int noise;
-	int th_hi;
-	int th_lo;
-};
-static struct ps_thre psthre_data[] = {
-	{50,  20,  12},
-	{100, 24,  16},
-	{200, 40,  30},
-	{400, 80, 50},
-	{1200,200, 100},
-	{1650,200, 100},
-};
+#define PS_OFFSET_DATA_LEN 6
 
 struct ltr559_data {
 
@@ -88,10 +76,12 @@ struct ltr559_data {
 
 	u16 irq;
 
-	u32 ps_state;
 	u32 last_lux;
-	bool cali_update;
-	u32 dynamic_noise;
+
+	bool ps_covered;
+	u8   ps_offset_data_count;
+	u16  ps_offset_data[PS_OFFSET_DATA_LEN];
+	u16  ps_offset;
 };
 
 struct ltr559_reg {
@@ -125,7 +115,6 @@ static int ltr559_als_set_enable(struct sensors_classdev *sensors_cdev,
 		unsigned int enable);
 static int ltr559_ps_set_enable(struct sensors_classdev *sensors_cdev,
 		unsigned int enable);
-static ssize_t ltr559_ps_dynamic_caliberate(struct sensors_classdev *sensors_cdev);
 
 static  struct ltr559_reg reg_tbl[] = {
 		{
@@ -138,7 +127,7 @@ static  struct ltr559_reg reg_tbl[] = {
 				.name = "PS_CONTR",
 				.addr = 0x81,
 				.defval = 0x00,
-				.curval = 0x03,
+				.curval = 0x23, /* PS active with saturation indicator enabled. */
 		},
 		{
 				.name = "ALS_PS_STATUS",
@@ -186,7 +175,8 @@ static  struct ltr559_reg reg_tbl[] = {
 				.name = "INTERRUPT_PERSIST",
 				.addr = 0x9e,
 				.defval = 0x00,
-				.curval = 0x23,
+				.curval = 0x13, /* Two consecutive PS values out of threshold range
+				                   trigger PS interrupt. */
 		},
 		{
 				.name = "PS_THRES_LOW",
@@ -198,7 +188,7 @@ static  struct ltr559_reg reg_tbl[] = {
 				.name = "PS_THRES_UP",
 				.addr = 0x90,
 				.defval = 0x07ff,
-				.curval = 0x0000,
+				.curval = 0x07ff,
 		},
 		{
 				.name = "ALS_THRES_LOW",
@@ -268,13 +258,93 @@ static struct sensors_classdev sensors_proximity_cdev = {
 	.sensors_poll_delay = NULL,
 };
 
-static int ltr559_ps_read(struct i2c_client *client)
+/* To determine the noise of the proximity sensor, three different series
+   of 10'000 measurements each have been performed:
+   (1) With an object exactly 5cm away from the sensor.
+   (2) With an object somewhat close to the sensor.
+   (3) With an object very close to the sensor.
+   The collected data are assumed to be normally distributed, which leads to
+   the following mean values µ (which correspond to the sensor values) and
+   standard deviations σ (which are measures for the noise levels):
+           (1)       (2)        (3)
+   µ:   41.24    462.00    1485.62
+   σ:    2.493     3.655      6.640
+   The measurements indicate a linear relationship between sensor value and
+   noise level. Use a linear fit of the obtained results to calculate σ for
+   arbitrary sensor values.
+   To ensure a strong separation of the hysteresis levels, the difference
+   between the sensor value and the upper threshold has been chosen to be equal
+   to 2*6σ (as a function of the current sensor value). The lower threshold is
+   half way between the sensor value and the upper threshold.
+   Value limits:
+   (a) The lower threshold is at least 2*6σ above zero.
+   (b) The sensor is not to be triggered by an object more than 5cm away
+       from it.
+   (c) The upper threshold is at least 6σ below the maximum value, which
+       is 0x07ff.
+   From all this one can derive the formulas below. */
+
+/* Returns a threshold that lies 6σ below val. */
+static u16 ltr559_ps_thres_below(u32 val)
 {
-	int psdata;
+	if (val <= 14)
+		return 0;
+	if (val >= 0x07ff)
+		return 1997;
+	/* return -15.65 + 0.98372*val; */
+	return (-925600 + 64404*val) >> 16;
+}
 
-	psdata = i2c_smbus_read_word_data(client,LTR559_PS_DATA_0);
+/* Returns a threshold that lies 6σ above val. */
+static u16 ltr559_ps_thres_low(u32 val)
+{
+	if (val <= 14)
+		return 28;
+	if (val >= 1905)
+		return 1952;
+	/* return 15.65 + 1.01628*val; */
+	return (925600 + 66668*val) >> 16;
+}
 
-	return psdata;
+/* Returns a threshold that lies 2*6σ above val. */
+static u16 ltr559_ps_thres_up(u32 val)
+{
+	if (val <= 14)
+		return 42;
+	if (val >= 1905)
+		return 1999;
+	/* return 31.30 + 1.03256*val; */
+	return (1851201 + 67801*val) >> 16;
+}
+
+static s16 ltr559_ps_read(struct i2c_client *client)
+{
+	static bool saturation_logged = false;
+	int ret;
+
+	ret = i2c_smbus_read_word_data(client, LTR559_PS_DATA_0);
+
+	/* 0x8000 is the saturation flag bit. */
+	if (ret & 0x8000) {
+		/* While the sensor is saturated, the interrupt will
+		   trigger very frequently. Don't spam the log. */
+		if(!saturation_logged) {
+			pr_warning("%s: Proximity sensor is saturated, presumably due"
+				" to very bright ambient light.\n", __func__);
+			saturation_logged = true;
+		}
+		return -ENOMSG;
+	}
+	saturation_logged = false;
+
+	/* 0x07ff is the maximum value. */
+	if (ret > 0x07ff || ret < 0) {
+		pr_err("%s: Error while reading data from proximity sensor"
+			" (i2c_smbus_read_word_data returned %i).\n", __func__, ret);
+		return -EBADMSG;
+	}
+
+	return ret;
 }
 
 static int ltr559_chip_reset(struct i2c_client *client)
@@ -297,51 +367,118 @@ static int ltr559_chip_reset(struct i2c_client *client)
 	return ret;
 }
 
-static void ltr559_set_ps_threshold(struct i2c_client *client, u8 addr, u16 value)
+static void ltr559_ps_set_thresholds(struct i2c_client *client, u16 thres_low, u16 thres_up)
 {
-	i2c_smbus_write_word_data(client, addr, value );
+	i2c_smbus_write_word_data(client, LTR559_PS_THRES_LOW_0, thres_low);
+	i2c_smbus_write_word_data(client, LTR559_PS_THRES_UP_0, thres_up);
 }
 
 static int ltr559_ps_enable(struct i2c_client *client, int on)
 {
 	struct ltr559_data *data = i2c_get_clientdata(client);
-	int ret=0;
-	int contr_data;
+	int ret;
 
 	if (on) {
-		ltr559_set_ps_threshold(client, LTR559_PS_THRES_LOW_0, 0);
-		ltr559_set_ps_threshold(client, LTR559_PS_THRES_UP_0, data->platform_data->prox_threshold);
+
 		ret = i2c_smbus_write_byte_data(client, LTR559_PS_CONTR, reg_tbl[REG_PS_CONTR].curval);
-		if(ret<0){
-			pr_err("%s: enable=(%d) failed!\n", __func__, on);
-			return ret;
-		}
-		contr_data = i2c_smbus_read_byte_data(client, LTR559_PS_CONTR);
-		if(contr_data != reg_tbl[REG_PS_CONTR].curval){
-			pr_err("%s: enable=(%d) failed!\n", __func__, on);
+		if(ret < 0) {
+			pr_err("%s: Failed to enable proximity sensor. Error while writing to register"
+				" REG_PS_CONTR (i2c_smbus_write_byte_data returned %i).\n", __func__, ret);
 			return -EFAULT;
+		ret = i2c_smbus_read_byte_data(client, LTR559_PS_CONTR);
+		if(ret != reg_tbl[REG_PS_CONTR].curval) {
+			pr_err("%s: Failed to enable proximity sensor. Error while writing to register"
+				" REG_PS_CONTR (i2c_smbus_read_byte_data returned %i, but must be %i).\n",
+				__func__, ret, reg_tbl[REG_PS_CONTR].curval);
 		}
 
 		msleep(WAKEUP_DELAY);
 
-		data->ps_state = 1;
-		ltr559_ps_dynamic_caliberate(&data->ps_cdev);
-		printk("%s, report ABS_DISTANCE=%s\n",__func__, data->ps_state ? "far" : "near");
-		input_report_abs(data->input_dev_ps, ABS_DISTANCE, data->ps_state);
+		ret = ltr559_ps_read(client);
+
+		if (data->ps_offset_data_count == 0) { // First activation.
+
+			if (ret < 0) {
+				pr_warning("%s: Received no or invalid sensor data during initialization"
+					" (ltr559_ps_read returned %i). Offset will now be set to its maximum"
+					" value (=1905).\n", __func__, ret);
+				data->ps_offset = 1905;
+			}
+			else if (ret > 1905)
+				data->ps_offset = 1905;
+			else
+				data->ps_offset = ret;
+
+			/* Assume that the sensor is not covered, even if this is not true.
+			   After the first interrupt ps_covered will be set suitably.
+			   However, in most cases, the sensor will work as expected right
+			   away (before the first interrupt is triggered).
+			   Only when the sensor value is high (meaning that the sensor is
+			   covered), but still below the highest possible upper threshold,
+			   the sensor state is set incorrectly until the first interrupt
+			   (which will trigger at the smallest movement). To observe this
+			   flaw, you would have to keep the sensor covered below the highest
+			   possible upper threshold without movement whenever it is enabled.
+			   Fortunately, this is highly unlikely in typical use cases.
+			   The flaw cannot be eliminated without assuming the offset value,
+			   which is not desirable (e.g. it is unknow if the user applied a
+			   screen protector that covers the sensor, which raises the offset). */
+			data->ps_covered = false;
+
+			data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_below(data->ps_offset);
+			data->platform_data->prox_threshold = ltr559_ps_thres_up(data->ps_offset);
+
+		} else {
+
+			if (ret <= (int) ltr559_ps_thres_up(data->ps_offset)) {
+
+				data->ps_covered = false;
+
+				data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_below(data->ps_offset);
+				data->platform_data->prox_threshold = ltr559_ps_thres_up(data->ps_offset);
+
+				if (ret < 0)
+					pr_warning("%s: Received no or invalid sensor data while waking up"
+						" proximity sensor (ltr559_ps_read returned %i). It will now"
+						" be assumed that the sensor is not covered.\n", __func__, ret);
+
+			} else {
+
+				data->ps_covered = true;
+
+				data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_low(data->ps_offset);
+				data->platform_data->prox_threshold = 0x07ff;
+			}
+		}
+
+		data->ps_offset_data_count = 1;
+		data->ps_offset_data[0] = data->ps_offset;
+
+		ltr559_ps_set_thresholds(client,
+			data->platform_data->prox_hysteresis_threshold,
+			data->platform_data->prox_threshold);
+
+		input_report_abs(data->input_dev_ps, ABS_DISTANCE, data->ps_covered ? 0 : 1);
+
+		pr_info("%s: Proximity sensor enabled (state: %s, offset=%i, thres_low=%i,"
+			" thres_up=%i).\n", __func__, data->ps_covered ? "covered" : "not covered",
+			data->ps_offset, data->platform_data->prox_hysteresis_threshold,
+			data->platform_data->prox_threshold);
 	} else {
 		ret = i2c_smbus_write_byte_data(client, LTR559_PS_CONTR, MODE_PS_StdBy);
-		if(ret<0){
-			pr_err("%s: enable=(%d) failed!\n", __func__, on);
-			return ret;
+		if(ret < 0) {
+			pr_err("%s: Failed to disable proximity sensor. Error while writing to"
+				" register REG_PS_CONTR (i2c_smbus_write_byte_data returned %i).\n",
+				__func__, ret);
 		}
-		contr_data = i2c_smbus_read_byte_data(client, LTR559_PS_CONTR);
-		if(contr_data != reg_tbl[REG_PS_CONTR].defval){
-			pr_err("%s:  enable=(%d) failed!\n", __func__, on);
-			return -EFAULT;
+		ret = i2c_smbus_read_byte_data(client, LTR559_PS_CONTR);
+		if(ret != reg_tbl[REG_PS_CONTR].defval) {
+			pr_err("%s: Failed to disable proximity sensor. Error while writing to"
+				" register REG_PS_CONTR (i2c_smbus_read_byte_data returned %i, but"
+				" must be %i).\n", __func__, ret, reg_tbl[REG_PS_CONTR].defval);
 		}
 	}
-	pr_err("%s: enable=(%d) OK\n", __func__, on);
-	return ret;
+	return 0;
 }
 
 /*
@@ -417,81 +554,104 @@ static int ltr559_als_read(struct i2c_client *client)
 		return luxdata;
 }
 
-static u32 ps_state_last = 1;
-
 static void ltr559_ps_work_func(struct work_struct *work)
 {
 	struct ltr559_data *data = container_of(work, struct ltr559_data, ps_work.work);
-	struct i2c_client *client=data->client;
-	int als_ps_status;
-	int psdata;
-	int j = 0;
+	struct i2c_client *client = data->client;
+	bool ps_state_changed = false;
+	int ret;
+	u8 i;
 
 	mutex_lock(&data->op_lock);
 
-	als_ps_status = i2c_smbus_read_byte_data(client, LTR559_ALS_PS_STATUS);
-	if (als_ps_status < 0)
-			goto workout;
-	/* Here should check data status,ignore interrupt status. */
-	/* Bit 0: PS Data
-	 * Bit 1: PS interrupt
-	 * Bit 2: ASL Data
-	 * Bit 3: ASL interrupt
-	 * Bit 4: ASL Gain 0: ALS measurement data is in dynamic range 2 (2 to 64k lux)
-	 *                 1: ALS measurement data is in dynamic range 1 (0.01 to 320 lux)
-	 */
-	if ((data->ps_open_state == 1) && (als_ps_status & 0x02)) {
-		psdata = i2c_smbus_read_word_data(client,LTR559_PS_DATA_0);
-		if (psdata < 0) {
-				goto workout;
+	/* LTR559_ALS_PS_STATUS register (1 byte):
+	   Bit 0: New unread proximity data is available.
+	   Bit 1: Proximity sensor interrupt conditions are met.
+	   Bits 2-7 hold ALS status information. */
+	ret = i2c_smbus_read_byte_data(client, LTR559_ALS_PS_STATUS);
+	if ((ret & 0x03) != 0x03)
+		goto workout;
+
+	ret = ltr559_ps_read(client);
+
+	if (ret < 0) {
+
+		/* If there is no data, don't touch offset and force uncovered state. */
+
+		if (data->ps_covered) {
+
+			data->ps_covered = false;
+			ps_state_changed = true;
+
+			data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_below(data->ps_offset);
+			data->platform_data->prox_threshold = ltr559_ps_thres_up(data->ps_offset);
 		}
-		if(psdata >= data->platform_data->prox_threshold){
-			data->ps_state = 0;    /* near */
-			ltr559_set_ps_threshold(client, LTR559_PS_THRES_LOW_0, data->platform_data->prox_hsyteresis_threshold);
-			ltr559_set_ps_threshold(client, LTR559_PS_THRES_UP_0, 0x07ff);
-		} else if (psdata <= data->platform_data->prox_hsyteresis_threshold){
-			data->ps_state = 1;    /* far */
+	} else {
 
-			/*dynamic calibration */
-			if (data->dynamic_noise > 20 && psdata < (data->dynamic_noise - 50) ) {
-				data->dynamic_noise = psdata;
+		if (ret > data->platform_data->prox_threshold) {
 
-				for(j=0; j<ARRAY_SIZE(psthre_data); j++) {
-					if(psdata < psthre_data[j].noise) {
-						data->platform_data->prox_threshold = psdata + psthre_data[j].th_hi;
-						data->platform_data->prox_hsyteresis_threshold = psdata + psthre_data[j].th_lo;
-						break;
-					}
+			data->ps_covered = true;
+			ps_state_changed = true;
+
+			data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_low(data->ps_offset);
+			data->platform_data->prox_threshold = 0x07ff;
+
+		} else if (ret < data->platform_data->prox_hysteresis_threshold) {
+
+			data->ps_offset = ret;
+
+			if (data->ps_covered) {
+
+				data->ps_covered = false;
+				ps_state_changed = true;
+
+				/* Recalculate offset as the mean value of the last few sensor values
+				   that triggered the interrupt via the lower threshold. */
+
+				if (data->ps_offset_data_count >= PS_OFFSET_DATA_LEN)
+					data->ps_offset_data_count = PS_OFFSET_DATA_LEN - 1;
+
+				for (i = data->ps_offset_data_count; i > 0; i--) {
+					data->ps_offset_data[i] = data->ps_offset_data[i-1];
+					data->ps_offset += data->ps_offset_data[i];
 				}
-				if(j == ARRAY_SIZE(psthre_data)) {
-					data->platform_data->prox_threshold = 1700;
-					data->platform_data->prox_hsyteresis_threshold = 1680;
-					pr_err("ltr559 the proximity sensor rubber or structure is error!\n");
-				}
+
+				data->ps_offset_data_count++;
+				data->ps_offset_data[0] = ret;
+
+				data->ps_offset /= data->ps_offset_data_count;
+
+			} else {
+
+				data->ps_offset_data_count = 1;
+				data->ps_offset_data[0] = data->ps_offset;
+
+				pr_info("%s: Proximity sensor offset adjusted (offset=%i, thres_low=%i, thres_up=%i).\n",
+					__func__, data->ps_offset, data->platform_data->prox_hysteresis_threshold,
+					data->platform_data->prox_threshold);
 			}
 
-			ltr559_set_ps_threshold(client, LTR559_PS_THRES_LOW_0, 0);
-			ltr559_set_ps_threshold(client, LTR559_PS_THRES_UP_0, data->platform_data->prox_threshold);
-		} else {
-			data->ps_state = ps_state_last;
+			data->platform_data->prox_hysteresis_threshold = ltr559_ps_thres_below(data->ps_offset);
+			data->platform_data->prox_threshold = ltr559_ps_thres_up(data->ps_offset);
 		}
-
-		if((ps_state_last != data->ps_state) || (data->ps_state == 0))
-		{
-			input_report_abs(data->input_dev_ps, ABS_DISTANCE, data->ps_state);
-			input_sync(data->input_dev_ps);
-			printk("%s, report ABS_DISTANCE=%s\n",__func__, data->ps_state ? "far" : "near");
-
-			ps_state_last = data->ps_state;
-		}
-		else
-			printk("%s, ps_state still %s\n", __func__, data->ps_state ? "far" : "near");
-       } else if ((data->ps_open_state == 0) && (als_ps_status & 0x02)) {
-               /* If the interrupt fires while we're still not open, the sensor is covered */
-		data->ps_state = 0;
-		ps_state_last = data->ps_state;
 	}
+
+	ltr559_ps_set_thresholds(client,
+		data->platform_data->prox_hysteresis_threshold,
+		data->platform_data->prox_threshold);
+
+	if (ps_state_changed) {
+
+		input_report_abs(data->input_dev_ps, ABS_DISTANCE, data->ps_covered ? 0 : 1);
+		input_sync(data->input_dev_ps);
+
+		pr_info("%s: Proximity sensor is now %s (offset=%i, thres_low=%i, thres_up=%i).\n",
+			__func__, data->ps_covered ? "covered" : "uncovered", data->ps_offset,
+			data->platform_data->prox_hysteresis_threshold, data->platform_data->prox_threshold);
+	}
+
 workout:
+
 	enable_irq(data->irq);
 	mutex_unlock(&data->op_lock);
 }
@@ -804,114 +964,26 @@ static int ltr559_als_poll_delay(struct sensors_classdev *sensors_cdev,
 	return 0;
 }
 
-static ssize_t ltr559_ps_dynamic_caliberate(struct sensors_classdev *sensors_cdev)
-{
-	struct ltr559_data *data = container_of(sensors_cdev, struct ltr559_data, ps_cdev);
-	struct ltr559_platform_data *pdata = data->platform_data;
-	int i = 0, j = 0;
-	int ps;
-	int data_total=0;
-	int noise = 0;
-	int count = 3;
-	int max = 0;
-
-	if(!data)
-	{
-		pr_err("ltr559_data is null!!\n");
-		return -EFAULT;
-	}
-
-	/* wait for register to be stable */
-	msleep(15);
-
-	for (i = 0; i < count; i++) {
-		/* wait for ps value be stable */
-
-		msleep(15);
-
-		ps = ltr559_ps_read(data->client);
-		if (ps < 0) {
-			i--;
-			continue;
-		}
-
-		if(ps & 0x8000){
-			noise = 0;
-			break;
-		} else {
-			noise = ps;
-		}
-
-		data_total += ps;
-
-		if (max++ > 10) {
-			pr_err("ltr559 read data error!\n");
-			return -EFAULT;
-		}
-	}
-
-	noise = data_total/count;
-	data->dynamic_noise = noise;
-
-/*if the noise twice bigger than boot, we treat it as covered mode */
-	   if(pdata->prox_default_noise < 0){
-		   pdata->prox_default_noise = data->dynamic_noise;
-	   }
-	   else if(data->dynamic_noise > (pdata->prox_default_noise * 2)){
-		   noise = pdata->prox_default_noise;
-		   data->dynamic_noise = pdata->prox_default_noise;
-	   }
-	   else if((data->dynamic_noise * 2) < pdata->prox_default_noise){
-		   pdata->prox_default_noise = data->dynamic_noise;
-	   }
-
-	for(j=0; j<ARRAY_SIZE(psthre_data); j++) {
-		if(noise < psthre_data[j].noise) {
-			pdata->prox_threshold = noise + psthre_data[j].th_hi;
-			pdata->prox_hsyteresis_threshold = noise + psthre_data[j].th_lo;
-			break;
-		}
-	}
-	if(j == ARRAY_SIZE(psthre_data)) {
-		pdata->prox_threshold = 1700;
-		pdata->prox_hsyteresis_threshold = 1680;
-		pr_err("ltr559 the proximity sensor rubber or structure is error!\n");
-		return -EAGAIN;
-	}
-
-	if (data->ps_state == 1) {
-		ltr559_set_ps_threshold(data->client, LTR559_PS_THRES_LOW_0, 0);
-		ltr559_set_ps_threshold(data->client, LTR559_PS_THRES_UP_0, data->platform_data->prox_threshold);
-	} else if (data->ps_state == 0) {
-		ltr559_set_ps_threshold(data->client, LTR559_PS_THRES_LOW_0, data->platform_data->prox_hsyteresis_threshold);
-		ltr559_set_ps_threshold(data->client, LTR559_PS_THRES_UP_0, 0x07ff);
-	}
-
-	data->cali_update = true;
-
-	return 0;
-}
-
 static int ltr559_ps_set_enable(struct sensors_classdev *sensors_cdev,
 		unsigned int enable)
 {
 	struct ltr559_data *data = container_of(sensors_cdev, struct ltr559_data, ps_cdev);
-	int ret = 0;
+	int ret;
 
 	if ((enable != 0) && (enable != 1)) {
-		pr_err("%s: invalid value(%d)\n", __func__, enable);
+		pr_err("%s: Invalid parameter (got enable=%i, but must be 0 or 1).\n", __func__, enable);
 		return -EINVAL;
 	}
 
 	ret = ltr559_ps_enable(data->client, enable);
 	if(ret < 0){
-		pr_err("%s: enable(%d) failed!\n", __func__, enable);
-		return -EFAULT;
+		pr_err("%s: Failed to %s the proximity sensor (ltr559_ps_enable returned %i).\n",
+			__func__, enable ? "enable" : "disable", ret);
+		return ret;
 	}
 
 	data->ps_open_state = enable;
-	pr_err("%s: enable=(%d), data->ps_open_state=%d\n", __func__, enable, data->ps_open_state);
-	return ret;
+	return 0;
 }
 
 static int ltr559_suspend(struct device *dev)
@@ -1199,7 +1271,7 @@ static int ltr559_parse_dt(struct device *dev, struct ltr559_data *data)
 		dev_err(dev, "Unable to read ps hysteresis threshold\n");
 		return rc;
 	}
-	pdata->prox_hsyteresis_threshold = tmp;
+	pdata->prox_hysteresis_threshold = tmp;
 
 	rc = of_property_read_u32(np, "ltr,als-polling-time", &tmp);
 	 if (rc) {
@@ -1344,7 +1416,7 @@ int ltr559_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		dev_err(&client->dev,"Unable to register input device ps: %s\n",data->input_dev_ps->name);
 		goto exit_unregister_dev_als;
 	}
-	printk("%s input device success.\n",__func__);
+	printk("%s: Register input device success.\n", __func__);
 
 	/* init delayed works */
 	INIT_DELAYED_WORK(&data->ps_work, ltr559_ps_work_func);
@@ -1362,7 +1434,7 @@ int ltr559_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	if (ret){
 		ret = -EROFS;
-		dev_err(&client->dev,"Unable to creat sysfs group\n");
+		dev_err(&client->dev,"Unable to create sysfs group.\n");
 		goto exit_unregister_dev_ps;
 	}
 
@@ -1377,23 +1449,23 @@ int ltr559_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ret = sensors_classdev_register(&client->dev, &data->als_cdev);
 	if(ret) {
 		ret = -EROFS;
-		dev_err(&client->dev,"Unable to register to als sensor class\n");
+		dev_err(&client->dev,"Unable to register to als sensor class.\n");
 		goto exit_remove_sysfs_group;
 	}
 
 	ret = sensors_classdev_register(&client->dev, &data->ps_cdev);
 	if(ret) {
 		ret = -EROFS;
-		dev_err(&client->dev,"Unable to register to ps sensor class\n");
+		dev_err(&client->dev,"Unable to register to ps sensor class.\n");
 		goto exit_unregister_als_class;
 	}
 
-	/* Enable / disable to trigger calibration at boot */
-	pdata->prox_default_noise=-1;
-	ltr559_ps_enable(client,1);
-	ltr559_ps_enable(client,0);
+	/* Initialize data offset and thresholds during boot. */
+	data->ps_offset_data_count = 0;
+	ltr559_ps_enable(client, 1);
+	ltr559_ps_enable(client, 0);
 
-	dev_dbg(&client->dev,"probe succece\n");
+	dev_dbg(&client->dev, "Probe success.\n");
 	return 0;
 
 exit_unregister_als_class:
@@ -1491,7 +1563,7 @@ static struct i2c_driver ltr559_driver = {
 
 static int ltr559_driver_init(void)
 {
-		pr_info("Driver ltr5590 init.\n");
+		pr_info("Driver ltr559 init.\n");
 		return i2c_add_driver(&ltr559_driver);
 };
 
