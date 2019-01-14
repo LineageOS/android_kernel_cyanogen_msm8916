@@ -1543,12 +1543,14 @@ static void check_eoc_condition(struct qpnp_bms_chip *chip)
 	}
 }
 
+/*
 static int report_voltage_based_soc(struct qpnp_bms_chip *chip)
 {
 	pr_debug("Reported voltage based soc = %d\n",
 			chip->prev_voltage_based_soc);
 	return chip->prev_voltage_based_soc;
 }
+*/
 
 static int prepare_reported_soc(struct qpnp_bms_chip *chip)
 {
@@ -1735,10 +1737,14 @@ static int report_state_of_charge(struct qpnp_bms_chip *chip)
 
 	mutex_lock(&chip->last_soc_mutex);
 
+	//zb500kl original kernel
+	//liyizeng bug 198346 20160815
+	/*
 	if (chip->dt.cfg_use_voltage_soc)
 		soc = report_voltage_based_soc(chip);
 	else
-		soc = report_vm_bms_soc(chip);
+	*/
+	soc = report_vm_bms_soc(chip);
 
 	mutex_unlock(&chip->last_soc_mutex);
 
