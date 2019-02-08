@@ -316,9 +316,20 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	    (doze_buf[2] == 0xBA) || (doze_buf[2] == 0xBB) ||
 	    (doze_buf[2] == 0xCC)) {
 		doze_status = DOZE_WAKEUP;
+		//fix zb500kl - try 3 keys to wake up device
 		input_report_key(ts->input_dev, KEY_POWER, 1);
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, KEY_POWER, 0);
+		input_sync(ts->input_dev);
+		
+		input_report_key(ts->input_dev, KEY_WAKEUP, 1);
+		input_sync(ts->input_dev);
+		input_report_key(ts->input_dev, KEY_WAKEUP, 0);
+		input_sync(ts->input_dev);
+
+		input_report_key(ts->input_dev, KEY_HOME, 1);
+		input_sync(ts->input_dev);
+		input_report_key(ts->input_dev, KEY_HOME, 0);
 		input_sync(ts->input_dev);
 		/*  clear 0x814B */
 		doze_buf[2] = 0x00;
@@ -1568,8 +1579,11 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 		input_set_capability(ts->input_dev, EV_KEY,
 				     ts->pdata->key_map[index]);
 
-	if (ts->pdata->slide_wakeup)
+	if (ts->pdata->slide_wakeup) {
 		input_set_capability(ts->input_dev, EV_KEY, KEY_POWER);
+		input_set_capability(ts->input_dev, EV_KEY, KEY_WAKEUP);
+		input_set_capability(ts->input_dev, EV_KEY, KEY_HOME);
+	}
 
 	if (ts->pdata->swap_x2y)
 		GTP_SWAP(ts->pdata->abs_size_x, ts->pdata->abs_size_y);

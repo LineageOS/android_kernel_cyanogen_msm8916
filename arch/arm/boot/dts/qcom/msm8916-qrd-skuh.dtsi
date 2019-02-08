@@ -373,10 +373,12 @@ i2c@78b6000 {
 			goodix,resume-in-workqueue = <1>;
 			goodix,int-sync = <0>;
 			goodix,swap-x2y = <0>;
+			//double tap -> slide-wakeup = <1>
 			goodix,slide-wakeup = <0>;
 			goodix,esd-protect = <0>;
 			goodix,auto-update = <0>;
 			goodix,auto-update-cfg = <0>;
+			//double tap -> power-off-sleep = <0>
 			goodix,power-off-sleep = <1>;
 			goodix,pen-suppress-finger = <0>;
 			goodix,cfg-group1 = [
