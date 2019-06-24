@@ -345,12 +345,6 @@ i2c@78b6000 {
 			status = "okay";
 			interrupt-parent = <&msm_gpio>;
 			interrupts = <13 0x2008>;
-			
-			pinctrl-names = "default", "int-output-low", "int-output-high", "int-input";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			pinctrl-2 = <>;
-			pinctrl-3 = <>;
 
 			vdd_ana-supply = <&pm8916_l17>;
 			vcc_i2c-supply = <&pm8916_l6>;
@@ -359,7 +353,7 @@ i2c@78b6000 {
 			irq-gpios = <&msm_gpio 13 0x2008>;
 			irq-flags = <2>;
 
-			touchscreen-max-id = <11>;
+			touchscreen-max-id = <10>;
 			touchscreen-size-x = <720>;
 			touchscreen-size-y = <1280>;
 			touchscreen-max-w = <1024>;
@@ -370,16 +364,14 @@ i2c@78b6000 {
 			goodix,driver-send-cfg = <1>;
 			goodix,create-wr-node = <1>;
 			goodix,wakeup-with-reset = <0>;
-			goodix,resume-in-workqueue = <1>;
-			goodix,int-sync = <0>;
+			goodix,resume-in-workqueue = <0>;
+			goodix,int-sync = <1>;
 			goodix,swap-x2y = <0>;
-			//double tap -> slide-wakeup = <1>
-			goodix,slide-wakeup = <0>;
+			goodix,slide-wakeup = <1>;
 			goodix,esd-protect = <0>;
 			goodix,auto-update = <0>;
 			goodix,auto-update-cfg = <0>;
-			//double tap -> power-off-sleep = <0>
-			goodix,power-off-sleep = <1>;
+			goodix,power-off-sleep = <0>;
 			goodix,pen-suppress-finger = <0>;
 			goodix,cfg-group1 = [
 				48 D0 02 00 05 0A 35 01 01 18 28 

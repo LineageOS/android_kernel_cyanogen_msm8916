@@ -314,7 +314,7 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	    (doze_buf[2] == 'z') || (doze_buf[2] == 0x5E) ||
 	    (doze_buf[2] == 0xAA) || (doze_buf[2] == 0xAB) ||
 	    (doze_buf[2] == 0xBA) || (doze_buf[2] == 0xBB) ||
-	    (doze_buf[2] == 0xCC)) {
+	    (doze_buf[2] == 0xCC)) {		
 		doze_status = DOZE_WAKEUP;
 		//fix zb500kl - try 3 keys to wake up device
 		input_report_key(ts->input_dev, KEY_POWER, 1);
