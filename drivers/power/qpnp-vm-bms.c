@@ -1135,14 +1135,114 @@ static void convert_and_store_ocv(struct qpnp_bms_chip *chip,
 {
 	int rc;
 
-	rc = calib_vadc(chip);
-	if (rc)
-		pr_err("Vadc reference voltage read failed, rc = %d\n", rc);
+	//from orig zb500kl kernel, lyz for three time for debounce
+	int last_ocv_uv_temp[5];
+	int i, j, temp_uv, temp_last_ocv;
+	for(i = 0;i < 5;i++)
+	{
+		rc = calib_vadc(chip);
+		if (rc)
+			pr_err("Vadc reference voltage read failed, rc = %d\n", rc);
 
-	chip->last_ocv_uv = convert_vbatt_raw_to_uv(chip,
-				chip->last_ocv_raw, is_pon_ocv);
-
-	pr_debug("last_ocv_uv = %d\n", chip->last_ocv_uv);
+		last_ocv_uv_temp[i]= convert_vbatt_raw_to_uv(chip,chip->last_ocv_raw, is_pon_ocv);
+		msleep(50);
+	}
+	for(j = 0;j < 5;j++)
+	{
+		for(i = j + 1;i < 5;i++)
+		{
+			if(last_ocv_uv_temp[i] <= last_ocv_uv_temp[j])
+			{
+				temp_uv = last_ocv_uv_temp[j];
+				last_ocv_uv_temp[j] = last_ocv_uv_temp[i];
+				last_ocv_uv_temp[i] = temp_uv;
+			}
+		}
+	}
+	temp_last_ocv = (last_ocv_uv_temp[1] + last_ocv_uv_temp[2] + last_ocv_uv_temp[3]) / 3;
+	if(chip->last_ocv_uv>3400000)
+	{
+		if(temp_last_ocv <= chip->last_ocv_uv)
+		{
+			if(chip->last_ocv_uv > 4000000)
+			{
+		     		if((chip->last_ocv_uv - temp_last_ocv)>10000)
+			  		chip->last_ocv_uv -= 10000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3800000)
+			{
+				if((chip->last_ocv_uv - temp_last_ocv)>5000)
+			  		chip->last_ocv_uv -= 5000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3700000)
+			{
+		      		if((chip->last_ocv_uv - temp_last_ocv)>3000)
+			  		chip->last_ocv_uv -= 3000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3660000)
+			{
+		      		if((chip->last_ocv_uv - temp_last_ocv)>2000)
+			  		chip->last_ocv_uv -= 2000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else
+			{
+		      		if((chip->last_ocv_uv - temp_last_ocv)>10000)
+			  		chip->last_ocv_uv -=10000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+		}
+		else
+		{
+			if(chip->last_ocv_uv > 4000000)
+			{
+		      		if((temp_last_ocv - chip->last_ocv_uv)>10000)
+			  		chip->last_ocv_uv += 10000;
+			 	 else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3800000)
+			{
+		     		 if((temp_last_ocv - chip->last_ocv_uv)>5000)
+			  		chip->last_ocv_uv += 5000;
+			 	 else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3700000)
+			{
+		      		if((temp_last_ocv - chip->last_ocv_uv)>3000)
+			  		chip->last_ocv_uv += 3000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else if(chip->last_ocv_uv > 3660000)
+			{
+		     		 if((temp_last_ocv - chip->last_ocv_uv)>2000)
+			  		chip->last_ocv_uv += 2000;
+			 	 else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+			else
+			{
+		      		if((temp_last_ocv - chip->last_ocv_uv)>10000)
+			  		chip->last_ocv_uv += 10000;
+			  	else
+			  		chip->last_ocv_uv = temp_last_ocv;
+			}
+		}
+	}
+	else
+	{
+		chip->last_ocv_uv = temp_last_ocv;
+	}
 }
 
 static int read_and_update_ocv(struct qpnp_bms_chip *chip, int batt_temp,
