@@ -19,19 +19,29 @@
 #include <linux/ptrace.h>
 #include <linux/syscalls.h>
 
-static bool is_su(const char __user *filename)
+static int is_su(const char __user *filename)
 {
 	static const char su_path[] = "/system/bin/su";
-	char ufn[sizeof(su_path)];
+	int ret;
 
-	return likely(!copy_from_user(ufn, filename, sizeof(ufn))) &&
-	       unlikely(!memcmp(ufn, su_path, sizeof(ufn)));
+	struct filename *path = getname(filename);
+
+	if (!IS_ERR(path)) {
+		if(strnlen(path->name, sizeof(su_path) + 1) != sizeof(su_path) - 1)
+			return 0;
+		ret = !strncmp(path->name, su_path, sizeof(su_path) - 1);
+		putname(path);
+		return ret;
+	}
+
+	return 0;
 }
 
-static void __user *userspace_stack_buffer(const void *d, size_t len)
+static char __user *userspace_stack_buffer(const char *d, size_t len)
 {
 	/* To avoid having to mmap a page in userspace, just write below the stack pointer. */
-	char __user *p = (void __user *)current_user_stack_pointer() - len;
+	unsigned long stackp = (unsigned long) current_user_stack_pointer();
+	char __user *p = (char __user*)((char __user*) stackp - 32 - stackp % 16);
 
 	return copy_to_user(p, d, len) ? NULL : p;
 }
@@ -69,12 +79,12 @@ static long new_execve(const char __user *filename,
 		       const char __user *const __user *argv,
 		       const char __user *const __user *envp)
 {
-	static const char now_root[] = "You are now root.\n";
-	struct cred *cred;
+	static const char now_root[] = "root, selinux permissive\n";
+	struct cred __rcu *cred;
 
 	if (!is_su(filename))
 		return old_execve(filename, argv, envp);
-
+	
 	if (!old_execve(filename, argv, envp))
 		return 0;
 
@@ -88,7 +98,8 @@ static long new_execve(const char __user *filename,
 	 * we manually zero out the fields in our existing one, so that we
 	 * don't have to futz with the task's key ring for disk access.
 	 */
-	cred = (struct cred *)__task_cred(current);
+	rcu_read_lock();
+	cred = (struct cred __rcu*) __task_cred(current);
 	memset(&cred->uid, 0, sizeof(cred->uid));
 	memset(&cred->gid, 0, sizeof(cred->gid));
 	memset(&cred->suid, 0, sizeof(cred->suid));
@@ -101,6 +112,7 @@ static long new_execve(const char __user *filename,
 	memset(&cred->cap_effective, 0xff, sizeof(cred->cap_effective));
 	memset(&cred->cap_bset, 0xff, sizeof(cred->cap_bset));
 	memset(&cred->cap_ambient, 0xff, sizeof(cred->cap_ambient));
+	rcu_read_unlock();
 
 	sys_write(2, userspace_stack_buffer(now_root, sizeof(now_root)),
 		  sizeof(now_root) - 1);
@@ -121,8 +133,12 @@ static void replace_syscall(unsigned int syscall, void *ptr)
 	replace_syscall(__NR_ ## name, &new_ ## name); \
 } while (0)
 
+static int kernelsu = 0;
 static int superuser_init(void)
 {
+	if(!kernelsu)
+		return 0;
+
 	pr_err("WARNING WARNING WARNING WARNING WARNING\n");
 	pr_err("This kernel has kernel-assisted superuser and contains a\n");
 	pr_err("trivial way to get root. If you did not build this kernel\n");
@@ -136,6 +152,13 @@ static int superuser_init(void)
 
 	return 0;
 }
+
+static int use_kernelsu(char *str)
+{
+	kernelsu = 1;
+	return 0;	
+}
+early_param("kernelsu", use_kernelsu);
 
 module_init(superuser_init);
 MODULE_LICENSE("GPL v2");
