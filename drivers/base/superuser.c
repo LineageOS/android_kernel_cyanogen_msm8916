@@ -22,19 +22,10 @@
 static int is_su(const char __user *filename)
 {
 	static const char su_path[] = "/system/bin/su";
-	int ret;
+	char ufn[sizeof(su_path)];
 
-	struct filename *path = getname(filename);
-
-	if (!IS_ERR(path)) {
-		if(strnlen(path->name, sizeof(su_path) + 1) != sizeof(su_path) - 1)
-			return 0;
-		ret = !strncmp(path->name, su_path, sizeof(su_path) - 1);
-		putname(path);
-		return ret;
-	}
-
-	return 0;
+	return likely(!copy_from_user(ufn, filename, sizeof(ufn))) &&
+	       unlikely(!memcmp(ufn, su_path, sizeof(ufn)));
 }
 
 static char __user *userspace_stack_buffer(const char *d, size_t len)
