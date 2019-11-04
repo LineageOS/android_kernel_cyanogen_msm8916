@@ -2,7 +2,7 @@
  * drivers/staging/android/ion/ion_priv.h
  *
  * Copyright (C) 2011 Google, Inc.
- * Copyright (c) 2011-2014,2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -51,8 +51,11 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
  * @lock:		protects the buffers cnt fields
  * @kmap_cnt:		number of times the buffer is mapped to the kernel
  * @vaddr:		the kenrel mapping if kmap_cnt is not zero
- * @dmap_cnt:		number of times the buffer is mapped for dma
- * @sg_table:		the sg table for the buffer if dmap_cnt is not zero
+ * @sg_table:		the sg table for the buffer.  Note that if you need
+ *			an sg_table for this buffer, you should likely be
+ *			using Ion as a DMA Buf exporter and using
+ *			dma_buf_map_attachment rather than trying to use this
+ *			field directly.
  * @pages:		flat array of pages in the buffer -- used by fault
  *			handler and only valid for buffers that are faulted in
  * @vmas:		list of vma's mapping this buffer
@@ -80,7 +83,6 @@ struct ion_buffer {
 	struct mutex lock;
 	int kmap_cnt;
 	void *vaddr;
-	int dmap_cnt;
 	struct sg_table *sg_table;
 	struct page **pages;
 	struct list_head vmas;
@@ -193,6 +195,7 @@ struct ion_heap {
 	spinlock_t free_lock;
 	wait_queue_head_t waitqueue;
 	struct task_struct *task;
+
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
 	atomic_t total_allocated;
 	atomic_t total_handles;
@@ -256,6 +259,7 @@ int ion_heap_map_user(struct ion_heap *, struct ion_buffer *,
 int ion_heap_buffer_zero(struct ion_buffer *buffer);
 
 int msm_ion_heap_high_order_page_zero(struct page *page, int order);
+struct ion_heap *get_ion_heap(int heap_id);
 int msm_ion_heap_buffer_zero(struct ion_buffer *buffer);
 int msm_ion_heap_pages_zero(struct page **pages, int num_pages);
 int msm_ion_heap_alloc_pages_mem(struct pages_mem *pages_mem);
@@ -351,8 +355,16 @@ void ion_carveout_heap_destroy(struct ion_heap *);
 
 struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *);
 void ion_chunk_heap_destroy(struct ion_heap *);
+#ifdef CONFIG_CMA
 struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
 void ion_cma_heap_destroy(struct ion_heap *);
+#else
+static inline struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *h)
+{
+	return NULL;
+}
+static inline void ion_cma_heap_destroy(struct ion_heap *h) {}
+#endif
 
 /**
  * kernel api to allocate/free from carveout -- used when carveout is

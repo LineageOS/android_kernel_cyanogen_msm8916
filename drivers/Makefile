@@ -137,6 +137,7 @@ obj-$(CONFIG_BCMA)		+= bcma/
 obj-$(CONFIG_VHOST_RING)	+= vhost/
 obj-$(CONFIG_VLYNQ)		+= vlynq/
 obj-$(CONFIG_STAGING)		+= staging/
+obj-$(CONFIG_ANDROID)		+= android/
 obj-y				+= platform/
 #common clk code
 obj-y				+= clk/
