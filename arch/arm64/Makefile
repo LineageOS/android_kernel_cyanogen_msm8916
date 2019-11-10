@@ -30,6 +30,9 @@ AS		+= -EL
 LD		+= -EL
 endif
 
+#fix for new gcc
+KBUILD_CFLAGS   += -mstrict-align
+
 comma = ,
 
 CHECKFLAGS	+= -D__aarch64__
