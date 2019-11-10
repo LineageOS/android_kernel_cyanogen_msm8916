@@ -105,6 +105,12 @@
 #define CHANNEL_SWITCH_SUPPORTED
 #endif
 
+#if defined(CFG80211_DEL_STA_V2) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)) || \
+	defined(WITH_BACKPORTS)
+#define USE_CFG80211_DEL_STA_V2
+#endif
+
 #define MAX_CHANNEL NUM_2_4GHZ_CHANNELS + NUM_5GHZ_CHANNELS
 
 #define IS_CHANNEL_VALID(channel) ((channel >= 0 && channel < 15) \
@@ -214,6 +220,62 @@ enum qca_nl80211_vendor_subcmds {
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET = 149,
     /* Get the NUD stats, represented by the enum qca_attr_nud_stats_get */
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
+    /*
+     * Event indicating to the user space that the driver has detected an
+     * internal failure. This event carries the information indicating the
+     * reason that triggered this detection. The attributes for this
+     * command are defined in enum qca_wlan_vendor_attr_hang.
+     */
+    QCA_NL80211_VENDOR_SUBCMD_HANG = 157,
+};
+
+enum qca_wlan_vendor_hang_reason {
+	/* Unspecified reason */
+	QCA_WLAN_HANG_REASON_UNSPECIFIED = 0,
+	/* No Map for the MAC entry for the received frame */
+	QCA_WLAN_HANG_RX_HASH_NO_ENTRY_FOUND = 1,
+	/* peer deletion timeout happened */
+	QCA_WLAN_HANG_PEER_DELETION_TIMEDOUT = 2,
+	/* peer unmap timeout */
+	QCA_WLAN_HANG_PEER_UNMAP_TIMEDOUT = 3,
+	/* Scan request timed out */
+	QCA_WLAN_HANG_SCAN_REQ_EXPIRED = 4,
+	/* Consecutive Scan attempt failures */
+	QCA_WLAN_HANG_SCAN_ATTEMPT_FAILURES = 5,
+	/* Unable to get the message buffer */
+	QCA_WLAN_HANG_GET_MSG_BUFF_FAILURE = 6,
+	/* Current command processing is timedout */
+	QCA_WLAN_HANG_ACTIVE_LIST_TIMEOUT = 7,
+	/* Timeout for an ACK from FW for suspend request */
+	QCA_WLAN_HANG_SUSPEND_TIMEOUT = 8,
+	/* Timeout for an ACK from FW for resume request */
+	QCA_WLAN_HANG_RESUME_TIMEOUT = 9,
+	/* Transmission timeout for consecutive data frames */
+	QCA_WLAN_HANG_TRANSMISSIONS_TIMEOUT = 10,
+	/* Timeout for the TX completion status of data frame */
+	QCA_WLAN_HANG_TX_COMPLETE_TIMEOUT = 11,
+	/* DXE failure for tx/Rx, DXE resource unavailability */
+	QCA_WLAN_HANG_DXE_FAILURE = 12,
+	/* WMI pending commands exceed the maximum count */
+	QCA_WLAN_HANG_WMI_EXCEED_MAX_PENDING_CMDS = 13,
+	/* WDI failure for commands, WDI resource unavailability */
+	QCA_WLAN_HANG_WDI_FAILURE = 14,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_hang - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_HANG.
+ */
+enum qca_wlan_vendor_attr_hang {
+	QCA_WLAN_VENDOR_ATTR_HANG_INVALID = 0,
+	/*
+	 * Reason for the Hang - Represented by enum
+	 * qca_wlan_vendor_hang_reason.
+	 */
+	 QCA_WLAN_VENDOR_ATTR_HANG_REASON = 1,
+	 QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST,
+	 QCA_WLAN_VENDOR_ATTR_HANG_MAX =
+		QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST - 1,
 };
 
 /**
@@ -412,6 +474,7 @@ enum qca_nl80211_vendor_subcmds_index {
     QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_HOTLIST_AP_LOST_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX,
+    QCA_NL80211_VENDOR_SUBCMD_HANG_REASON_INDEX,
 };
 
 /**
@@ -1643,7 +1706,9 @@ void wlan_hdd_cfg80211_oemdata_callback(void *ctx, const tANI_U16 evType,
                                       void *pMsg,  tANI_U32 evLen);
 #endif /* FEATURE_OEM_DATA_SUPPORT */
 
-#if !(defined (SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC))
+#if !(defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(4, 1, 0)) && \
+	!(defined(WITH_BACKPORTS))
 static inline struct sk_buff *
 backported_cfg80211_vendor_event_alloc(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
@@ -1656,6 +1721,16 @@ backported_cfg80211_vendor_event_alloc(struct wiphy *wiphy,
 }
 #define cfg80211_vendor_event_alloc backported_cfg80211_vendor_event_alloc
 #endif
+
+/**
+ * wlan_hdd_send_hang_reason_event() - Send hang reason to the userspace
+ * @hdd_ctx: Pointer to hdd context
+ * @reason: cds recovery reason
+ *
+ * Return: 0 on success or failure reason
+ */
+int wlan_hdd_send_hang_reason_event(hdd_context_t *hdd_ctx,
+				    unsigned int reason);
 
 /**
  * enum qca_wlan_vendor_attr_memory_dump - values for memory dump attributes
@@ -1702,7 +1777,7 @@ struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_list(
 
 struct cfg80211_bss *wlan_hdd_cfg80211_inform_bss_frame(hdd_adapter_t *pAdapter,
 		tSirBssDescription *bss_desc);
-#ifdef CFG80211_DEL_STA_V2
+#ifdef USE_CFG80211_DEL_STA_V2
 int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
                                   struct net_device *dev,
                                   struct station_del_parameters *param);

@@ -1076,8 +1076,8 @@ tSirRetStatus peOpen(tpAniSirGlobal pMac, tMacOpenParameters *pMacOpenParam)
      */
 #ifdef LIM_TRACE_RECORD
     MTRACE(limTraceInit(pMac));
-    lim_register_debug_callback();
 #endif
+    lim_register_debug_callback();
     return eSIR_SUCCESS;
 }
 

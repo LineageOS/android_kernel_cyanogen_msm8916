@@ -2555,12 +2555,6 @@ WDI_Stop
   /*We have completed cleaning unlock now*/
   wpalMutexRelease(&pWDICtx->wptMutex);
 
-  /* Free the global variables */
-  wpalMemoryFree(gpHostWlanFeatCaps);
-  wpalMemoryFree(gpFwWlanFeatCaps);
-  gpHostWlanFeatCaps = NULL;
-  gpFwWlanFeatCaps = NULL;
-
   /*------------------------------------------------------------------------
     Fill in Event data and post to the Main FSM
   ------------------------------------------------------------------------*/
@@ -8544,7 +8538,7 @@ WDI_ProcessStopReq
   wpt_uint8*             pSendBuffer         = NULL;
   wpt_uint16             usDataOffset        = 0;
   wpt_uint16             usSendSize          = 0;
-  wpt_status             status;
+  wpt_status             status = WDI_STATUS_E_FAILURE;
   tHalMacStopReqMsg      halStopReq;
   /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -8558,7 +8552,7 @@ WDI_ProcessStopReq
      WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_WARN,
                  "%s: Invalid parameters", __func__);
      WDI_ASSERT(0);
-     goto failRequest;
+     goto free_wlan_feat_caps;
   }
 
   /*-----------------------------------------------------------------------
@@ -8573,7 +8567,7 @@ WDI_ProcessStopReq
               "Unable to get send buffer in stop req %pK %pK %pK",
                 pEventData, pwdiStopParams, wdiStopRspCb);
      WDI_ASSERT(0);
-     goto failRequest;
+     goto free_wlan_feat_caps;
   }
 
   /*-----------------------------------------------------------------------
@@ -8633,17 +8627,22 @@ WDI_ProcessStopReq
   /*-------------------------------------------------------------------------
     Send Stop Request to HAL
   -------------------------------------------------------------------------*/
-  return  WDI_SendMsg( pWDICtx, pSendBuffer, usSendSize,
+  status =  WDI_SendMsg( pWDICtx, pSendBuffer, usSendSize,
                        wdiStopRspCb, pEventData->pUserData, WDI_STOP_RESP);
-
+  goto free_wlan_feat_caps;
 fail:
    // Release the message buffer so we don't leak
    wpalMemoryFree(pSendBuffer);
 
-failRequest:
-   //WDA should have failure check to avoid the memory leak
-   return WDI_STATUS_E_FAILURE;
+free_wlan_feat_caps:
+  /* Free global wlan feature caps variables */
+  wpalMemoryFree(gpHostWlanFeatCaps);
+  wpalMemoryFree(gpFwWlanFeatCaps);
+  gpHostWlanFeatCaps = NULL;
+  gpFwWlanFeatCaps = NULL;
 
+   //WDA should have failure check to avoid the memory leak
+   return status;
 }/*WDI_ProcessStopReq*/
 
 /**
@@ -16944,7 +16943,7 @@ WDI_ProcessStartRsp
     wdiStartRspCb( &wdiRspParams, pWDICtx->pRspCBUserData);
 
     WDI_DetectedDeviceError(pWDICtx, wdiRspParams.wdiStatus);
-    wpalWlanReload();
+    wpalWlanReload(VOS_WDI_FAILURE);
 
     /*Although the response is an error - it was processed by our function
     so as far as the caller is concerned this is a succesful reponse processing*/
@@ -17031,6 +17030,7 @@ WDI_ProcessStopRsp
   /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   wdiStopRspCb = (WDI_StopRspCb)pWDICtx->pfncRspCB;
+
   /*-------------------------------------------------------------------------
     Sanity check
   -------------------------------------------------------------------------*/
@@ -17079,7 +17079,7 @@ WDI_ProcessStopRsp
                halMacStopRspMsg.stopRspParams.status);
 
     WDI_DetectedDeviceError( pWDICtx, WDI_ERR_BASIC_OP_FAILURE);
-    wpalWlanReload();
+    wpalWlanReload(VOS_WDI_FAILURE);
 
     wpalMutexRelease(&pWDICtx->wptMutex);
     return WDI_STATUS_E_FAILURE;
@@ -23073,7 +23073,7 @@ WDI_RXMsgCTSCB
     WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
               "Invalid packet received from HAL - catastrophic failure");
     WDI_DetectedDeviceError( pWDICtx, WDI_ERR_INVALID_RSP_FMT);
-    wpalWlanReload();
+    wpalWlanReload(VOS_WDI_FAILURE);
 
     return;
   }
@@ -23600,7 +23600,7 @@ WDI_ResponseTimerCB
     }
 #else
     WDI_DetectedDeviceError(pWDICtx, WDI_ERR_BASIC_OP_FAILURE);
-    wpalWlanReload();
+    wpalWlanReload(VOS_WDI_FAILURE);
 #endif
   }
   else
@@ -38974,6 +38974,10 @@ WDI_Status WDI_ProcessSetAllowedActionFramesInd(WDI_ControlBlockType *pWDICtx,
         WDI_ASSERT(0);
         return WDI_STATUS_E_FAILURE;
     }
+    /*-----------------------------------------------------------------------
+      Get message buffer
+    -----------------------------------------------------------------------*/
+    usLen = sizeof(tHalAllowedActionFrames);
 
     if ((WDI_STATUS_SUCCESS != WDI_GetMessageBuffer(pWDICtx,
                                         WDI_SET_ALLOWED_ACTION_FRAMES_IND,

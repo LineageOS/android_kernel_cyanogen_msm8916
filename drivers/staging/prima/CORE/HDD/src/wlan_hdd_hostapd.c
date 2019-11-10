@@ -81,6 +81,7 @@
 #include "wniCfg.h"
 #include <wlan_hdd_wowl.h>
 #include "wlan_hdd_hostapd.h"
+#include "wlan_hdd_request_manager.h"
 
 #ifdef FEATURE_WLAN_CH_AVOID
 #include "wcnss_wlan.h"
@@ -1383,7 +1384,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                    hddLog(LOGE, FL("Failed to start AP inactivity timer"));
             }
 #ifdef WLAN_OPEN_SOURCE
-            if (wake_lock_active(&pHddCtx->sap_wake_lock))
+            if (vos_wake_lock_active(&pHddCtx->sap_wake_lock))
             {
                vos_wake_lock_release(&pHddCtx->sap_wake_lock,
                                       WIFI_POWER_EVENT_WAKELOCK_SAP);
@@ -1410,7 +1411,9 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                     staInfo->assoc_req_ies =
                         (const u8 *)&pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.ies[0];
                     staInfo->assoc_req_ies_len = iesLen;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,31))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,31)) && \
+	((LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)) && \
+	!defined(WITH_BACKPORTS))
                     staInfo->filled |= STATION_INFO_ASSOC_REQ_IES;
 #endif
                     cfg80211_new_sta(dev,
@@ -4809,8 +4812,15 @@ static int iw_set_ap_genie(struct net_device *dev,
 static VOS_STATUS  wlan_hdd_get_classAstats_for_station(hdd_adapter_t *pAdapter, u8 staid)
 {
    eHalStatus hstatus;
-   long lrc;
-   struct statsContext context;
+   int ret;
+   void *cookie;
+   struct hdd_request *request;
+   struct stats_class_a_ctx *priv;
+   static const struct hdd_request_params params = {
+        .priv_size = sizeof(*priv),
+        .timeout_ms = WLAN_WAIT_TIME_STATS,
+   };
+
 
    if (NULL == pAdapter)
    {
@@ -4818,17 +4828,21 @@ static VOS_STATUS  wlan_hdd_get_classAstats_for_station(hdd_adapter_t *pAdapter,
       return VOS_STATUS_E_FAULT;
    }
 
-   init_completion(&context.completion);
-   context.pAdapter = pAdapter;
-   context.magic = STATS_CONTEXT_MAGIC;
+   request = hdd_request_alloc(&params);
+   if (!request) {
+       hddLog(VOS_TRACE_LEVEL_ERROR, FL("Request allocation failure"));
+       return VOS_STATUS_E_NOMEM;
+   }
+   cookie = hdd_request_cookie(request);
+
    hstatus = sme_GetStatistics( WLAN_HDD_GET_HAL_CTX(pAdapter),
                                   eCSR_HDD,
                                   SME_GLOBAL_CLASSA_STATS,
-                                  hdd_GetClassA_statisticsCB,
+                                  hdd_get_class_a_statistics_cb,
                                   0, // not periodic
                                   FALSE, //non-cached results
                                   staid,
-                                  &context);
+                                  cookie);
    if (eHAL_STATUS_SUCCESS != hstatus)
    {
       hddLog(VOS_TRACE_LEVEL_ERROR,
@@ -4837,30 +4851,25 @@ static VOS_STATUS  wlan_hdd_get_classAstats_for_station(hdd_adapter_t *pAdapter,
    }
    else
    {
-      lrc = wait_for_completion_interruptible_timeout(&context.completion,
-            msecs_to_jiffies(WLAN_WAIT_TIME_STATS));
-      if (lrc <= 0)
+      ret = hdd_request_wait_for_response(request);
+      if (ret)
       {
          hddLog(VOS_TRACE_LEVEL_ERROR,
-               "%s: SME %s while retrieving link speed",
-              __func__, (0 == lrc) ? "timeout" : "interrupt");
+               FL("SME timeout while retrieving link speed"));
+      }
+      else
+      {
+           priv = hdd_request_priv(request);
+           pAdapter->hdd_stats.ClassA_stat = priv->class_a_stats;
       }
    }
 
-   /* either we never sent a request, we sent a request and received a
-      response or we sent a request and timed out.  if we never sent a
-      request or if we sent a request and got a response, we want to
-      clear the magic out of paranoia.  if we timed out there is a
-      race condition such that the callback function could be
-      executing at the same time we are. of primary concern is if the
-      callback function had already verified the "magic" but had not
-      yet set the completion variable when a timeout occurred. we
-      serialize these activities by invalidating the magic while
-      holding a shared spinlock which will cause us to block if the
-      callback is currently executing */
-   spin_lock(&hdd_context_lock);
-   context.magic = 0;
-   spin_unlock(&hdd_context_lock);
+  /*
+   * either we never sent a request, we sent a request and received a
+   * response or we sent a request and timed out. Regardless we are
+   * done with the request.
+   */
+   hdd_request_put(request);
 
    return VOS_STATUS_SUCCESS;
 }
