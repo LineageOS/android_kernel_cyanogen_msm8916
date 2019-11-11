@@ -33,6 +33,10 @@ endif
 #fix for new gcc
 KBUILD_CFLAGS   += -mstrict-align
 
+#msm8916
+KBUILD_CFLAGS   += -march=armv8-a+crc+crypto
+KBUILD_CFLAGS   += -mtune=cortex-a53
+
 comma = ,
 
 CHECKFLAGS	+= -D__aarch64__
