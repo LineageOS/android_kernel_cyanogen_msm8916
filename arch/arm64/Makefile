@@ -10,12 +10,10 @@
 #
 # Copyright (C) 1995-2001 by Russell King
 
-LDFLAGS_vmlinux	:=-p --no-undefined -X
+LDFLAGS_vmlinux	:=--no-undefined -X --fix-cortex-a53-835769  --fix-cortex-a53-843419
 CPPFLAGS_vmlinux.lds = -DTEXT_OFFSET=$(TEXT_OFFSET)
 OBJCOPYFLAGS	:=-O binary -R .note -R .note.gnu.build-id -R .comment -S
 GZFLAGS		:=-9
-
-LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 
 KBUILD_DEFCONFIG := defconfig
 
@@ -36,6 +34,18 @@ KBUILD_CFLAGS   += -mstrict-align
 #msm8916
 KBUILD_CFLAGS   += -march=armv8-a+crc+crypto
 KBUILD_CFLAGS   += -mtune=cortex-a53
+KBUILD_AFLAGS   += -mcpu=cortex-a53+crc+crypto
+
+#fixes for a53
+KBUILD_CFLAGS   += -mfix-cortex-a53-835769
+KBUILD_CFLAGS   += -mfix-cortex-a53-843419
+
+#from newer kernels
+KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
+KBUILD_CFLAGS	+= -fno-pic
+
+KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
+KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
 
 comma = ,
 
@@ -54,7 +64,6 @@ core-$(CONFIG_XEN)		+= arch/arm64/xen/
 core-$(CONFIG_KVM) += arch/arm64/kvm/
 core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 libs-y		:= arch/arm64/lib/ $(libs-y)
-libs-y		+= $(LIBGCC)
 
 # Default target when executing plain make
 ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
