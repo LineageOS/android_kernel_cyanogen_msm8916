@@ -63,14 +63,6 @@
 		/* IOMMU Data */
 		iommu = <&gfx_iommu>;
 
-		/* Trace bus */
-		coresight-id = <67>;
-		coresight-name = "coresight-gfx";
-		coresight-nr-inports = <0>;
-		coresight-outports = <0>;
-		coresight-child-list = <&funnel_in0>;
-		coresight-child-ports = <5>;
-
 		/* CPU latency parameter */
 		qcom,pm-qos-active-latency = <701>;
 		qcom,pm-qos-wakeup-latency = <701>;
