@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1110,6 +1110,9 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_EXIT_UAPSD_RSP             SIR_HAL_EXIT_UAPSD_RSP
 #define WDA_LOW_RSSI_IND               SIR_HAL_LOW_RSSI_IND 
 #define WDA_BEACON_FILTER_IND          SIR_HAL_BEACON_FILTER_IND
+#define WDA_VOWIFI_MODE                SIR_HAL_VOWIFI_MODE
+#define WDA_QPOWER                     SIR_HAL_QPOWER
+
 /// PE <-> HAL WOWL messages
 #define WDA_WOWL_ADD_BCAST_PTRN        SIR_HAL_WOWL_ADD_BCAST_PTRN
 #define WDA_WOWL_DEL_BCAST_PTRN        SIR_HAL_WOWL_DEL_BCAST_PTRN
@@ -1143,8 +1146,6 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 
 #define WDA_SET_MAX_TX_POWER_PER_BAND_REQ \
         SIR_HAL_SET_MAX_TX_POWER_PER_BAND_REQ
-#define WDA_SET_MAX_TX_POWER_PER_BAND_RSP \
-        SIR_HAL_SET_MAX_TX_POWER_PER_BAND_RSP
 
 #define WDA_SEND_MSG_COMPLETE          SIR_HAL_SEND_MSG_COMPLETE 
 
@@ -1362,8 +1363,6 @@ eHalStatus WDA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
 #ifdef WLAN_FEATURE_EXTSCAN
 #define WDA_HIGH_PRIORITY_DATA_INFO_IND         SIR_HAL_HIGH_PRIORITY_DATA_INFO_IND
 #endif /* WLAN_FEATURE_EXTSCAN */
-
-#define WDA_FW_MEM_DUMP_REQ                  SIR_HAL_FW_MEM_DUMP_REQ
 
 #define WDA_WIFI_CONFIG_REQ                    SIR_HAL_WIFI_CONFIG_PARAMS
 
@@ -2063,28 +2062,17 @@ VOS_STATUS WDA_HALDumpCmdReq(tpAniSirGlobal   pMac,tANI_U32 cmd,
                  tANI_U32   arg1, tANI_U32   arg2, tANI_U32   arg3,
                  tANI_U32   arg4, tANI_U8   *pBuffer, wpt_boolean async);
 
-/*==========================================================================
-   FUNCTION    WDA_featureCapsExchange
-
-  DESCRIPTION
-    WDA API to invoke capability exchange between host and FW
-
-  DEPENDENCIES
-
-  PARAMETERS
-
-   IN
-    pVosContext         VOS context
-
-   OUT
-    NONE
-
-  RETURN VALUE
-    NONE
-    
-  SIDE EFFECTS
-============================================================================*/
-void WDA_featureCapsExchange(v_PVOID_t pVosContext);
+/**
+ * WDA_featureCapsExchange() - WDA API to invoke capability exchange between
+ * host and FW
+ * @pVosContext: VOS context
+ * @request: Request to hold call-back to be invoked for response
+ *
+ * Return: VOS_STATUS
+ */
+VOS_STATUS
+WDA_featureCapsExchange(v_PVOID_t pVosContext,
+			struct sir_feature_caps_params *request);
 
 void WDA_disableCapablityFeature(tANI_U8 feature_index);
 /*==========================================================================

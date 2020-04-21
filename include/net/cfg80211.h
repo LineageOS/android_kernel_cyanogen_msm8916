@@ -1287,6 +1287,9 @@ struct cfg80211_scan_request {
 	u32 rates[IEEE80211_NUM_BANDS];
 
 	struct wireless_dev *wdev;
+	
+	u8 mac_addr[ETH_ALEN] __aligned(2);
+	u8 mac_addr_mask[ETH_ALEN] __aligned(2);
 
 	/* internal */
 	struct wiphy *wiphy;
@@ -1343,6 +1346,9 @@ struct cfg80211_sched_scan_request {
 	int n_match_sets;
 	s32 min_rssi_thold;
 	s32 rssi_thold; /* just for backward compatible */
+	
+	u8 mac_addr[ETH_ALEN] __aligned(2);
+	u8 mac_addr_mask[ETH_ALEN] __aligned(2);
 
 	/* internal */
 	struct wiphy *wiphy;

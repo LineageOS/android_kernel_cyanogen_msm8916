@@ -13,7 +13,7 @@ ifeq ($(KERNEL_BUILD),1)
 	WLAN_ROOT := drivers/staging/prima
 endif
 
-ifeq ($(KERNEL_BUILD), 0)
+#ifeq ($(KERNEL_BUILD), 0)
 # These are configurable via Kconfig for kernel-based builds
 # Need to explicitly configure for Android-based builds
 
@@ -52,7 +52,7 @@ ifneq ($(CONFIG_PRONTO_WLAN),)
 #Flag to enable offload packets feature
     CONFIG_WLAN_OFFLOAD_PACKETS := y
 
-    endif
+    #endif
 #Flag to enable AP Find feature
 CONFIG_WLAN_FEATURE_AP_FIND := y
 
@@ -88,6 +88,31 @@ HAVE_CFG80211 := 0
 endif
 endif
 
+ifeq ($(KERNEL_BUILD), 0)
+ifeq ($(WLAN_PROPRIETARY),1)
+    WLAN_BLD_DIR := vendor/qcom/proprietary/wlan
+else
+ifneq ($(TARGET_SUPPORTS_WEARABLES),true)
+ifneq ($(ANDROID_BUILD_TOP),)
+    WLAN_BLD_DIR := $(ANDROID_BUILD_TOP)/vendor/qcom/opensource/wlan
+else
+    WLAN_BLD_DIR := vendor/qcom/opensource/wlan
+endif # ANDROID_BUILD_TOP
+else
+ifneq ($(ANDROID_BUILD_TOP),)
+    WLAN_BLD_DIR := $(ANDROID_BUILD_TOP)/device/qcom/msm8909w/opensource/wlan
+else
+    WLAN_BLD_DIR := device/qcom/msm8909w/opensource/wlan
+endif # ANDROID_BUILD_TOP
+endif # TARGET_SUPPORTS_WEARABLES
+endif # WLAN_PROPRIETARY
+
+ifneq ($(ANDROID_BUILD_TOP),)
+WLAN_ROOT=$(WLAN_BLD_DIR)/prima
+else
+WLAN_ROOT=$(KERNEL_TO_BUILD_ROOT_OFFSET)$(WLAN_BLD_DIR)/prima
+endif # ANDROID_BUILD_TOP
+endif # KERNEL_BUILD
 
 ifeq ($(CONFIG_PRIMA_WLAN_BTAMP),y)
 ############ BAP ############
@@ -719,6 +744,9 @@ endif
 ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/mach-msm/include/mach/msm_smsm.h),)
 CDEFINES += -DEXISTS_MSM_SMSM
 endif
+
+# Fix build for GCC 4.7
+EXTRA_CFLAGS += -Wno-maybe-uninitialized -Wno-unused-function
 
 ifeq ($(CONFIG_WLAN_OFFLOAD_PACKETS),y)
 CDEFINES += -DWLAN_FEATURE_OFFLOAD_PACKETS

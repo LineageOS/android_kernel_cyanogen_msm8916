@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -456,6 +456,7 @@ eCsrCfgDot11Mode csrGetCfgDot11ModeFromCsrPhyMode(tCsrRoamProfile *pProfile, eCs
 tANI_U32 csrTranslateToWNICfgDot11Mode(tpAniSirGlobal pMac, eCsrCfgDot11Mode csrDot11Mode);
 void csrSaveChannelPowerForBand( tpAniSirGlobal pMac, tANI_BOOLEAN fPopulate5GBand );
 void csrApplyChannelPowerCountryInfo( tpAniSirGlobal pMac, tCsrChannel *pChannelList, tANI_U8 *countryCode, tANI_BOOLEAN updateRiva);
+void csrUpdateFCCChannelList(tpAniSirGlobal pMac);
 void csrApplyPower2Current( tpAniSirGlobal pMac );
 void csrAssignRssiForCategory(tpAniSirGlobal pMac, tANI_S8 bestApRssi, tANI_U8 catOffset);
 tANI_BOOLEAN csrIsMacAddressZero( tpAniSirGlobal pMac, tCsrBssid *pMacAddr );
@@ -581,6 +582,9 @@ eHalStatus csrScanFilterDFSResults(tpAniSirGlobal pMac);
 eHalStatus csrScanFlushSelectiveResult(tpAniSirGlobal, v_BOOL_t flushP2P);
 
 eHalStatus csrScanFlushSelectiveResultForBand(tpAniSirGlobal, v_BOOL_t flushP2P, tSirRFBand band);
+
+eHalStatus csrScanFlushSelectiveSsid(tpAniSirGlobal pMac, tANI_U8 *ssId,
+                                     tANI_U8 ssIdLen);
 
 /* ---------------------------------------------------------------------------
     \fn csrScanBGScanGetParam

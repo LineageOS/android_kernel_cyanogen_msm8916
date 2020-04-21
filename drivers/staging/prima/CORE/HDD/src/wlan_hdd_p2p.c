@@ -1275,6 +1275,7 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     struct net_device *dev = wdev->netdev;
 #endif
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR( dev );
+    hdd_adapter_t *pGoAdapter;
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
     hdd_remain_on_chan_ctx_t *pRemainChanCtx = NULL;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
@@ -1443,6 +1444,14 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     {
         home_ch = pAdapter->sessionCtx.station.conn_info.operationChannel;
     }
+    else
+    {
+        pGoAdapter = hdd_get_adapter(pHddCtx, WLAN_HDD_P2P_GO);
+        if (pGoAdapter && test_bit(SOFTAP_BSS_STARTED,
+                                   &pGoAdapter->event_flags))
+            home_ch = pGoAdapter->sessionCtx.ap.operatingChannel;
+    }
+
     //If GO adapter exists and operating on same frequency
     //then we will not request remain on channel
     if (ieee80211_frequency_to_channel(chan->center_freq) == home_ch)
@@ -2376,8 +2385,8 @@ __wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
 #endif
     }
 
-    if ((type == NL80211_IFTYPE_P2P_CLIENT) ||
-          (type == NL80211_IFTYPE_P2P_GO))
+    if (type == NL80211_IFTYPE_P2P_CLIENT || type == NL80211_IFTYPE_P2P_GO ||
+        type == NL80211_IFTYPE_AP)
     {
         /* Below function Notifies Mode change and
          * If p2p session is detected then invokes functionality to
@@ -2753,6 +2762,7 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     /* Get pAdapter from Destination mac address of the frame */
     if ((type == SIR_MAC_MGMT_FRAME) &&
         (subType != SIR_MAC_MGMT_PROBE_REQ) &&
+        (nFrameLength > WLAN_HDD_80211_FRM_DA_OFFSET + VOS_MAC_ADDR_SIZE) &&
         !vos_is_macaddr_broadcast(
          (v_MACADDR_t *)&pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]))
     {
@@ -2823,12 +2833,16 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
-        (subType == SIR_MAC_MGMT_ACTION))
+        (subType == SIR_MAC_MGMT_ACTION) &&
+        (nFrameLength > WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET + 1))
     {
         if(pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_PUBLIC_ACTION_FRAME)
         {
             // public action frame
-            if((pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+1] == SIR_MAC_ACTION_VENDOR_SPECIFIC) &&
+            if((WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET + SIR_MAC_P2P_OUI_SIZE + 2 <
+                nFrameLength) &&
+               (pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+1] ==
+                SIR_MAC_ACTION_VENDOR_SPECIFIC) &&
                 vos_mem_compare(&pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+2], SIR_MAC_P2P_OUI, SIR_MAC_P2P_OUI_SIZE))
             // P2P action frames
             {

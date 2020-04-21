@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -426,9 +426,6 @@ int hdd_validate_mcc_config(hdd_adapter_t *pAdapter, v_UINT_t staId,
 #ifdef WLAN_FEATURE_PACKET_FILTERING
 int wlan_hdd_set_filter(hdd_adapter_t *pAdapter, tpPacketFilterCfg pRequest);
 #endif
-static int get_fwr_memdump(struct net_device *,
-                            struct iw_request_info *,
-                            union iwreq_data *, char *);
 /**---------------------------------------------------------------------------
 
   \brief mem_alloc_copy_from_user_helper -
@@ -839,7 +836,7 @@ int hdd_wlan_get_freq(v_U32_t channel, v_U32_t *pfreq)
             if (channel == freq_chan_map[i].chan)
             {
                 *pfreq = freq_chan_map[i].freq;
-                return 1;
+                return 0;
             }
         }
     }
@@ -1632,189 +1629,6 @@ static int iw_get_name(struct net_device *dev,
     return ret;
 }
 
-static int __iw_set_mode(struct net_device *dev,
-                         struct iw_request_info *info,
-                         union iwreq_data *wrqu, char *extra)
-{
-    hdd_wext_state_t         *pWextState;
-    hdd_adapter_t            *pAdapter;
-    hdd_context_t            *pHddCtx;
-    tCsrRoamProfile          *pRoamProfile;
-    eCsrRoamBssType          LastBSSType;
-    eMib_dot11DesiredBssType connectedBssType;
-    hdd_config_t             *pConfig;
-    struct wireless_dev      *wdev;
-    int                      status = 0;
-
-    ENTER();
-
-    pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    if (NULL == pAdapter)
-    {
-        hddLog(VOS_TRACE_LEVEL_WARN,
-               "%s: Invalid context, pAdapter", __func__);
-        return 0;
-    }
-    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
-    status = wlan_hdd_validate_context(pHddCtx);
-    if (0 != status)
-    {
-        return status;
-    }
-
-    pWextState = WLAN_HDD_GET_WEXT_STATE_PTR(pAdapter);
-    if (pWextState == NULL)
-    {
-        hddLog(LOGE, "%s ERROR: Data Storage Corruption", __func__);
-        return -EINVAL;
-    }
-
-    wdev = dev->ieee80211_ptr;
-    pRoamProfile = &pWextState->roamProfile;
-    LastBSSType = pRoamProfile->BSSType;
-
-    hddLog(LOG1, "%s Old Bss type = %d", __func__, LastBSSType);
-
-    switch (wrqu->mode)
-    {
-    case IW_MODE_ADHOC:
-        hddLog(LOG1, "%s Setting AP Mode as IW_MODE_ADHOC", __func__);
-        pRoamProfile->BSSType = eCSR_BSS_TYPE_START_IBSS;
-        // Set the phymode correctly for IBSS.
-        pConfig  = (WLAN_HDD_GET_CTX(pAdapter))->cfg_ini;
-        pWextState->roamProfile.phyMode = hdd_cfg_xlate_to_csr_phy_mode(pConfig->dot11Mode);
-        pAdapter->device_mode = WLAN_HDD_IBSS;
-        wdev->iftype = NL80211_IFTYPE_ADHOC;
-        break;
-    case IW_MODE_INFRA:
-        hddLog(LOG1, "%s Setting AP Mode as IW_MODE_INFRA", __func__);
-        pRoamProfile->BSSType = eCSR_BSS_TYPE_INFRASTRUCTURE;
-        wdev->iftype = NL80211_IFTYPE_STATION;
-        break;
-    case IW_MODE_AUTO:
-        hddLog(LOG1, "%s Setting AP Mode as IW_MODE_AUTO", __func__);
-        pRoamProfile->BSSType = eCSR_BSS_TYPE_ANY;
-        break;
-    default:
-        hddLog(LOGE, "%s Unknown AP Mode value %d ", __func__, wrqu->mode);
-        return -EOPNOTSUPP;
-    }
-
-    if ( LastBSSType != pRoamProfile->BSSType )
-    {
-        //the BSS mode changed
-        // We need to issue disconnect if connected or in IBSS disconnect state
-        if ( hdd_connGetConnectedBssType( WLAN_HDD_GET_STATION_CTX_PTR(pAdapter), &connectedBssType ) ||
-             ( eCSR_BSS_TYPE_START_IBSS == LastBSSType ) )
-        {
-            VOS_STATUS vosStatus;
-            // need to issue a disconnect to CSR.
-            INIT_COMPLETION(pAdapter->disconnect_comp_var);
-            vosStatus = sme_RoamDisconnect( WLAN_HDD_GET_HAL_CTX(pAdapter),
-                                          pAdapter->sessionId,
-                                          eCSR_DISCONNECT_REASON_IBSS_LEAVE );
-            if(VOS_STATUS_SUCCESS == vosStatus)
-            {
-                 long ret;
-                 ret = wait_for_completion_interruptible_timeout(
-                                   &pAdapter->disconnect_comp_var,
-                                    msecs_to_jiffies(WLAN_WAIT_TIME_DISCONNECT));
-                 if (ret <= 0)
-                     hddLog(VOS_TRACE_LEVEL_ERROR,
-                            FL("failed wait on disconnect_comp_var %ld"), ret);
-            }
-        }
-    }
-
-    EXIT();
-    return 0;
-}
-
-static int iw_set_mode(struct net_device *dev,
-                       struct iw_request_info *info,
-                       union iwreq_data *wrqu, char *extra)
-{
-    int ret;
-
-    vos_ssr_protect(__func__);
-    ret = __iw_set_mode(dev, info, wrqu, extra);
-    vos_ssr_unprotect(__func__);
-
-    return ret;
-}
-
-static int __iw_get_mode(struct net_device *dev,
-                         struct iw_request_info *info,
-                         union iwreq_data *wrqu,
-                         char *extra)
-{
-
-    hdd_wext_state_t *pWextState;
-    hdd_adapter_t *pAdapter;
-    hdd_context_t *pHddCtx;
-    int ret = 0;
-
-    ENTER();
-
-    pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    if (NULL == pAdapter)
-    {
-        hddLog(VOS_TRACE_LEVEL_WARN,
-               "%s: Invalid context, pAdapter", __func__);
-        return 0;
-    }
-
-    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
-    ret = wlan_hdd_validate_context(pHddCtx);
-    if (0 != ret)
-    {
-        return ret;
-    }
-    pWextState = WLAN_HDD_GET_WEXT_STATE_PTR(pAdapter);
-    if (pWextState == NULL)
-    {
-        hddLog(LOGE, "%s ERROR: Data Storage Corruption", __func__);
-        return -EINVAL;
-    }
-
-    switch (pWextState->roamProfile.BSSType)
-    {
-    case eCSR_BSS_TYPE_INFRASTRUCTURE:
-        hddLog(LOG1, "%s returns IW_MODE_INFRA", __func__);
-        wrqu->mode = IW_MODE_INFRA;
-        break;
-    case eCSR_BSS_TYPE_IBSS:
-    case eCSR_BSS_TYPE_START_IBSS:
-        hddLog(LOG1, "%s returns IW_MODE_ADHOC", __func__);
-        wrqu->mode = IW_MODE_ADHOC;
-        break;
-    case eCSR_BSS_TYPE_ANY:
-        hddLog(LOG1, "%s returns IW_MODE_AUTO", __func__);
-        wrqu->mode = IW_MODE_AUTO;
-        break;
-    default:
-        hddLog(LOG1, "%s returns APMODE_UNKNOWN", __func__);
-        break;
-    }
-
-    EXIT();
-    return 0;
-}
-
-static int iw_get_mode(struct net_device *dev,
-                       struct iw_request_info *info,
-                       union iwreq_data *wrqu,
-                       char *extra)
-{
-    int ret;
-
-    vos_ssr_protect(__func__);
-    ret = __iw_get_mode(dev, info, wrqu, extra);
-    vos_ssr_unprotect(__func__);
-
-    return ret;
-}
-
 static int __iw_set_freq(struct net_device *dev,
                          struct iw_request_info *info,
                          union iwreq_data *wrqu, char *extra)
@@ -2024,7 +1838,7 @@ static int __iw_get_freq(struct net_device *dev,
        else
        {
            status = hdd_wlan_get_freq(channel, &freq);
-           if( TRUE == status )
+           if( 0 == status )
            {
                /* Set Exponent parameter as 6 (MHZ) in struct iw_freq
                 * iwlist & iwconfig command shows frequency into proper
@@ -2287,7 +2101,8 @@ static int __iw_set_bitrate(struct net_device *dev,
     hdd_wext_state_t *pWextState;
     hdd_station_ctx_t *pHddStaCtx;
     hdd_context_t *pHddCtx;
-    v_U8_t supp_rates[WNI_CFG_SUPPORTED_RATES_11A_LEN];
+    v_U8_t supp_rates[WNI_CFG_SUPPORTED_RATES_11A_LEN +
+                      WNI_CFG_SUPPORTED_RATES_11B_LEN];
     v_U32_t a_len = WNI_CFG_SUPPORTED_RATES_11A_LEN;
     v_U32_t b_len = WNI_CFG_SUPPORTED_RATES_11B_LEN;
     v_U32_t i, rate;
@@ -2350,7 +2165,7 @@ static int __iw_set_bitrate(struct net_device *dev,
                         supp_rates, &a_len) == eHAL_STATUS_SUCCESS) &&
                 (ccmCfgGetStr(WLAN_HDD_GET_HAL_CTX(pAdapter),
                         WNI_CFG_SUPPORTED_RATES_11B,
-                        supp_rates, &b_len) == eHAL_STATUS_SUCCESS))
+                        supp_rates + a_len, &b_len) == eHAL_STATUS_SUCCESS))
             {
                 for (i = 0; i < (b_len + a_len); ++i)
                 {
@@ -6719,6 +6534,7 @@ static VOS_STATUS wlan_hdd_get_current_antenna_index(hdd_adapter_t *pAdapter,
    else
    {
        /* request was sent -- wait for the response */
+       ret = hdd_request_wait_for_response(request);
        if (ret)
        {
            hddLog(VOS_TRACE_LEVEL_ERROR,
@@ -7776,13 +7592,6 @@ static int __iw_setnone_getnone(struct net_device *dev,
                      WLAN_LOG_INDICATOR_IOCTL,
                      WLAN_LOG_REASON_IOCTL,
                      TRUE, TRUE);
-            break;
-        }
-        case WE_GET_FW_MEMDUMP:
-        {
-            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
-                     "FW_MEM_DUMP requested ");
-            get_fwr_memdump(dev,info,wrqu,extra);
             break;
         }
         default:
@@ -9347,6 +9156,7 @@ int wlan_hdd_set_filter(hdd_adapter_t *pAdapter, tpPacketFilterCfg pRequest)
             {
                 hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Failure to execute Clear Filter",
                         __func__);
+                hdd_request_put(request);
                 return -EINVAL;
             }
 
@@ -10549,7 +10359,7 @@ int hdd_setBand(struct net_device *dev, u8 ui_band)
              if(curr_country[0] == '0' && curr_country[1] == '0')
                      regulatory_hint_user("IN", NL80211_USER_REG_HINT_USER);
              else
-                     regulatory_hint_user("OO", NL80211_USER_REG_HINT_USER);
+                     regulatory_hint_user("00", NL80211_USER_REG_HINT_USER);
 #else
              if(curr_country[0] == '0' && curr_country[1] == '0')
                      regulatory_hint_user("IN");
@@ -10715,32 +10525,6 @@ static int iw_set_band_config(struct net_device *dev,
     vos_ssr_unprotect(__func__);
 
     return ret;
-}
-
-static int get_fwr_memdump(struct net_device *dev,
-                            struct iw_request_info *info,
-                            union iwreq_data *wrqu, char *extra)
-{
-    hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
-    int ret;
-    ENTER();
-   // HddCtx sanity
-   ret = wlan_hdd_validate_context(pHddCtx);
-   if (0 != ret)
-   {
-      return ret;
-   }
-   if( !pHddCtx->cfg_ini->enableFwrMemDump ||
-      (FALSE == sme_IsFeatureSupportedByFW(MEMORY_DUMP_SUPPORTED)))
-   {
-      hddLog(VOS_TRACE_LEVEL_INFO, FL("FW dump Logging not supported"));
-      return -EINVAL;
-   }
-   ret = wlan_hdd_fw_mem_dump_req(pHddCtx);
-
-   EXIT();
-   return ret;
 }
 
 static int __iw_set_power_params_priv(struct net_device *dev,
@@ -11119,8 +10903,8 @@ static const iw_handler      we_handler[] =
    (iw_handler) NULL,            /* SIOCGIWNWID */
    (iw_handler) iw_set_freq,      /* SIOCSIWFREQ */
    (iw_handler) iw_get_freq,      /* SIOCGIWFREQ */
-   (iw_handler) iw_set_mode,      /* SIOCSIWMODE */
-   (iw_handler) iw_get_mode,      /* SIOCGIWMODE */
+   (iw_handler) NULL,             /* SIOCSIWMODE */
+   (iw_handler) NULL,             /* SIOCGIWMODE */
    (iw_handler) NULL,              /* SIOCSIWSENS */
    (iw_handler) NULL,              /* SIOCGIWSENS */
    (iw_handler) NULL,             /* SIOCSIWRANGE */

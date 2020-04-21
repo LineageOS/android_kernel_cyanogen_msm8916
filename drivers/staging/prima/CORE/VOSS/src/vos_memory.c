@@ -218,17 +218,17 @@ v_VOID_t * vos_mem_malloc_debug( v_SIZE_t size, char* fileName, v_U32_t lineNum)
       }
 #endif
       time_before_kmalloc = vos_timer_get_system_time();
-      memPtr = kmalloc(size, flags);
+      memPtr = kzalloc(size, flags);
 
       /* If time taken by kmalloc is greater than VOS_GET_MEMORY_TIME_THRESHOLD
        * msec */
       if (vos_timer_get_system_time() - time_before_kmalloc >=
                                     VOS_GET_MEMORY_TIME_THRESHOLD)
          VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-               "%s: kmalloc took %lu msec for size %d called from %pS at line %d",
+               "%s: kmalloc took %lu msec for size %d called at line %d",
                __func__,
                vos_timer_get_system_time() - time_before_kmalloc,
-               size, (void *)_RET_IP_, lineNum);
+               size, lineNum);
       if ((flags != GFP_ATOMIC) && (NULL == memPtr))
       {
          WARN_ON(1);
@@ -243,16 +243,16 @@ v_VOID_t * vos_mem_malloc_debug( v_SIZE_t size, char* fileName, v_U32_t lineNum)
    new_size = size + sizeof(struct s_vos_mem_struct) + 8; 
 
    time_before_kmalloc = vos_timer_get_system_time();
-   memStruct = (struct s_vos_mem_struct*)kmalloc(new_size, flags);
+   memStruct = (struct s_vos_mem_struct*)kzalloc(new_size, flags);
    /* If time taken by kmalloc is greater than VOS_GET_MEMORY_TIME_THRESHOLD
     * msec */
    if (vos_timer_get_system_time() - time_before_kmalloc >=
                               VOS_GET_MEMORY_TIME_THRESHOLD)
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-           "%s: kmalloc took %lu msec for size %d called from %pS at line %d",
+           "%s: kmalloc took %lu msec for size %d called at line %d",
             __func__,
             vos_timer_get_system_time() - time_before_kmalloc,
-            size, (void *)_RET_IP_, lineNum);
+            size, lineNum);
 
    if(memStruct != NULL)
    {
@@ -364,16 +364,16 @@ v_VOID_t * vos_mem_malloc( v_SIZE_t size )
    }
 #endif
    time_before_kmalloc = vos_timer_get_system_time();
-   memPtr = kmalloc(size, flags);
+   memPtr = kzalloc(size, flags);
    /* If time taken by kmalloc is greater than VOS_GET_MEMORY_TIME_THRESHOLD
     * msec */
    if (vos_timer_get_system_time() - time_before_kmalloc >=
                               VOS_GET_MEMORY_TIME_THRESHOLD)
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-          "%s: kmalloc took %lu msec for size %d from %pS",
+          "%s: kmalloc took %lu msec for size %d",
           __func__,
           vos_timer_get_system_time() - time_before_kmalloc,
-          size, (void *)_RET_IP_);
+          size);
 
    if ((flags != GFP_ATOMIC) && (NULL == memPtr))
    {
@@ -420,10 +420,10 @@ v_VOID_t * vos_mem_vmalloc(v_SIZE_t size)
     if (vos_timer_get_system_time() - time_before_vmalloc >=
                               VOS_GET_MEMORY_TIME_THRESHOLD)
         VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-           "%s: vmalloc took %lu msec for size %d from %pS",
+           "%s: vmalloc took %lu msec for size %d",
            __func__,
            vos_timer_get_system_time() - time_before_vmalloc,
-           size, (void *)_RET_IP_);
+           size);
     return memPtr;
 }
 

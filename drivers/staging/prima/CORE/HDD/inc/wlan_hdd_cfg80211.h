@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -100,6 +100,13 @@
 #endif
 #endif
 
+/*
+ * Max number of supported csa_counters in beacons
+ * and probe responses. Set to the same value as
+ * IEEE80211_MAX_CSA_COUNTERS_NUM
+ */
+#define WLAN_HDD_MAX_NUM_CSA_COUNTERS 2
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)) \
 	|| defined(BACKPORTED_CHANNEL_SWITCH_PRESENT)
 #define CHANNEL_SWITCH_SUPPORTED
@@ -121,6 +128,9 @@
 #define NUM_RADIOS  0x1
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
+#define WOWL_PTRN_MAX_SIZE          128
+#define WOWL_PTRN_MASK_MAX_SIZE      16
+#define WOWL_MAX_PTRNS_ALLOWED       16
 
 typedef struct {
    u8 element_id;
@@ -190,8 +200,6 @@ enum qca_nl80211_vendor_subcmds {
 
     /* Get Wifi Specific Info */
     QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO = 61,
-    /* Start Wifi Memory Dump */
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP = 63,
 
     /*
      * APIs corresponding to the sub commands 65-68 are deprecated.
@@ -202,6 +210,9 @@ enum qca_nl80211_vendor_subcmds {
     /* Wi-Fi Configuration subcommands */
     QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION = 74,
     QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION = 75,
+
+    QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET = 76,
+
     QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA = 77,
 
     QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI = 80,
@@ -469,12 +480,12 @@ enum qca_nl80211_vendor_subcmds_index {
     /*EXT TDLS*/
     QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE_CHANGE_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_NAN_INDEX,
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP_INDEX,
 
     QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_HOTLIST_AP_LOST_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_HANG_REASON_INDEX,
+    QCA_NL80211_VENDOR_SUBCMD_LINK_PROPERTIES_INDEX,
 };
 
 /**
@@ -1377,6 +1388,10 @@ enum qca_wlan_vendor_attr_link_properties {
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_RATE_FLAGS = 2,
     /* Unsigned 32bit value for operating frequency */
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_FREQ       = 3,
+    /*  An array of 6 Unsigned 8bit values for the STA MAC address*/
+    QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_MAC_ADDR = 4,
+    /* Unsigned 32bit value for STA flags*/
+    QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_STA_FLAGS  = 5,
 
     /* KEEP LAST */
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_AFTER_LAST,
@@ -1402,14 +1417,51 @@ enum qca_wlan_vendor_config {
     QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT,
     QCA_WLAN_VENDOR_ATTR_CONFIG_TX_RATE,
     QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS,
+
+    /* 8-bit unsigned value to trigger QPower: 1-Enable, 0-Disable */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER = 25,
     /* 8-bit unsigned value to set the beacon miss threshold in 2.4 GHz */
     QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_24 = 37,
     /* 8-bit unsigned value to set the beacon miss threshold in 5 GHz */
     QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_5 = 38,
+
+    /*8-bit unsigned value indicating the driver to use the RSNE as-is from
+     * the connect interface. Exclusively used for the scenarios where the
+     * device is used as a test bed device with special functionality and
+     * not recommended for production. This helps driver to not validate the
+     * RSNE passed from user space and thus allow arbitrary IE data to be
+     * used for testing purposes.
+     * 1-enable, 0-disable.
+     * Applications set/reset this configuration. If not reset, this
+     * parameter remains in use until the driver is unloaded.
+     */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE = 39,
+
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_CONFIG_LAST,
     QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
     QCA_WLAN_VENDOR_ATTR_CONFIG_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_logger_features - value for logger
+ *						   supported features
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_INVALID - Invalid
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED - Indicate the supported features
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST - To keep track of the last enum
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_MAX - max value possible for this type
+ *
+ * enum values are used for NL attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET sub command.
+ */
+enum qca_wlan_vendor_attr_get_logger_features {
+	QCA_WLAN_VENDOR_ATTR_LOGGER_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED = 1,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_MAX =
+		QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST - 1,
 };
 
 /* Feature defines */
@@ -1578,6 +1630,23 @@ enum qca_wlan_vendor_attr_offloaded_packets
 };
 #endif
 
+/**
+ * enum wifi_logger_supported_features - values for supported logger features
+ * @WIFI_LOGGER_PER_PACKET_TX_RX_STATUS_SUPPORTED - Per packet statistics
+ * @WIFI_LOGGER_CONNECT_EVENT_SUPPORTED - Logging of Connectivity events
+ * @WIFI_LOGGER_POWER_EVENT_SUPPORTED - Power of driver
+ * @WIFI_LOGGER_WAKE_LOCK_SUPPORTED - Wakelock of driver
+ * @WIFI_LOGGER_WATCHDOG_TIMER_SUPPORTED - monitor FW health
+ */
+enum wifi_logger_supported_features {
+    WIFI_LOGGER_PER_PACKET_TX_RX_STATUS_SUPPORTED = (1 << (1)),
+    WIFI_LOGGER_CONNECT_EVENT_SUPPORTED = (1 << (2)),
+    WIFI_LOGGER_POWER_EVENT_SUPPORTED = (1 << (3)),
+    WIFI_LOGGER_WAKE_LOCK_SUPPORTED = (1 << (4)),
+    WIFI_LOGGER_VERBOSE_SUPPORTED = (1 << (5)),
+    WIFI_LOGGER_WATCHDOG_TIMER_SUPPORTED = (1 << (6)),
+};
+
 struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_db( hdd_adapter_t *pAdapter,
                                       tCsrRoamInfo *pRoamInfo
                                       );
@@ -1651,6 +1720,38 @@ void* wlan_hdd_change_country_code_cb(void *pAdapter);
 void hdd_select_cbmode( hdd_adapter_t *pAdapter,v_U8_t operationChannel);
 
 /*
+ * wlan_hdd_restore_channels() Restore the channels which were cached
+ * and disabled in __wlan_hdd_disable_channels api.
+ * @hdd_ctx: Pointer to the HDD context
+ *
+ * @Return: 0 on success, Error code on failure
+ */
+int wlan_hdd_restore_channels(hdd_context_t *pHddCtx);
+
+/*
+ * wlan_hdd_disable_channels() - Cache the the channels
+ * and current state of the channels from the channel list
+ * received in the command and disable the channels on the
+ * wiphy and NV table.
+ * @hdd_ctx: Pointer to hdd context
+ *
+ * @return: 0 on success, Error code on failure
+ */
+int wlan_hdd_disable_channels(hdd_context_t *hdd_ctx);
+
+/*
+ * hdd_check_and_disconnect_sta_on_invalid_channel() - Disconnect STA if it is
+ * on indoor channel
+ * @hdd_ctx: pointer to hdd context
+ *
+ * STA should be disconnected before starting the SAP if it is on indoor
+ * channel.
+ *
+ * Return: void
+ */
+void hdd_check_and_disconnect_sta_on_invalid_channel(hdd_context_t *hdd_ctx);
+
+/*
  * hdd_update_indoor_channel() - enable/disable indoor channel
  * @hdd_ctx: hdd context
  * @disable: whether to enable / disable indoor channel
@@ -1674,8 +1775,7 @@ void hdd_update_indoor_channel(hdd_context_t *hdd_ctx,
  */
 void hdd_modify_indoor_channel_state_flags(
     struct ieee80211_channel *wiphy_chan,
-    v_U32_t rfChannel,
-    bool disable);
+    v_U32_t rfChannel, bool disable, hdd_context_t *hdd_ctx);
 
 
 v_U8_t* wlan_hdd_cfg80211_get_ie_ptr(
@@ -1732,27 +1832,6 @@ backported_cfg80211_vendor_event_alloc(struct wiphy *wiphy,
 int wlan_hdd_send_hang_reason_event(hdd_context_t *hdd_ctx,
 				    unsigned int reason);
 
-/**
- * enum qca_wlan_vendor_attr_memory_dump - values for memory dump attributes
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_INVALID - Invalid
- * @QCA_WLAN_VENDOR_ATTR_REQUEST_ID - Indicate request ID
- * @QCA_WLAN_VENDOR_ATTR_MEMDUMP_SIZE - Indicate size of the memory dump
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST - To keep track of the last enum
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_MAX - max value possible for this type
- *
- * enum values are used for NL attributes for data used by
- * QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP sub command.
- */
-enum qca_wlan_vendor_attr_memory_dump {
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_INVALID = 0,
-    QCA_WLAN_VENDOR_ATTR_REQUEST_ID = 1,
-    QCA_WLAN_VENDOR_ATTR_MEMDUMP_SIZE = 2,
-
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST,
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_MAX =
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST - 1,
-};
-
 #if defined(CFG80211_DISCONNECTED_V2) || \
 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
 static inline void wlan_hdd_cfg80211_indicate_disconnect(struct net_device *dev,
@@ -1772,8 +1851,15 @@ static inline void wlan_hdd_cfg80211_indicate_disconnect(struct net_device *dev,
 }
 #endif
 
-struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_list(
-   hdd_adapter_t *pAdapter, tSirMacAddr bssid);
+/*
+ * wlan_hdd_cfg80211_unlink_bss :to inform nl80211
+ * interface that BSS might have been lost.
+ * @pAdapter: adapter
+ * @bssid: bssid which might have been lost
+ *
+ * Return: void
+ */
+void wlan_hdd_cfg80211_unlink_bss(hdd_adapter_t *pAdapter, tSirMacAddr bssid);
 
 struct cfg80211_bss *wlan_hdd_cfg80211_inform_bss_frame(hdd_adapter_t *pAdapter,
 		tSirBssDescription *bss_desc);
@@ -1794,4 +1880,49 @@ int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 int wlan_hdd_cfg80211_update_apies(hdd_adapter_t *pHostapdAdapter);
 int wlan_hdd_try_disconnect(hdd_adapter_t *pAdapter);
 void wlan_hdd_sap_get_sta_rssi(hdd_adapter_t *adapter, uint8_t staid, s8 *rssi);
+
+/*
+ *wlan_hdd_send_sta_authorized_event: Function to send station authorized
+ *event to user space in case of SAP
+ *@pAdapter: Pointer to the adapter
+ *@pHddCtx:  HDD Context
+ *@mac_addr: MAC address of the STA for whic the Authorized event needs to
+ *           be sent
+ *This api is used to send station authorized event to user space
+ */
+VOS_STATUS wlan_hdd_send_sta_authorized_event(hdd_adapter_t *adapter,
+                                              hdd_context_t *hdd_ctx,
+                                              const v_MACADDR_t *mac_addr);
+
+/**
+ * wlan_hdd_disconnect() - hdd disconnect api
+ * @pAdapter: Pointer to adapter
+ * @reason: Disconnect reason code
+ *
+ * This function is used to issue a disconnect request to SME
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+int wlan_hdd_disconnect(hdd_adapter_t *pAdapter, u16 reason);
+
+#if defined(CFG80211_SCAN_RANDOM_MAC_ADDR) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+/**
+ * wlan_hdd_cfg80211_scan_randomization_init() - Enable NL80211 scan randomize
+ * @wiphy: Pointer to wiphy structure
+ *
+ * This function is used to enable NL80211 scan randomization feature when
+ * ini: gEnableMacAddrSpoof is set to MAC_ADDR_SPOOFING_FW_HOST_ENABLE and
+ * cfg80211 supports scan randomization.
+ *
+ * Return: None
+ */
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy);
+#else
+static inline
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy)
+{
+}
+#endif
+
 #endif

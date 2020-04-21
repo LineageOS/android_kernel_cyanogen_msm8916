@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -231,6 +231,9 @@ sme_SetLinkLayerStatsIndCB
 
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
+void sme_set_vowifi_mode(tpAniSirGlobal pMac, bool enable);
+void sme_set_qpower(tpAniSirGlobal pMac, uint8_t enable);
+
 #ifdef WLAN_FEATURE_EXTSCAN
 /* ---------------------------------------------------------------------------
     \fn sme_GetValidChannelsByBand
@@ -321,13 +324,16 @@ eHalStatus sme_OemDataRegisterCallback (tHalHandle hHal,
                void *callbackContext);
 #endif
 
-/* ---------------------------------------------------------------------------
-    \fn sme_SpoofMacAddrReq
-    \brief  SME API to send Spoof Mac Addr req to HAL
-    \param  macaddr: mac address to be sent
-    \- return eHalStatus
-    -------------------------------------------------------------------------*/
-eHalStatus  sme_SpoofMacAddrReq(tHalHandle hHal, v_MACADDR_t *macaddr);
+/**
+ * sme_SpoofMacAddrReq() - SME API to send Spoof Mac Addr req to HAL
+ * @hHal: Hal handle
+ * @macaddr: Spoof mac address to be sent
+ * @spoof_mac_oui: If spoof request is from VENDOR_SUBCMD_MAC_OUI
+ *
+ * Return: eHalStatus
+ */
+eHalStatus
+sme_SpoofMacAddrReq(tHalHandle hHal, v_MACADDR_t *macaddr, bool spoof_mac_oui);
 
 typedef enum
 {
@@ -2306,6 +2312,19 @@ eHalStatus sme_GetFramesLog(tHalHandle hHal, tANI_U8 flag);
 eHalStatus sme_InitMgmtFrameLogging( tHalHandle hHal,
                             tpSirFWLoggingInitParam wlanFWLoggingInitParam);
 
+/**
+ * sme_unpack_rsn_ie: wrapper to unpack RSN IE and update def RSN params
+ * if optional fields are not present.
+ * @hal: handle returned by mac_open
+ * @buf: rsn ie buffer pointer
+ * @buf_len: rsn ie buffer length
+ * @rsn_ie: outframe rsn ie structure
+ * @append_ie: flag to indicate if the rsn_ie need to be appended from buf
+ *
+ * Return: parse status
+ */
+uint32_t sme_unpack_rsn_ie(tHalHandle hal, uint8_t *buf,
+                        uint8_t buf_len, tDot11fIERSN *rsn_ie);
 
 /* ---------------------------------------------------------------------------
 
@@ -2789,17 +2808,17 @@ eHalStatus sme_HideSSID(tHalHandle hHal, v_U8_t sessionId, v_U8_t ssidHidden);
   ---------------------------------------------------------------------------*/
 eHalStatus sme_SetTmLevel(tHalHandle hHal, v_U16_t newTMLevel, v_U16_t tmMode);
 
-/*---------------------------------------------------------------------------
-
-  \brief sme_featureCapsExchange() - SME interface to exchange capabilities between
-  Host and FW.
-
-  \param  hHal - HAL handle for device
-
-  \return NONE
-
----------------------------------------------------------------------------*/
-void sme_featureCapsExchange(tHalHandle hHal);
+/**
+ * sme_featureCapsExchange() - SME API to get firmware feature caps
+ * @params: Pointer to hold HDD callback to be invoked for response
+ * and associated user data.
+ *
+ * This function is used to exchange capabilities between Host and FW.
+ *
+ * Return: VOS_STATUS
+ */
+VOS_STATUS
+sme_featureCapsExchange(struct sir_feature_caps_params *params);
 
 /*---------------------------------------------------------------------------
 
@@ -4064,5 +4083,36 @@ sme_get_cb_phy_mode_from_cb_ini_mode(uint32_t cb_ini_value)
 {
    return csrConvertCBIniValueToPhyCBState(cb_ini_value);
 }
+
+/**
+ * sme_request_imps() - Send IMPS request
+ * @hal: hal context
+ *
+ * Return: void
+ */
+void sme_request_imps(tHalHandle hal);
+
+
+/**
+ * sme_is_sta_key_exchange_in_progress() - checks whether the STA/P2P client
+ * session has key exchange in progress
+ *
+ * @hal: global hal handle
+ * @session_id: session id
+ *
+ * Return: true - if key exchange in progress
+ *         false - if not in progress
+ */
+bool sme_is_sta_key_exchange_in_progress(tHalHandle hal, uint8_t session_id);
+/**
+ * sme_process_msg_callback() - process callback message from LIM
+ * @hal: global hal handle
+ * @msg: vos message
+ *
+ * This function process the callback messages from LIM.
+ *
+ * Return: VOS_STATUS enumeration.
+ */
+VOS_STATUS sme_process_msg_callback(tHalHandle hal, vos_msg_t *msg);
 
 #endif //#if !defined( __SME_API_H )

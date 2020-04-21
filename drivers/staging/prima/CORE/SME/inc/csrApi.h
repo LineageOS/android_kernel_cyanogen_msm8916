@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -296,6 +296,8 @@ typedef struct tagCsrScanRequest
     tANI_U32 restTime;      //in units of milliseconds  //ignored when not connected
     tANI_U32 uIEFieldLen;
     tANI_U8 *pIEField;
+    bool scan_randomize;
+    bool nl_scan;
     eCsrRequestType requestType;    //11d scan or full scan
     tANI_BOOLEAN p2pSearch;
     tANI_BOOLEAN skipDfsChnlInP2pSearch;
@@ -406,6 +408,7 @@ typedef struct tagCsrScanResultFilter
     tANI_BOOLEAN isPERRoamScan;
 #endif
     tCsrBssid bssid_hint;
+    bool ignore_pmf_cap;
 }tCsrScanResultFilter;
 
 
@@ -962,6 +965,7 @@ typedef struct tagCsrRoamProfile
     tVOS_CON_MODE csrPersona;
     bool force_24ghz_in_ht20;
     tCsrBssid bssid_hint;
+    bool force_rsne_override;
 }tCsrRoamProfile;
 
 

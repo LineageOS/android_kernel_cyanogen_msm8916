@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, 2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -92,6 +92,11 @@ typedef struct sAniSirGlobal *tpAniSirGlobal;
 #define SIR_MAX_24G_5G_CHANNEL_RANGE      166
 #define SIR_BCN_REPORT_MAX_BSS_DESC       4
 
+/*
+ * RSSI diff threshold to fix rssi and channel in beacon for the cases where
+ * DS params and HT info is not present.
+ */
+#define SIR_ADJACENT_CHANNEL_RSSI_DIFF_THRESHOLD 15
 
 #ifdef FEATURE_WLAN_BATCH_SCAN
 #define SIR_MAX_SSID_SIZE (32)
@@ -547,7 +552,8 @@ typedef struct sSirSmeReadyReq
 {
     tANI_U16   messageType; // eWNI_SME_SYS_READY_IND
     tANI_U16   length;
-    tANI_U16   transactionId;     
+    tANI_U16   transactionId;
+    void *sme_msg_cb;
 } tSirSmeReadyReq, *tpSirSmeReadyReq;
 
 /// Definition for response message to previously issued start request
@@ -907,6 +913,15 @@ typedef struct sSirSmeScanReq
 
     /* Number of SSIDs to scan */
     tANI_U8             numSsid;
+
+    /*
+     * @nl_scan is set to true if scan request is from cfg80211 sub-system and
+     * known as NL scan.
+     *
+     * @scan_randomize is set to true if NL scan requires randomization.
+     */
+    bool                 nl_scan;
+    bool                 scan_randomize;
     
     //channelList has to be the last member of this structure. Check tSirChannelList for the reason.
     /* This MUST be the last field of the structure */
@@ -1129,6 +1144,7 @@ typedef struct sSirSmeJoinReq
     tSirMacPowerCapInfo powerCap;
     tSirSupChnl         supportedChannels;
     bool force_24ghz_in_ht20;
+    bool force_rsne_override;
     tSirBssDescription  bssDescription;
     /*
      * WARNING: Pls make bssDescription as last variable in struct
@@ -5919,6 +5935,7 @@ typedef struct
     tANI_U16       messageType;
     tANI_U16       length;
     tSirMacAddr    macAddr;
+    bool           spoof_mac_oui;
 } tSirSpoofMacAddrReq, *tpSirSpoofMacAddrReq;
 
 typedef struct
@@ -6418,6 +6435,18 @@ struct ecsa_frame_params {
     uint8_t      op_class;
     uint8_t   new_channel;
     uint8_t  switch_count;
+};
+
+typedef void (*sir_feature_caps_cb)(void *user_data);
+
+/**
+ * struct sir_feature_caps_params - Feature capability request
+ * @feature_caps_cb: HDD callback to be invoked from WDA
+ * @user_data: associated user-data with feature_caps_cb callback
+ */
+struct sir_feature_caps_params {
+	sir_feature_caps_cb feature_caps_cb;
+	void *user_data;
 };
 
 #endif /* __SIR_API_H */

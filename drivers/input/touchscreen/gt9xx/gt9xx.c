@@ -35,6 +35,8 @@ static const char *goodix_input_phys = "input/ts";
 struct i2c_client *i2c_connect_client;
 static struct proc_dir_entry *gtp_config_proc;
 
+static bool double_tap = true;
+
 enum doze {
 	DOZE_DISABLED = 0,
 	DOZE_ENABLED = 1,
@@ -304,7 +306,10 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	}
 
 	dev_dbg(&ts->client->dev, "0x814B = 0x%02X", doze_buf[2]);
-	if ((doze_buf[2] == 'a') || (doze_buf[2] == 'b') ||
+	// working gestures: c, e, s, v, w, z, double tap.
+	if(doze_buf[2] == 'w')
+		double_tap = !double_tap;
+	if (double_tap && ((doze_buf[2] == 'a') || (doze_buf[2] == 'b') ||
 	    (doze_buf[2] == 'c') || (doze_buf[2] == 'd') ||
 	    (doze_buf[2] == 'e') || (doze_buf[2] == 'g') ||
 	    (doze_buf[2] == 'h') || (doze_buf[2] == 'm') ||
@@ -314,9 +319,9 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	    (doze_buf[2] == 'z') || (doze_buf[2] == 0x5E) ||
 	    (doze_buf[2] == 0xAA) || (doze_buf[2] == 0xAB) ||
 	    (doze_buf[2] == 0xBA) || (doze_buf[2] == 0xBB) ||
-	    (doze_buf[2] == 0xCC)) {		
+	    (doze_buf[2] == 0xCC))) {		
 		doze_status = DOZE_WAKEUP;
-		//fix zb500kl - try 3 keys to wake up device
+		//try 3 keys to wake up device
 		input_report_key(ts->input_dev, KEY_POWER, 1);
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, KEY_POWER, 0);

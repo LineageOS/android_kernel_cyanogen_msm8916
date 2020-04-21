@@ -60,6 +60,8 @@
 #define IEEE80211_CHAN_NO_80MHZ		1<<7
 #endif
 
+bool init_by_reg_core_user;
+
 #ifdef CONFIG_ENABLE_LINUX_REG
 
 static v_REGDOMAIN_t cur_reg_domain = REGDOMAIN_COUNT;
@@ -2634,6 +2636,40 @@ VOS_STATUS vos_nv_setNVEncodedBuffer(v_U8_t *pNvBuffer, v_SIZE_t size)
     return VOS_STATUS_SUCCESS;
 }
 
+/*
+ *vos_nv_set_Channel_state - API to set the channel state in NV table
+ *@rfChannel  - input channel enum
+ *@channel_state - state of the channel to be set
+ *  enabled
+ *  disabled
+ *  DFS
+ * Return - Void
+ */
+void vos_nv_set_channel_state(v_U32_t rfChannel,
+			      eNVChannelEnabledType channel_state)
+{
+	v_U32_t	channelLoop;
+	eRfChannels channelEnum = INVALID_RF_CHANNEL;
+
+	for (channelLoop = 0; channelLoop <= RF_CHAN_165; channelLoop++) {
+		if (rfChannels[channelLoop].channelNum == rfChannel) {
+			channelEnum = (eRfChannels)channelLoop;
+			break;
+		}
+	}
+
+	if (INVALID_RF_CHANNEL == channelEnum) {
+		VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+			  "vos_nv_set_channel_state, invalid channel %d",
+			  rfChannel);
+		return;
+	}
+
+	pnvEFSTable->
+	halnv.tables.regDomains[temp_reg_domain].channels[channelEnum].enabled =
+		channel_state;
+}
+
 /**------------------------------------------------------------------------
   \brief vos_nv_getChannelEnabledState -
   \param rfChannel  - input channel enum to know evabled state
@@ -3688,24 +3724,35 @@ int vos_update_nv_table_from_wiphy_band(void *hdd_ctx,
                 }
             }
             /* nv cannot distinguish between DFS and passive channels */
-            else if (wiphy->bands[i]->channels[j].flags &
+            else if ((wiphy->bands[i]->channels[j].flags &
                     (IEEE80211_CHAN_RADAR | IEEE80211_CHAN_PASSIVE_SCAN |
-                     IEEE80211_CHAN_INDOOR_ONLY))
+                    IEEE80211_CHAN_INDOOR_ONLY )))
             {
-                if (wiphy->bands[i]->channels[j].flags &
-                        IEEE80211_CHAN_INDOOR_ONLY)
+                if (pHddCtx && pHddCtx->cfg_ini &&
+                    pHddCtx->cfg_ini->indoor_channel_support == false &&
+                    wiphy->bands[i]->channels[j].flags &
+                    IEEE80211_CHAN_INDOOR_ONLY)
                     wiphy->bands[i]->channels[j].flags |=
                         IEEE80211_CHAN_PASSIVE_SCAN;
+
 #ifdef FEATURE_WLAN_CH144
-                if ((RF_CHAN_144 == k) && (E_NV_V3 != vos_nv_getNvVersion()))
-                {
-                    //Do not enable channel 144 when NV version is not NV3
+                if ((RF_CHAN_144 == k) &&
+                    (E_NV_V3 != vos_nv_getNvVersion())) {
+                        //Do not enable channel 144 when NV version is not NV3
                 }
                 else
 #endif
                 {
-                    pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].\
-                        channels[k].enabled = NV_CHANNEL_DFS;
+                    if ((pHddCtx && pHddCtx->cfg_ini &&
+                         pHddCtx->cfg_ini->indoor_channel_support == true &&
+                         wiphy->bands[i]->channels[j].flags &
+                         IEEE80211_CHAN_INDOOR_ONLY)) {
+                        pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].\
+                            channels[k].enabled = NV_CHANNEL_ENABLE;
+                    } else {
+                        pnvEFSTable->halnv.tables.regDomains[temp_reg_domain].\
+                            channels[k].enabled = NV_CHANNEL_DFS;
+                    }
                 }
 
                 if (!gnvEFSTable->halnv.tables.regDomains[temp_reg_domain].channels[k].pwrLimit
@@ -4019,6 +4066,9 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
     VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
                "cfg80211 reg notifier callback for country for initiator %d", request->initiator);
 
+    pr_info("country: %c%c and initiator %d", request->alpha2[0],
+            request->alpha2[1], request->initiator);
+
     if (NULL == pHddCtx)
     {
        VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
@@ -4159,6 +4209,9 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
         }
         else
         {
+           if (WLAN_HDD_IS_LOAD_IN_PROGRESS(pHddCtx))
+              init_by_reg_core_user = true;
+
            sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
                                     temp_reg_domain);
         }
@@ -4812,15 +4865,15 @@ int __wlan_hdd_crda_reg_notifier(struct wiphy *wiphy,
                  k = wiphy->bands[HDD_NL80211_BAND_2GHZ]->n_channels + j;
 
                  if ((wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5260 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5280 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5300 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5320 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5500 ||
-                      wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].center_freq == 5520) &&
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5280 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5300 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5320 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5500 ||
+                      wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].center_freq == 5520) &&
                      ((regChannels[k].enabled == NV_CHANNEL_ENABLE) ||
                       (regChannels[k].enabled == NV_CHANNEL_DFS)))
                  {
-                     wiphy->bands[IEEE80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_RADAR;
+                     wiphy->bands[HDD_NL80211_BAND_5GHZ]->channels[j].flags |= IEEE80211_CHAN_RADAR;
                  }
              }
          }
