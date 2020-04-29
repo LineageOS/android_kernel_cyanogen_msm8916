@@ -22,7 +22,7 @@
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
-#include <linux/i2c/i2c-qup.h>
+#include <linux/i2c/i2c-msm-qup.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
@@ -34,10 +34,10 @@
 #include <linux/pm_runtime.h>
 #include <linux/gpio.h>
 #include <linux/of.h>
-#include <linux/of_i2c.h>
 #include <linux/of_gpio.h>
 #include <mach/board.h>
 #include <mach/gpiomux.h>
+#include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 
 MODULE_LICENSE("GPL v2");
@@ -1696,14 +1696,9 @@ blsp_core_init:
 			free_irq(dev->in_irq, dev);
 		}
 		free_irq(dev->err_irq, dev);
-	} else {
-		if (dev->dev->of_node) {
-			dev->adapter.dev.of_node = pdev->dev.of_node;
-			of_i2c_register_devices(&dev->adapter);
-		}
-
-		return 0;
 	}
+
+	return 0;
 
 
 err_request_irq_failed:
@@ -1830,8 +1825,10 @@ static int i2c_qup_pm_resume_sys_noirq(struct device *device)
 #endif /* CONFIG_PM */
 
 static const struct dev_pm_ops i2c_qup_dev_pm_ops = {
+#ifdef CONFIG_PM_SLEEP
 	.suspend_noirq = i2c_qup_pm_suspend_sys_noirq,
 	.resume_noirq  = i2c_qup_pm_resume_sys_noirq,
+#endif
 	SET_RUNTIME_PM_OPS(
 		i2c_qup_pm_suspend_runtime,
 		i2c_qup_pm_resume_runtime,

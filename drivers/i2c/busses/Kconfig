@@ -509,7 +509,7 @@ config I2C_MPC
 	  This driver can also be built as a module.  If so, the module
 	  will be called i2c-mpc.
 
-config I2C_QUP
+config I2C_MSM_QUP
 	tristate "I2C_QUP"
 	depends on ARCH_MSM
 	help

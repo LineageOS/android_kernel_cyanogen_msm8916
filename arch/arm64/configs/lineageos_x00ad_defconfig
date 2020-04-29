@@ -1805,7 +1805,7 @@ CONFIG_I2C_HELPER_AUTO=y
 # CONFIG_I2C_EG20T is not set
 # CONFIG_I2C_GPIO is not set
 # CONFIG_I2C_INTEL_MID is not set
-# CONFIG_I2C_QUP is not set
+# CONFIG_I2C_MSM_QUP is not set
 CONFIG_I2C_MSM_V2=y
 # CONFIG_I2C_NOMADIK is not set
 # CONFIG_I2C_OCORES is not set
