@@ -15,7 +15,7 @@
 #include "dsi-panel-tcl-hx8394f-720p-video-def.dtsi"
 
 &tlmm_pinmux {
-    ap3426_int_pin {
+	ap3426_int_pin {
 		qcom,pins = <&gp 113>;
 		qcom,pin-func = <0>;
 		qcom,num-grp-pins = <1>;
@@ -361,16 +361,6 @@ i2c@78b6000 {
 		compatible = "regulator-fixed";
 		status = "ok";
 		regulator-name = "vdd_vreg";
-	};
-
-	gen-vkeys {
-		compatible = "qcom,gen-vkeys";
-		label = "synaptics_rmi4_i2c";
-		qcom,disp-maxx = <720>;
-		qcom,disp-maxy = <1280>;
-		qcom,panel-maxx = <720>;
-		qcom,panel-maxy = <1385>;
-		qcom,key-codes = <158 172 139>;
 	};
 };
 

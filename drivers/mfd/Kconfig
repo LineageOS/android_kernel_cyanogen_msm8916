@@ -1215,7 +1215,6 @@ config WCD9335_CODEC
 	depends on SLIMBUS
 	select SOUNDWIRE_WCD_CTRL
 	select MFD_CORE
-	select REGMAP_ALLOW_WRITE_DEBUGFS
 	help
 	  Enables the WCD9xxx codec core driver. The core driver provides
 	  read/write capability to registers which are part of the
