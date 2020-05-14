@@ -187,10 +187,12 @@ static int msm_comm_get_inst_load(struct msm_vidc_inst *inst,
 		enum load_calc_quirks quirks)
 {
 	int load = 0;
+	
+	mutex_lock(&inst->lock);
 
 	if (!(inst->state >= MSM_VIDC_OPEN_DONE &&
 			inst->state < MSM_VIDC_STOP_DONE))
-		return 0;
+		goto exit;
 
 	load = msm_comm_get_mbs_per_sec(inst);
 
@@ -212,6 +214,8 @@ static int msm_comm_get_inst_load(struct msm_vidc_inst *inst,
 		} else
 			load = msm_comm_get_mbs_per_sec(inst) / inst->prop.fps;
 	}
+exit:
+	mutex_unlock(&inst->lock);
 	return load;
 }
 
@@ -890,7 +894,7 @@ static void handle_session_prop_info(enum command_response cmd, void *data)
 		return;
 	}
 
-	getprop->data = kmemdup(response->data, response->size, GFP_KERNEL);
+	getprop->data = kmemdup(response->data, sizeof(union hal_get_property), GFP_KERNEL);
 	if (!getprop->data) {
 		dprintk(VIDC_ERR, "%s: kmemdup failed\n", __func__);
 		kfree(getprop);
@@ -2780,11 +2784,22 @@ int msm_comm_suspend(int core_id)
 		dprintk(VIDC_ERR, "%s Invalid device handle\n", __func__);
 		return -EINVAL;
 	}
+	
+	mutex_lock(&core->lock);
+	if (core->state == VIDC_CORE_INVALID) {
+		dprintk(VIDC_ERR,
+				"%s - fw is not in proper state, skip suspend\n",
+				__func__);
+		rc = -EINVAL;
+		goto exit;
+	}
 
 	rc = call_hfi_op(hdev, suspend, hdev->hfi_device_data);
 	if (rc)
 		dprintk(VIDC_WARN, "Failed to suspend\n");
 
+exit:
+	mutex_unlock(&core->lock);
 	return rc;
 }
 
@@ -2823,7 +2838,7 @@ static int set_output_buffers(struct msm_vidc_inst *inst,
 {
 	int rc = 0;
 	struct msm_smem *handle;
-	struct internal_buf *binfo;
+	struct internal_buf *binfo = NULL;
 	struct vidc_buffer_addr_info buffer_info = {0};
 	u32 smem_flags = 0, buffer_size;
 	struct hal_buffer_requirements *output_buf, *extradata_buf;
@@ -3225,6 +3240,7 @@ int msm_comm_try_state(struct msm_vidc_inst *inst, int state)
 				SESSION_END_DONE);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		msm_comm_session_clean(inst);
 	case MSM_VIDC_CORE_UNINIT:
 	case MSM_VIDC_CORE_INVALID:
 		dprintk(VIDC_DBG, "Sending core uninit\n");
@@ -4698,6 +4714,7 @@ int msm_comm_kill_session(struct msm_vidc_inst *inst)
 			return rc;
 
 		change_inst_state(inst, MSM_VIDC_CLOSE_DONE);
+		msm_comm_generate_session_error(inst);
 	} else {
 		dprintk(VIDC_WARN,
 				"Inactive session %pK, triggering an internal session error\n",

@@ -80,37 +80,7 @@
 				qcom,pin-num = <4>;
 			};
 		};
-
-		pm8916_gpios: gpios {
-			compatible = "qcom,qpnp-pin";
-			spmi-dev-container;
-			gpio-controller;
-			#gpio-cells = <2>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			label = "pm8916-gpio";
-
-			gpio@c000 {
-				reg = <0xc000 0x100>;
-				qcom,pin-num = <1>;
-			};
-
-			gpio@c100 {
-				reg = <0xc100 0x100>;
-				qcom,pin-num = <2>;
-			};
-
-			gpio@c200 {
-				reg = <0xc200 0x100>;
-				qcom,pin-num = <3>;
-			};
-
-			gpio@c300 {
-				reg = <0xc300 0x100>;
-				qcom,pin-num = <4>;
-			};
-		};
-
+		
 		pm8916_rtc: qcom,pm8916_rtc {
                         spmi-dev-container;
                         compatible = "qcom,qpnp-rtc";
