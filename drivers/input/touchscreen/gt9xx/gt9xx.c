@@ -35,7 +35,7 @@ static const char *goodix_input_phys = "input/ts";
 struct i2c_client *i2c_connect_client;
 static struct proc_dir_entry *gtp_config_proc;
 
-static bool double_tap = true;
+static bool enable_gestures = true;
 
 enum doze {
 	DOZE_DISABLED = 0,
@@ -308,8 +308,8 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	dev_dbg(&ts->client->dev, "0x814B = 0x%02X", doze_buf[2]);
 	// working gestures: c, e, s, v, w, z, double tap.
 	if(doze_buf[2] == 'w')
-		double_tap = !double_tap;
-	if (double_tap && ((doze_buf[2] == 'a') || (doze_buf[2] == 'b') ||
+		enable_gestures = !enable_gestures;
+	if (enable_gestures && ((doze_buf[2] == 'a') || (doze_buf[2] == 'b') ||
 	    (doze_buf[2] == 'c') || (doze_buf[2] == 'd') ||
 	    (doze_buf[2] == 'e') || (doze_buf[2] == 'g') ||
 	    (doze_buf[2] == 'h') || (doze_buf[2] == 'm') ||

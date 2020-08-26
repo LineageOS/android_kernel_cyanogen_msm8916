@@ -12,6 +12,9 @@
 
 #include "msm8916-qrd.dtsi"
 #include "msm8916-camera-sensor-qrd.dtsi"
+#include "dsi-panel-txd-ili9881c-cpt-720p-video.dtsi"
+#include "dsi-panel-txd-ili9881c-auo-720p-video.dtsi"
+#include "dsi-panel-tcl-hx8394f-720p-video.dtsi"
 #include "dsi-panel-tcl-hx8394f-720p-video-def.dtsi"
 
 &tlmm_pinmux {
@@ -156,9 +159,24 @@
 	};
 };
 
+&dsi_tcl_hx8394f_720p_video {
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
+};
+
 &dsi_tcl_hx8394f_720p_video_def {
 	qcom,cont-splash-enabled;
 	//qcom,esd-check-enabled;
+};
+
+&dsi_txd_ili9881c_720p_auo_video {
+	qcom,cont-splash-enabled;
+	//qcom,esd-check-enabled;
+};
+
+&dsi_txd_ili9881c_720p_cpt_video {
+	qcom,cont-splash-enabled;
+	qcom,esd-check-enabled;
 };
 
 &soc {
@@ -254,50 +272,53 @@
 			asoc-codec-names = "msm-stub-codec.1", "tombak_codec";
 	};
 
-i2c@78b6000 {
-	di@1e {
-		compatible = "di,ap3426";
-		reg = <0x1e>;
-		vdd-supply = <&pm8916_l17>;
-		vio-supply = <&pm8916_l6>;
-		interrupt-parent = <&msm_gpio>;
-		pinctrl-names = "default","sleep";
-		pinctrl-0 = <&ap3426_default>;
-		pinctrl-1 = <&ap3426_sleep>;
-		di,irq-gpio = <&msm_gpio 113 0x2002>;
-		di,als-cal = <94>;
-		di,als-gain = <0>;
-		di,als-persist = <1>;
-		di,ps-gain = <1>;
-		di,ps-persist = <1>;
-		di,ps-led-driver = <3>;
-		di,ps-mean-time = <3>;
-		di,ps-integrated-time = <6>;
-		di,ps-distance-table = <887 500 400 300 200 100>;
-		di,als-sensitivity = <50>;
-		di,wakeup-threshold = <4>;
-		di,ps-thdl = <100>;
-		di,ps-thdh = <250>;
+	i2c@78b6000 {
+		di@1e {
+			compatible = "di,ap3426";
+			reg = <0x1e>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
+			interrupt-parent = <&msm_gpio>;
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&ap3426_default>;
+			pinctrl-1 = <&ap3426_sleep>;
+			di,irq-gpio = <&msm_gpio 113 0x2002>;
+			di,als-cal = <94>;
+			di,als-gain = <0>;
+			di,als-persist = <1>;
+			di,ps-gain = <1>;
+			di,ps-persist = <1>;
+			di,ps-led-driver = <3>;
+			di,ps-mean-time = <3>;
+			di,ps-integrated-time = <6>;
+			di,ps-distance-table = <887 500 400 300 200 100>;
+			di,als-sensitivity = <50>;
+			di,wakeup-threshold = <4>;
+			di,ps-thdl = <100>;
+			di,ps-thdh = <250>;
+		};
+		
+		bosch@18 { /* Accelerometer sensor */
+			compatible = "bosch,bma2x2";
+			reg = <0x18>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&bma2x2_int1_default &bma2x2_int2_default>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <115 0x2002>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
+			bosch,init-interval = <200>;
+			bosch,place = <0>;
+			bosch,gpio-int1 = <&msm_gpio 115 0x2002>;
+			bosch,gpio-int2 = <&msm_gpio 115 0x2002>;
+		};
+		
+		senodia@0C { /* magnetic sensor */
+			compatible = "senodia,st480";
+			reg = <0x0C>;
+		};
 	};
-	bosch@18 { /* Accelerometer sensor */
-		compatible = "bosch,bma2x2";
-		reg = <0x18>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&bma2x2_int1_default &bma2x2_int2_default>;
-		interrupt-parent = <&msm_gpio>;
-		interrupts = <115 0x2002>;
-		vdd-supply = <&pm8916_l17>;
-		vio-supply = <&pm8916_l6>;
-		bosch,init-interval = <200>;
-		bosch,place = <0>;
-		bosch,gpio-int1 = <&msm_gpio 115 0x2002>;
-		bosch,gpio-int2 = <&msm_gpio 115 0x2002>;
-	};
-	senodia@0C { /* magnetic sensor */
-		compatible = "senodia,st480";
-		reg = <0x0C>;
-	};
-};
+	
 	i2c@78b9000 { /* BLSP1 QUP5 */
 		gt9xx-i2c@5d {
 			compatible = "goodix,gt9xx";
@@ -324,7 +345,7 @@ i2c@78b6000 {
 			goodix,driver-send-cfg = <1>;
 			goodix,create-wr-node = <1>;
 			goodix,wakeup-with-reset = <0>;
-			goodix,resume-in-workqueue = <0>;
+			goodix,resume-in-workqueue = <1>;
 			goodix,int-sync = <1>;
 			goodix,swap-x2y = <0>;
 			goodix,slide-wakeup = <1>;
@@ -352,10 +373,42 @@ i2c@78b6000 {
 				28 29 2A 00 00 00 00 00 00 00 00 
 				00 00 00 00 00 00 00 00 8F 01
 			];	
-		};    	
+		};
+	       	
+	       	focaltech@38 {
+			compatible = "focaltech,fts";
+			reg = <0x38>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <13 0x2008>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
+			focaltech,name = "ft6x06";
+			focaltech,family-id = <0x54>;
+			focaltech,reset-gpio = <&msm_gpio 12 0x00>;
+			focaltech,irq-gpio = <&msm_gpio 13 0x2008>;
+			focaltech,display-coords = <0 0 720 1280>;
+			focaltech,panel-coords = <0 0 720 1280>;
+			focaltech,fw-vkey-support;
+			focaltech,button-map= <158 102 139>;
+			focaltech,no-force-update;
+			focaltech,i2c-pull-up;
+			focaltech,group-id = <0>;
+			focaltech,hard-reset-delay-ms = <20>;
+			focaltech,soft-reset-delay-ms = <200>;
+			focaltech,num-max-touches = <10>;
+			//focaltech,fw-name = "ft_8610_qrd_fw.bin";
+			focaltech,fw-delay-aa-ms = <100>;
+			focaltech,fw-delay-55-ms = <30>;
+			focaltech,fw-upgrade-id1 = <0x79>;
+			focaltech,fw-upgrade-id2 = <0x08>;
+			focaltech,fw-delay-readid-ms = <10>;
+			focaltech,fw-delay-era-flsh-ms = <2000>;
+			focaltech,fw-auto-cal;
+			//focaltech,psensor-support;
+			focaltech,gesture-support;
+			//focaltech,resume-in-workqueue;
+	       	};
 	};
-		
-		
 	
 	vdd_vreg: vdd_vreg {
 		compatible = "regulator-fixed";
