@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -149,6 +149,8 @@ typedef tANI_U8 tSirVersionString[SIR_VERSION_STRING_LEN];
 #define PERIODIC_TX_PTRN_MAX_SIZE 1536
 #define MAXNUM_PERIODIC_TX_PTRNS 6
 
+/* Cache ID length */
+#define CACHE_ID_LEN 2
 
 #ifdef WLAN_FEATURE_EXTSCAN
 
@@ -1077,6 +1079,7 @@ typedef struct sSirSmeJoinReq
     tSirBssType         bsstype;                // add new type for BT -AMP STA and AP Modules
     tANI_U8             dot11mode;              // to support BT-AMP     
     tVOS_CON_MODE       staPersona;             //Persona
+    bool                sae_pmk_cached;
     tANI_BOOLEAN        bOSENAssociation;       //HS2.0
     tANI_BOOLEAN        bWPSAssociation;       //WPS
     ePhyChanBondState   cbMode;                 // Pass CB mode value in Join.
@@ -1240,7 +1243,8 @@ typedef struct sSirSmeAssocInd
     tANI_U16             staId; // Station ID for peer
     tANI_U8              uniSig;  // DPU signature for unicast packets
     tANI_U8              bcastSig; // DPU signature for broadcast packets
-    tAniAuthType         authType;    
+    tAniAuthType         authType;
+    enum ani_akm_type    akm_type;
     tAniSSID             ssId; // SSID used by STA to associate
     tSirRSNie            rsnIE;// RSN IE received from peer
     tSirAddie            addIE;// Additional IE received from peer, which possibly include WSC IE and/or P2P IE
@@ -1261,6 +1265,7 @@ typedef struct sSirSmeAssocInd
     tANI_U32             assocReqLength;
     tANI_U8*             assocReqPtr;
     uint32_t             rate_flags;
+    bool                 is_sae_authenticated;
     tSirSmeChanInfo      chan_info;
     tSirMacHTChannelWidth ch_width;
     tDot11fIEHTCaps HTCaps;
@@ -1280,6 +1285,7 @@ typedef struct sSirSmeAssocCnf
     tANI_U16             aid;
     tSirMacAddr          alternateBssId;
     tANI_U8              alternateChannelId;
+    tSirMacStatusCodes   mac_status_code;
 } tSirSmeAssocCnf, *tpSirSmeAssocCnf;
 
 /// Definition for Reassociation indication from peer
@@ -3771,6 +3777,17 @@ typedef struct sSirSmeCoexInd
     tANI_U32        coexIndData[SIR_COEX_IND_DATA_SIZE];
 }tSirSmeCoexInd, *tpSirSmeCoexInd;
 
+/**
+ * enum rxmgmt_flags - flags for received management frame.
+ * @RXMGMT_FLAG_NONE: Default value to indicate no flags are set.
+ * @RXMGMT_FLAG_EXTERNAL_AUTH: frame can be used for external authentication
+ *                             by upper layers.
+ */
+enum rxmgmt_flags {
+    RXMGMT_FLAG_NONE,
+    RXMGMT_FLAG_EXTERNAL_AUTH = 1 << 1,
+};
+
 typedef struct sSirSmeMgmtFrameInd
 {
     tANI_U16        frameLen;
@@ -3778,6 +3795,7 @@ typedef struct sSirSmeMgmtFrameInd
     tANI_U8        sessionId;
     tANI_U8         frameType;
     tANI_S8         rxRssi;
+    enum rxmgmt_flags rx_flags;
     tANI_U8  frameBuf[1]; //variable
 }tSirSmeMgmtFrameInd, *tpSirSmeMgmtFrameInd;
 
@@ -4854,6 +4872,9 @@ typedef struct sSirAddPeriodicTxPtrn
 {
     /* MAC Address for the adapter */
     tSirMacAddr macAddress;
+
+     /* BSSID of the connection */
+     tSirMacAddr bss_address;
 
     tANI_U8  ucPtrnId;           // Pattern ID
     tANI_U16 ucPtrnSize;         // Pattern size
@@ -6449,4 +6470,35 @@ struct sir_feature_caps_params {
 	void *user_data;
 };
 
+/**
+ * struct sae_info - SAE info used for commit/confirm messages
+ * @msg_type: Message type
+ * @msg_len: length of message
+ * @vdev_id: vdev id
+ * @peer_mac_addr: peer MAC address
+ * @ssid: SSID
+ */
+struct sir_sae_info {
+    uint16_t msg_type;
+    uint16_t msg_len;
+    uint32_t vdev_id;
+    v_MACADDR_t peer_mac_addr;
+    tSirMacSSid ssid;
+};
+
+/**
+ * struct sir_sae_msg - SAE msg used for message posting
+ * @message_type: message type
+ * @length: message length
+ * @session_id: SME session id
+ * @sae_status: SAE status, 0: Success, Non-zero: Failure.
+ * @peer_mac_addr: peer MAC address
+ */
+struct sir_sae_msg {
+    uint16_t message_type;
+    uint16_t length;
+    uint16_t session_id;
+    uint8_t sae_status;
+    tSirMacAddr peer_mac_addr;
+};
 #endif /* __SIR_API_H */

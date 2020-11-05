@@ -3214,8 +3214,16 @@ static void dxeRXISR
       return;         
    }
 
-   wpalReadRegister(WLANDXE_INT_SRC_RAW_ADDRESS,
+   status = wpalReadRegister(WLANDXE_INT_SRC_RAW_ADDRESS,
                                   &intSrc);
+   if(eWLAN_PAL_STATUS_SUCCESS != status)
+   {
+      status = wpalEnableInterrupt(DXE_INTERRUPT_RX_READY);
+      if(eWLAN_PAL_STATUS_SUCCESS != status)
+          HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_ERROR,
+                   "dxeISR enable rx ready interrupt fail");
+      return;
+   }
    /* Note: intSrc which holds the INT_SRC_RAW_ADDRESS reg value
       While debugging crash dump convert to power of 2 for channel type */
    DXTRACE(dxeTrace(intSrc, TRACE_RXINT_STATE, TRACE_WLANDXE_VAR_DISABLE));
@@ -4818,7 +4826,8 @@ void *WLANDXE_Open
     * Init State is
     *    Clear TX Enable
     *    RING EMPTY STATE */
-   smsmInitState = wpalNotifySmsm(WPAL_SMSM_WLAN_TX_ENABLE,
+   smsmInitState = wpalNotifySmsm(WPAL_SMSM_WLAN_TX_ENABLE |
+                                  WPAL_SMSM_WLAN_TX_RINGS_EMPTY,
                                   WPAL_SMSM_WLAN_TX_RINGS_EMPTY);
    if(0 != smsmInitState)
    {

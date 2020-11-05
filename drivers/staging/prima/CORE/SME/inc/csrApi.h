@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -46,6 +46,7 @@ typedef enum
     // MAC layer authentication types
     eCSR_AUTH_TYPE_OPEN_SYSTEM,
     eCSR_AUTH_TYPE_SHARED_KEY,
+    eCSR_AUTH_TYPE_SAE,
     eCSR_AUTH_TYPE_AUTOSWITCH,
 
     // Upper layer authentication types
@@ -71,6 +72,7 @@ typedef enum
     eCSR_AUTH_TYPE_RSN_PSK_SHA256,
     eCSR_AUTH_TYPE_RSN_8021X_SHA256,
 #endif
+    eCSR_AUTH_TYPE_OWE,
     eCSR_NUM_OF_SUPPORT_AUTH_TYPE,
     eCSR_AUTH_TYPE_FAILED = 0xff,
     eCSR_AUTH_TYPE_UNKNOWN = eCSR_AUTH_TYPE_FAILED,
@@ -218,6 +220,7 @@ typedef enum
 #define CSR_SCAN_TIME_DEFAULT       0
 #define CSR_VALUE_IGNORED           0xFFFFFFFF
 #define CSR_RSN_PMKID_SIZE          16
+#define CSR_RSN_MAX_PMK_LEN         48
 #define CSR_MAX_PMKID_ALLOWED       32
 #define CSR_WEP40_KEY_LEN       5
 #define CSR_WEP104_KEY_LEN      13
@@ -362,11 +365,10 @@ typedef struct tagCsrEseCckmInfo
 #endif
 
 #if defined(FEATURE_WLAN_ESE) && defined(FEATURE_WLAN_ESE_UPLOAD)
-#define CSR_DOT11F_IE_RSN_MAX_LEN   (114)  /*TODO: duplicate one in dot11f.h */
 
 typedef struct tagCsrEseCckmIe
 {
-    tANI_U8 cckmIe[CSR_DOT11F_IE_RSN_MAX_LEN];
+    tANI_U8 cckmIe[DOT11F_IE_RSN_MAX_LEN];
     tANI_U8 cckmIeLen;
 } tCsrEseCckmIe;
 #endif /* FEATURE_WLAN_ESE && FEATURE_WLAN_ESE_UPLOAD */
@@ -526,6 +528,7 @@ typedef enum
     eCSR_ROAM_ECSA_BCN_TX_IND,
     eCSR_ROAM_ECSA_CHAN_CHANGE_RSP,
     eCSR_ROAM_STA_CHANNEL_SWITCH,
+    eCSR_ROAM_SAE_COMPUTE,
 }eRoamCmdStatus;
 
 
@@ -845,6 +848,11 @@ typedef struct tagPmkidCacheInfo
 {
     tCsrBssid BSSID;
     tANI_U8 PMKID[CSR_RSN_PMKID_SIZE];
+    uint8_t pmk[CSR_RSN_MAX_PMK_LEN];
+    uint8_t pmk_len;
+    uint8_t ssid_len;
+    uint8_t ssid[SIR_MAC_MAX_SSID_LENGTH];
+    uint8_t cache_id[CACHE_ID_LEN];
 }tPmkidCacheInfo;
 
 #ifdef FEATURE_WLAN_WAPI
@@ -895,6 +903,7 @@ typedef struct tagCsrRoamProfile
 
     tCsrAuthList AuthType;
     eCsrAuthType negotiatedAuthType;
+    tCsrAuthList akm_list;
 
     tCsrEncryptionList EncryptionType;
     //This field is for output only, not for input
@@ -978,6 +987,7 @@ typedef struct tagCsrRoamConnectedProfile
     eCsrRoamBssType BSSType;
     eCsrAuthType AuthType;
     tCsrAuthList AuthInfo;
+    tCsrAuthList akm_list;
     eCsrEncryptionType EncryptionType;
     tCsrEncryptionList EncryptionInfo;
     eCsrEncryptionType mcEncryptionType;
@@ -1357,6 +1367,9 @@ typedef struct tagCsrRoamInfo
     struct sir_channel_chanege_rsp *ap_chan_change_rsp;
     tSirSmeChanInfo chan_info;
     tSirMacHTChannelWidth ch_width;
+#ifdef WLAN_FEATURE_SAE
+    struct sir_sae_info *sae_info;
+#endif
 }tCsrRoamInfo;
 
 typedef struct tagCsrFreqScanInfo
@@ -1390,6 +1403,8 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf
     tSirMacHTChannelWidth ch_width;
     tDot11fIEHTCaps HTCaps;
     tDot11fIEVHTCaps VHTCaps;
+    uint32_t             ies_len;
+    uint8_t              *ies;
 } tSirSmeAssocIndToUpperLayerCnf, *tpSirSmeAssocIndToUpperLayerCnf;
 
 typedef struct tagCsrSummaryStatsInfo
@@ -1656,6 +1671,12 @@ typedef eHalStatus (*csrRoamSessionCloseCallback)(void *pContext);
 
 ///////////////////////////////////////////Common Roam ends
 
+#ifdef WLAN_FEATURE_SAE
+#define CSR_IS_AUTH_TYPE_SAE(auth_type) \
+   (eCSR_AUTH_TYPE_SAE == auth_type)
+#else
+#define CSR_IS_AUTH_TYPE_SAE(auth_type) (false)
+#endif
 
 /* ---------------------------------------------------------------------------
     \fn csrSetChannels

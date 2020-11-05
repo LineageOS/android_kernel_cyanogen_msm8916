@@ -3948,6 +3948,17 @@ enum nl80211_crit_proto_id {
 /* maximum duration for critical protocol measures */
 #define NL80211_CRIT_PROTO_MAX_DURATION		5000 /* msec */
 
+/**
+ * enum nl80211_rxmgmt_flags - flags for received management frame.
+ *
+ * Used by cfg80211_rx_mgmt()
+ *
+ * @NL80211_RXMGMT_FLAG_ANSWERED: frame was answered by device/driver.
+ */
+enum nl80211_rxmgmt_flags {
+	NL80211_RXMGMT_FLAG_ANSWERED = 1 << 0,
+};
+
 /*
  * If this flag is unset, the lower 24 bits are an OUI, if set
  * a Linux nl80211 vendor ID is used (no such IDs are allocated

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -233,6 +233,7 @@ sme_SetLinkLayerStatsIndCB
 
 void sme_set_vowifi_mode(tpAniSirGlobal pMac, bool enable);
 void sme_set_qpower(tpAniSirGlobal pMac, uint8_t enable);
+void sme_set_olpc_mode(tpAniSirGlobal pMac, bool enable);
 
 #ifdef WLAN_FEATURE_EXTSCAN
 /* ---------------------------------------------------------------------------
@@ -3731,9 +3732,9 @@ eHalStatus smeIssueFastRoamNeighborAPEvent (tHalHandle hHal,
 
 eHalStatus sme_RoamDelPMKIDfromCache( tHalHandle hHal, tANI_U8 sessionId,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-                                      const tANI_U8 *pBSSId,
+                                      tPmkidCacheInfo *pmksa,
 #else
-                                      tANI_U8 *pBSSId,
+                                      tPmkidCacheInfo *pmksa,
 #endif
                                       tANI_BOOLEAN flush_cache );
 
@@ -4114,5 +4115,67 @@ bool sme_is_sta_key_exchange_in_progress(tHalHandle hal, uint8_t session_id);
  * Return: VOS_STATUS enumeration.
  */
 VOS_STATUS sme_process_msg_callback(tHalHandle hal, vos_msg_t *msg);
+
+/**
+ * sme_send_mgmt_tx() - Sends mgmt frame from CSR to LIM
+ * @hal: The handle returned by mac_open
+ * @session_id: session id
+ * @buf: pointer to frame
+ * @len: frame length
+ *
+ * Return: eHalStatus
+ */
+eHalStatus sme_send_mgmt_tx(tHalHandle hal, uint8_t session_id,
+                                const uint8_t *buf, uint32_t len);
+
+#ifdef WLAN_FEATURE_SAE
+/**
+ * sme_handle_sae_msg() - Sends SAE message received from supplicant
+ * @hal: The handle returned by mac_open
+ * @session_id: session id
+ * @sae_status: status of SAE authentication
+ * @peer_mac_addr: mac address of the peer to be authenticated
+ *
+ * Return: HAL_STATUS
+ */
+eHalStatus sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
+                            uint8_t sae_status,
+                            tSirMacAddr peer_mac_addr);
+#else
+static inline eHalStatus sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
+                                            uint8_t sae_status,
+                                            tSirMacAddr peer_mac_addr)
+{
+	return eHAL_STATUS_SUCCESS;
+}
+#endif
+
+#define MAX_BSSID_AVOID_LIST 16
+
+struct roam_ext_params {
+    uint8_t blacklist_timedout;
+    uint8_t num_bssid_avoid_list;
+    v_MACADDR_t bssid_avoid_list[MAX_BSSID_AVOID_LIST];
+};
+
+/**
+ * sme_UpdateBlacklist() - Send blacklist bssid received from user space
+ * @hal: The handle returned by mac_open
+ * @session_id: session id
+ * @roam_ext_params: list of blacklist Bssid
+ *
+ * Return: HAL_STATUS
+ */
+eHalStatus sme_UpdateBlacklist(tHalHandle hHal, uint8_t session_id,
+                               struct roam_ext_params *roam_params);
+
+/**
+ * sme_update_olpc_mode() - Send OLPC mode command received from user space
+ * @hal: The handle returned by mac_open
+ * @enable: OLPC mode enable/disable
+ *
+ * Return: HAL_STATUS
+ */
+eHalStatus sme_update_olpc_mode(tHalHandle hHal, bool enable);
 
 #endif //#if !defined( __SME_API_H )

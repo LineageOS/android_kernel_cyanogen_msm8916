@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -174,19 +174,64 @@ safeChannelType safeChannels[NUM_20MHZ_RF_CHANNELS] =
 int __hdd_hostapd_open (struct net_device *dev)
 {
    hdd_adapter_t *pAdapter =  WLAN_HDD_GET_PRIV_PTR(dev);
+   hdd_context_t *pHddCtx;
+   VOS_STATUS status;
+   v_BOOL_t in_standby = TRUE;
+   hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
 
    ENTER();
 
-   if(!test_bit(SOFTAP_BSS_STARTED, &pAdapter->event_flags))
-   {
-       //WMM_INIT OR BSS_START not completed
-       hddLog( LOGW, "Ignore hostadp open request");
-       EXIT();
-       return 0;
+   if (test_bit(DEVICE_IFACE_OPENED, &pAdapter->event_flags)) {
+          hddLog(VOS_TRACE_LEVEL_DEBUG, "%s: session already opened for the adapter",
+                 __func__);
+          return 0;
    }
 
-   MTRACE(vos_trace(VOS_MODULE_ID_HDD,
-                    TRACE_CODE_HDD_HOSTAPD_OPEN_REQUEST, NO_SESSION, 0));
+   pHddCtx = (hdd_context_t*)pAdapter->pHddCtx;
+   MTRACE(vos_trace(VOS_MODULE_ID_HDD, TRACE_CODE_HDD_OPEN_REQUEST,
+                    pAdapter->sessionId, pAdapter->device_mode));
+   if (NULL == pHddCtx)
+   {
+      VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
+         "%s: HDD context is Null", __func__);
+      return -ENODEV;
+   }
+   status = hdd_get_front_adapter ( pHddCtx, &pAdapterNode );
+   while ( (NULL != pAdapterNode) && (VOS_STATUS_SUCCESS == status) )
+   {
+      if (test_bit(DEVICE_IFACE_OPENED, &pAdapterNode->pAdapter->event_flags))
+      {
+         hddLog(VOS_TRACE_LEVEL_INFO, "%s: chip already out of standby",
+                __func__);
+         in_standby = FALSE;
+         break;
+      }
+      else
+      {
+         status = hdd_get_next_adapter ( pHddCtx, pAdapterNode, &pNext );
+         pAdapterNode = pNext;
+      }
+   }
+
+   if (TRUE == in_standby)
+   {
+       if (VOS_STATUS_SUCCESS != wlan_hdd_exit_lowpower(pHddCtx, pAdapter))
+       {
+           hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Failed to bring "
+                   "wlan out of power save", __func__);
+           return -EINVAL;
+       }
+   }
+
+   status = hdd_init_ap_mode( pAdapter, false);
+   if( VOS_STATUS_SUCCESS != status ) {
+          hddLog(VOS_TRACE_LEVEL_ERROR, "%s: Failed to create session for station mode",
+                 __func__);
+          return -EINVAL;
+   }
+
+   set_bit(DEVICE_IFACE_OPENED, &pAdapter->event_flags);
+
    //Turn ON carrier state
    netif_carrier_on(dev);
    //Enable all Tx queues
@@ -238,6 +283,14 @@ int __hdd_hostapd_stop (struct net_device *dev)
 
    //Turn OFF carrier state
    netif_carrier_off(dev);
+
+  if (test_bit(SME_SESSION_OPENED, &adapter->event_flags)) {
+     hdd_stop_adapter(hdd_ctx, adapter, VOS_TRUE);
+     hdd_deinit_adapter(hdd_ctx, adapter, TRUE);
+  }
+
+ clear_bit(DEVICE_IFACE_OPENED, &adapter->event_flags);
+ adapter->dev->wireless_handlers = NULL;
 
    if (!hdd_is_cli_iface_up(hdd_ctx))
        sme_ScanFlushResult(hdd_ctx->hHal, 0);
@@ -668,9 +721,10 @@ static int hdd_hostapd_ioctl(struct net_device *dev,
 static int __hdd_hostapd_set_mac_address(struct net_device *dev, void *addr)
 {
    struct sockaddr *psta_mac_addr = addr;
-   hdd_adapter_t *pAdapter;
+   hdd_adapter_t *pAdapter, *adapter_temp;
    hdd_context_t *pHddCtx;
-   int ret = 0;
+   int ret = 0, i;
+   v_MACADDR_t mac_addr;
 
    ENTER();
    pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
@@ -683,10 +737,49 @@ static int __hdd_hostapd_set_mac_address(struct net_device *dev, void *addr)
    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
    ret = wlan_hdd_validate_context(pHddCtx);
    if (0 != ret)
-   {
        return ret;
+
+
+   memcpy(&mac_addr, psta_mac_addr->sa_data, sizeof(mac_addr));
+   if(vos_is_macaddr_zero(&mac_addr)) {
+        hddLog(VOS_TRACE_LEVEL_ERROR, "Zero Mac address");
+        return -EINVAL;
    }
+
+   if (vos_is_macaddr_broadcast(&mac_addr)) {
+        hddLog(VOS_TRACE_LEVEL_ERROR,"MAC is Broadcast");
+        return -EINVAL;
+   }
+
+   if (vos_is_macaddr_multicast(&mac_addr)) {
+        hddLog(VOS_TRACE_LEVEL_ERROR, "Multicast Mac address");
+        return -EINVAL;
+   }
+
+
+   adapter_temp = hdd_get_adapter_by_macaddr(pHddCtx, mac_addr.bytes);
+   if (adapter_temp) {
+         if (!strcmp(adapter_temp->dev->name, dev->name))
+            return 0;
+        hddLog(VOS_TRACE_LEVEL_ERROR,
+              "%s: WLAN Mac Addr: "
+               MAC_ADDRESS_STR, __func__,
+               MAC_ADDR_ARRAY(mac_addr.bytes));
+         return -EINVAL;
+   }
+
+  for (i = 0; i < VOS_MAX_CONCURRENCY_PERSONA; i++) {
+          if (!vos_mem_compare(&pAdapter->macAddressCurrent.bytes,
+              &pHddCtx->cfg_ini->intfMacAddr[i].bytes[0], VOS_MAC_ADDR_SIZE)) {
+              memcpy(&pHddCtx->cfg_ini->intfMacAddr[i].bytes[0], mac_addr.bytes,
+                     VOS_MAC_ADDR_SIZE);
+              break;
+        }
+  }
+
+   memcpy(&pAdapter->macAddressCurrent, psta_mac_addr->sa_data, ETH_ALEN);
    memcpy(dev->dev_addr, psta_mac_addr->sa_data, ETH_ALEN);
+
    EXIT();
    return 0;
 }
@@ -1004,7 +1097,11 @@ static VOS_STATUS hdd_chan_change_notify(hdd_adapter_t *hostapd_adapter,
 
    freq = vos_chan_to_freq(oper_chan);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0))
+   chan = ieee80211_get_channel(hostapd_adapter->wdev.wiphy, freq);
+#else
    chan = __ieee80211_get_channel(hostapd_adapter->wdev.wiphy, freq);
+#endif
 
    if (!chan) {
        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
@@ -1200,6 +1297,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
     v_CONTEXT_t pVosContext = NULL;
     ptSapContext pSapCtx = NULL;
     hdd_config_t *cfg_param;
+    tSap_StationAssocReassocCompleteEvent *event;
 
     dev = (struct net_device *)usrDataForCallback;
     pHostapdAdapter = netdev_priv(dev);
@@ -1370,6 +1468,7 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
         
         case eSAP_STA_ASSOC_EVENT:
         case eSAP_STA_REASSOC_EVENT:
+            event = &pSapEvent->sapevt.sapStationAssocReassocCompleteEvent;
             wrqu.addr.sa_family = ARPHRD_ETHER;
             memcpy(wrqu.addr.sa_data, &pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.staMac, 
                 sizeof(v_MACADDR_t));
@@ -1461,11 +1560,8 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                 }
 
                 memset(staInfo, 0, sizeof(*staInfo));
-                if (iesLen <= MAX_ASSOC_IND_IE_LEN )
-                {
-                    staInfo->assoc_req_ies =
-                        (const u8 *)&pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.ies[0];
-                    staInfo->assoc_req_ies_len = iesLen;
+                staInfo->assoc_req_ies = event->ies;
+                staInfo->assoc_req_ies_len = iesLen;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,31)) && \
 	((LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)) && \
 	!defined(WITH_BACKPORTS))
@@ -1475,11 +1571,6 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
                                  (const u8 *)&pSapEvent->sapevt.sapStationAssocReassocCompleteEvent.staMac.bytes[0],
                                  staInfo, GFP_KERNEL);
                     vos_mem_free(staInfo);
-                }
-                else
-                {
-                    hddLog(LOGE, FL(" Assoc Ie length is too long"));
-                }
              }
 #endif
             hdd_manage_delack_timer(pHddCtx);
@@ -1497,6 +1588,8 @@ VOS_STATUS hdd_hostapd_SAPEventCB( tpSap_Event pSapEvent, v_PVOID_t usrDataForCa
             memcpy(wrqu.addr.sa_data, &pSapEvent->sapevt.sapStationDisassocCompleteEvent.staMac,
                    sizeof(v_MACADDR_t));
             hddLog(LOG1, " disassociated "MAC_ADDRESS_STR, MAC_ADDR_ARRAY(wrqu.addr.sa_data));
+
+            vos_status = vos_event_set(&pHostapdState->sta_discon_event);
             if (pSapEvent->sapevt.sapStationDisassocCompleteEvent.reason == eSAP_USR_INITATED_DISASSOC)
                 hddLog(LOG1," User initiated disassociation");
             else
@@ -1761,7 +1854,7 @@ int hdd_softap_unpackIE(
                 tHalHandle halHandle,
                 eCsrEncryptionType *pEncryptType,
                 eCsrEncryptionType *mcEncryptType,
-                eCsrAuthType *pAuthType,
+                tCsrAuthList *akm_list,
                 v_BOOL_t *pMFPCapable,
                 v_BOOL_t *pMFPRequired,
                 u_int16_t gen_ie_len,
@@ -1771,7 +1864,7 @@ int hdd_softap_unpackIE(
     tDot11fIEWPA dot11WPAIE; 
  
     tANI_U8 *pRsnIe; 
-    tANI_U16 RSNIeLen;
+    tANI_U16 RSNIeLen, i;
     tANI_U32 status;
     
     if (NULL == halHandle)
@@ -1816,11 +1909,12 @@ int hdd_softap_unpackIE(
                 __func__, dot11RSNIE.pwise_cipher_suite_count );
         hddLog(LOG1, FL("%s: authentication suite count: %d"),
                 __func__, dot11RSNIE.akm_suite_cnt);
-        /*Here we have followed the apple base code, 
-          but probably I suspect we can do something different*/
-        //dot11RSNIE.akm_suite_cnt
-        // Just translate the FIRST one 
-        *pAuthType =  hdd_TranslateRSNToCsrAuthType(dot11RSNIE.akm_suite[0]);
+
+        //Translate akms in akm suite
+        for (i = 0; i < dot11RSNIE.akm_suite_cnt; i++)
+            akm_list->authType[i] =
+                hdd_TranslateRSNToCsrAuthType(dot11RSNIE.akm_suite[i]);
+        akm_list->numEntries = dot11RSNIE.akm_suite_cnt;
         //dot11RSNIE.pwise_cipher_suite_count 
         *pEncryptType = hdd_TranslateRSNToCsrEncryptionType(dot11RSNIE.pwise_cipher_suites[0]);                     
         //dot11RSNIE.gp_cipher_suite_count 
@@ -1862,8 +1956,11 @@ int hdd_softap_unpackIE(
         hddLog(LOG1, FL("%s: WPA authentication suite count: %d"),
                 __func__, dot11WPAIE.auth_suite_count);
         //dot11WPAIE.auth_suite_count
-        // Just translate the FIRST one 
-        *pAuthType =  hdd_TranslateWPAToCsrAuthType(dot11WPAIE.auth_suites[0]); 
+        //Translate akms in akm suite
+        for (i = 0; i < dot11WPAIE.auth_suite_count; i++)
+            akm_list->authType[i] =
+                hdd_TranslateWPAToCsrAuthType(dot11WPAIE.auth_suites[i]);
+        akm_list->numEntries = dot11WPAIE.auth_suite_count;
         //dot11WPAIE.unicast_cipher_count 
         *pEncryptType = hdd_TranslateWPAToCsrEncryptionType(dot11WPAIE.unicast_ciphers[0]);                       
         //dot11WPAIE.unicast_cipher_count 
@@ -5536,6 +5633,12 @@ VOS_STATUS hdd_init_ap_mode( hdd_adapter_t *pAdapter, bool re_init)
          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, ("ERROR: Hostapd HDD vos event init failed!!"));
          return status;
     }
+    status = vos_event_init(&phostapdBuf->sta_discon_event);
+    if (!VOS_IS_STATUS_SUCCESS(status))
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR, "ERROR: Hostapd HDD sta disassoc event init failed!!");
+        return status;
+    }
 #ifdef DHCP_SERVER_OFFLOAD
     status = vos_event_init(&dhcp_status->vos_event);
     if (!VOS_IS_STATUS_SUCCESS(status)) {
@@ -5585,6 +5688,10 @@ VOS_STATUS hdd_init_ap_mode( hdd_adapter_t *pAdapter, bool re_init)
                                 ini_cfg->apEndChannelNum,
                                 ini_cfg->apOperatingBand);
     }
+   /* Action frame registered in one adapter which will
+    * applicable to all interfaces
+    */
+    wlan_hdd_cfg80211_register_frames(pAdapter);
 
     return status;
 
@@ -5633,8 +5740,7 @@ hdd_adapter_t* hdd_wlan_create_ap_dev( hdd_context_t *pHddCtx, tSirMacAddr macAd
     
         vos_mem_copy(pWlanHostapdDev->dev_addr, (void *)macAddr,sizeof(tSirMacAddr));
         vos_mem_copy(pHostapdAdapter->macAddressCurrent.bytes, (void *)macAddr, sizeof(tSirMacAddr));
-
-        pWlanHostapdDev->destructor = free_netdev;
+        hdd_dev_setup_destructor(pWlanHostapdDev);
         pWlanHostapdDev->ieee80211_ptr = &pHostapdAdapter->wdev ;
         pHostapdAdapter->wdev.wiphy = pHddCtx->wiphy;  
         pHostapdAdapter->wdev.netdev =  pWlanHostapdDev;

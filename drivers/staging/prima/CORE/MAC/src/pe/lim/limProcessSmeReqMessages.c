@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1685,6 +1685,31 @@ static void __limProcessClearDfsChannelList(tpAniSirGlobal pMac,
                   sizeof(tSirDFSChannelList), 0);
 }
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * lim_update_sae_config()- This API update SAE session info to csr config
+ * from join request.
+ * @session: PE session
+ * @sme_join_req: pointer to join request
+ *
+ * Return: None
+ */
+static void lim_update_sae_config(tpPESession session,
+                                  tpSirSmeJoinReq sme_join_req)
+{
+    session->sae_pmk_cached = sme_join_req->sae_pmk_cached;
+
+    VOS_TRACE(VOS_MODULE_ID_PE, VOS_TRACE_LEVEL_DEBUG,
+              FL("pmk_cached %d for BSSID=" MAC_ADDRESS_STR),
+              session->sae_pmk_cached,
+              MAC_ADDR_ARRAY(sme_join_req->bssDescription.bssId));
+}
+#else
+static inline void lim_update_sae_config(tpPESession session,
+                                         tpSirSmeJoinReq sme_join_req)
+{}
+#endif
+
 /**
  * __limProcessSmeJoinReq()
  *
@@ -2002,6 +2027,8 @@ __limProcessSmeJoinReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
         psessionEntry->isFastRoamIniFeatureEnabled = pSmeJoinReq->isFastRoamIniFeatureEnabled;
 #endif
         psessionEntry->txLdpcIniFeatureEnabled = pSmeJoinReq->txLdpcIniFeatureEnabled;
+
+        lim_update_sae_config(psessionEntry, pSmeJoinReq);
 
         if (psessionEntry->bssType == eSIR_INFRASTRUCTURE_MODE)
         {
@@ -2650,10 +2677,16 @@ __limProcessSmeDisassocReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
 		 * and lim state is eLIM_SME_WT_REASSOC_STATE. As the
 		 * FT session would have already created but is not cleaned.
 		 * This will prevent sending duplicate add bss request,
-		 * if we try to disconnect and connect to the same AP
+		 * if we try to disconnect and connect to the same AP.
+		 * As limFTCleanup delete pesession, send resp back to csr
+		 * from here.
 		 */
 		case eLIM_SME_WT_REASSOC_STATE:
+			limLog(pMac, LOG1, FL("Rcvd SME_DISASSOC_REQ while in "
+			      "limSmeState: %d "),psessionEntry->limSmeState);
 			limFTCleanup(pMac);
+			disassocTrigger = eLIM_HOST_DISASSOC;
+			goto sendDisassoc;
 			/* Fall through */
                 case eLIM_SME_ASSOCIATED_STATE:
                 case eLIM_SME_LINK_EST_STATE:
@@ -3967,7 +4000,7 @@ void limProcessSmeDelBssRsp(
   void
 __limProcessSmeAssocCnfNew(tpAniSirGlobal pMac, tANI_U32 msgType, tANI_U32 *pMsgBuf)
 {
-    tSirSmeAssocCnf    assocCnf;
+    tSirSmeAssocCnf    assocCnf = {0};
     tpDphHashNode      pStaDs = NULL;
     tpPESession        psessionEntry= NULL;
     tANI_U8            sessionId; 
@@ -4060,17 +4093,31 @@ __limProcessSmeAssocCnfNew(tpAniSirGlobal pMac, tANI_U32 msgType, tANI_U32 *pMsg
     } // (assocCnf.statusCode == eSIR_SME_SUCCESS)
     else
     {
+        tSirMacStatusCodes mac_status_code = eSIR_MAC_UNSPEC_FAILURE_STATUS;
+        uint8_t add_pre_auth_context = true;
+
         // SME_ASSOC_CNF status is non-success, so STA is not allowed to be associated
         /*Since the HAL sta entry is created for denied STA we need to remove this HAL entry.So to do that set updateContext to 1*/
         if(!pStaDs->mlmStaContext.updateContext)
            pStaDs->mlmStaContext.updateContext = 1;
-        limLog(pMac, LOG1, FL("Receive Assoc Cnf with status Code : %d(assoc id=%d) "),
-                           assocCnf.statusCode, pStaDs->assocId);
+
+        limLog(pMac, LOG1,
+                FL("Receive Assoc Cnf with status Code : %d(assoc id=%d) Reason code: %d"),
+                assocCnf.statusCode, pStaDs->assocId, assocCnf.mac_status_code);
+        if (assocCnf.mac_status_code)
+            mac_status_code = assocCnf.mac_status_code;
+
+        if (assocCnf.mac_status_code == eSIR_MAC_INVALID_PMKID ||
+            assocCnf.mac_status_code ==
+            eSIR_MAC_AUTH_ALGO_NOT_SUPPORTED_STATUS)
+            add_pre_auth_context = false;
+
         limRejectAssociation(pMac, pStaDs->staAddr,
                              pStaDs->mlmStaContext.subType,
-                             true, pStaDs->mlmStaContext.authType,
+                             add_pre_auth_context,
+                             pStaDs->mlmStaContext.authType,
                              pStaDs->assocId, true,
-                             eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
+                             mac_status_code, psessionEntry);
     }
 
 end:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -159,6 +159,9 @@ typedef enum {
    /*70 reserved for WIFI_DUAL_BAND_ENABLE */
    PROBE_RSP_TEMPLATE_VER1 = 71,
    STA_MONITOR_SCC = 72,
+#ifdef FEATURE_WLAN_LFR
+   BSSID_BLACKLIST = 73,
+#endif
    //MAX_FEATURE_SUPPORTED = 128
 } placeHolderInCapBitmap;
 
@@ -265,6 +268,20 @@ typedef struct sSirMbMsgP2p
      */
     tANI_U32 data[1];
 } tSirMbMsgP2p, *tpSirMbMsgP2p;
+
+/**
+ * struct sir_mgmt_msg - Structure used to send auth frame from CSR to LIM
+ * @type: Message type
+ * @msg_len: Message length
+ * @session_id: session id
+ * @data: Pointer to data tobe transmitted
+ */
+struct sir_mgmt_msg {
+    uint16_t type;
+    uint16_t msg_len;
+    uint8_t session_id;
+    uint8_t *data;
+};
 
 /// Message queue definitions
 //  msgtype(2bytes) reserved(2bytes) bodyptr(4bytes) bodyval(4bytes)
@@ -809,9 +826,11 @@ typedef struct sSirMbMsgP2p
 /* ARP Debug stats */
 #define SIR_HAL_SET_ARP_STATS_REQ          (SIR_HAL_ITC_MSG_TYPES_BEGIN + 303)
 #define SIR_HAL_GET_ARP_STATS_REQ          (SIR_HAL_ITC_MSG_TYPES_BEGIN + 304)
+#define SIR_HAL_LOW_POWER_MODE             (SIR_HAL_ITC_MSG_TYPES_BEGIN + 305)
 #define SIR_HAL_VOWIFI_MODE                (SIR_HAL_ITC_MSG_TYPES_BEGIN + 306)
 #define SIR_HAL_QPOWER                     (SIR_HAL_ITC_MSG_TYPES_BEGIN + 307)
 
+#define SIR_HAL_BLACKLIST_REQ              (SIR_HAL_ITC_MSG_TYPES_BEGIN + 308)
 
 #define SIR_HAL_MSG_TYPES_END              (SIR_HAL_MSG_TYPES_BEGIN + 0x1FF)
 
@@ -913,6 +932,7 @@ typedef struct sSirMbMsgP2p
 #define SIR_LIM_REASSOC_MBB_RSP_TIMEOUT   (SIR_LIM_TIMEOUT_MSG_START + 0x2A)
 #endif
 
+#define SIR_LIM_AUTH_SAE_TIMEOUT            (SIR_LIM_TIMEOUT_MSG_START + 0x2B)
 #define SIR_LIM_CONVERT_ACTIVE_CHANNEL_TO_PASSIVE (SIR_LIM_TIMEOUT_MSG_START + 0x2C)
 #define SIR_LIM_AUTH_RETRY_TIMEOUT            (SIR_LIM_TIMEOUT_MSG_START + 0x2D)
 #define SIR_LIM_SAP_ECSA_TIMEOUT            (SIR_LIM_TIMEOUT_MSG_START + 0x2E)

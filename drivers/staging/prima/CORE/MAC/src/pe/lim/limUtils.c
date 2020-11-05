@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1119,6 +1119,13 @@ limCleanupMlm(tpAniSirGlobal pMac)
         tx_timer_delete(&pMac->lim.limTimers.gLimFTPreAuthRspTimer);
 #endif
 
+#ifdef WLAN_FEATURE_LFR_MBB
+        tx_timer_deactivate(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer);
+        tx_timer_delete(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer);
+
+        tx_timer_deactivate(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer);
+        tx_timer_delete(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer);
+#endif
 
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
         // Deactivate and delete TSM
@@ -1140,6 +1147,9 @@ limCleanupMlm(tpAniSirGlobal pMac)
 
         tx_timer_deactivate(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
         tx_timer_delete(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
+
+        tx_timer_deactivate(&pMac->lim.limTimers.sae_auth_timer);
+        tx_timer_delete(&pMac->lim.limTimers.sae_auth_timer);
 
         pMac->lim.gLimTimersCreated = 0;
     }
@@ -7022,8 +7032,13 @@ limRestorePreChannelSwitchState(tpAniSirGlobal pMac, tpPESession psessionEntry)
     /* Channel switch should be ready for the next time */
     psessionEntry->gLimSpecMgmt.dot11hChanSwState = eLIM_11H_CHANSW_INIT;
 
-    /* Restore the frame transmission, all the time. */
-    limFrameTransmissionControl(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
+    /* Restore the frame transmission, if switched channel is NON-DFS.
+     * Else tx should be resumed after receiving first beacon on DFS channel
+     */
+    if(!limIsconnectedOnDFSChannel(psessionEntry->currentOperChannel))
+        limFrameTransmissionControl(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
+    else
+        psessionEntry->gLimSpecMgmt.dfs_channel_csa = true;
 
     /* Free to enter BMPS */
     limSendSmePostChannelSwitchInd(pMac);

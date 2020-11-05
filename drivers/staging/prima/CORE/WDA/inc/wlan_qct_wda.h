@@ -1112,6 +1112,7 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_BEACON_FILTER_IND          SIR_HAL_BEACON_FILTER_IND
 #define WDA_VOWIFI_MODE                SIR_HAL_VOWIFI_MODE
 #define WDA_QPOWER                     SIR_HAL_QPOWER
+#define WDA_LOW_POWER_MODE             SIR_HAL_LOW_POWER_MODE
 
 /// PE <-> HAL WOWL messages
 #define WDA_WOWL_ADD_BCAST_PTRN        SIR_HAL_WOWL_ADD_BCAST_PTRN
@@ -1240,6 +1241,8 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_GET_ROAM_RSSI_RSP      SIR_HAL_GET_ROAM_RSSI_RSP
 
 #define WDA_NAN_REQUEST            SIR_HAL_NAN_REQUEST
+
+#define WDA_BLACKLIST_REQ          SIR_HAL_BLACKLIST_REQ
 
 #define WDA_START_SCAN_OFFLOAD_REQ  SIR_HAL_START_SCAN_OFFLOAD_REQ
 #define WDA_START_SCAN_OFFLOAD_RSP  SIR_HAL_START_SCAN_OFFLOAD_RSP

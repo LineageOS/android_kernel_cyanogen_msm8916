@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -886,6 +886,11 @@ typedef enum
 #define CFG_LFR_MAWC_FEATURE_ENABLED_MIN                    (0)
 #define CFG_LFR_MAWC_FEATURE_ENABLED_MAX                    (1)
 #define CFG_LFR_MAWC_FEATURE_ENABLED_DEFAULT                (0) /* disabled */
+
+#define CFG_PER_BSSID_BLACKLIST_TIMEOUT_NAME               "gBssidBlacklistTimeOut"
+#define CFG_PER_BSSID_BLACKLIST_TIMEOUT_MIN                (0)
+#define CFG_PER_BSSID_BLACKLIST_TIMEOUT_MAX                (240) //Max timeout
+#define CFG_PER_BSSID_BLACKLIST_TIMEOUT_DEFAULT            (0)
 #endif // FEATURE_WLAN_LFR
 
 #if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_ESE) || defined(FEATURE_WLAN_LFR)
@@ -3266,6 +3271,52 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
 #define CFG_ENABLE_DEFAULT_SAP           "gEnabledefaultSAP"
 #define CFG_ENABLE_DEFAULT_SAP_DEFAULT   ""
 
+/*
+ * <ini>
+ * sae_enabled - Enable/Disable SAE support in driver
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable/disable SAE support in driver
+ * Driver will update config to supplicant based on this config.
+ *
+ * Related: None
+ *
+ * Supported Feature: SAE
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
+#define CFG_IS_SAE_ENABLED_DEFAULT (1)
+#define CFG_IS_SAE_ENABLED_MIN     (0)
+#define CFG_IS_SAE_ENABLED_MAX     (1)
+
+/*
+ * <ini>
+ * enable_sae_for_sap - Enable/Disable SAE support in driver for SAP
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable/disable SAE support in driver for SAP mode
+ * Driver will process/drop the SAE authentication frames based on this config.
+ *
+ * Related: None
+ *
+ * Supported Feature: SAE
+ * Usage: External
+ *
+ * </ini>
+ */
+
+#define CFG_ENABLE_SAE_FOR_SAP_NAME    "enable_sae_for_sap"
+#define CFG_ENABLE_SAE_FOR_SAP_DEFAULT (1)
+#define CFG_ENABLE_SAE_FOR_SAP_MIN     (0)
+#define CFG_ENABLE_SAE_FOR_SAP_MAX     (1)
+
 /*--------------------------------------------------------------------------- 
   Type declarations
   -------------------------------------------------------------------------*/ 
@@ -3882,6 +3933,13 @@ typedef struct
    bool                        indoor_channel_support;
    bool                        force_rsne_override;
    char enabledefaultSAP[CFG_CONCURRENT_IFACE_MAX_LEN];
+#ifdef WLAN_FEATURE_SAE
+   bool                        is_sae_enabled;
+   bool                        enable_sae_for_sap;
+#endif
+#ifdef FEATURE_WLAN_LFR
+   uint8_t                     bssid_blacklist_timeout;
+#endif
 } hdd_config_t;
 
 /*--------------------------------------------------------------------------- 
