@@ -79,7 +79,7 @@ static int ehci_msm_reset(struct usb_hcd *hcd)
 	return 0;
 }
 
-static const struct ehci_driver_overrides ehci_msm_overrides __initdata = {
+static const struct ehci_driver_overrides ehci_msm_overrides __initconst = {
 	.reset = ehci_msm_reset,
 };
 

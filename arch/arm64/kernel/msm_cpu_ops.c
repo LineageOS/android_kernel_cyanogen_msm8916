@@ -1,19 +1,3 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
- * Copyright (c) 2013 ARM Ltd.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
-
-/* MSM ARMv8 CPU Operations
- * Based on arch/arm64/kernel/smp_spin_table.c
- */
 
 #include <linux/bitops.h>
 #include <linux/cpu.h>
@@ -48,7 +32,7 @@ static int cold_boot_flags[] = {
 	SCM_FLAG_COLDBOOT_CPU2,
 	SCM_FLAG_COLDBOOT_CPU3,
 };
-
+ 
 static void write_pen_release(u64 val)
 {
 	void *start = (void *)&secondary_holding_pen_release;
@@ -131,34 +115,9 @@ static int msm_cpu_boot(unsigned int cpu)
 	int ret = 0;
 
 	if (per_cpu(cold_boot_done, cpu) == false) {
-		if (of_board_is_sim()) {
-			ret = msm_unclamp_secondary_arm_cpu_sim(cpu);
-			if (ret)
-				return ret;
-		} else {
-			ret = msm_unclamp_secondary_arm_cpu(cpu);
-			if (ret)
-				return ret;
-		}
-		per_cpu(cold_boot_done, cpu) = true;
-	}
-	return secondary_pen_release(cpu);
-}
-
-static int msm8994_cpu_boot(unsigned int cpu)
-{
-	int ret = 0;
-
-	if (per_cpu(cold_boot_done, cpu) == false) {
-		if (of_board_is_sim()) {
-			ret = msm_unclamp_secondary_arm_cpu_sim(cpu);
-			if (ret)
-				return ret;
-		} else {
-			ret = msm8994_unclamp_secondary_arm_cpu(cpu);
-			if (ret)
-				return ret;
-		}
+		ret = msm_unclamp_secondary_arm_cpu(cpu);
+		if (ret)
+			return ret;
 		per_cpu(cold_boot_done, cpu) = true;
 	}
 	return secondary_pen_release(cpu);
@@ -201,28 +160,16 @@ static void msm_wfi_cpu_die(unsigned int cpu)
 }
 #endif
 
-static const struct cpu_operations msm_cortex_a_ops = {
+extern int msm_pm_collapse(unsigned long);
+
+struct cpu_operations msm_cortex_a_ops = {
 	.name		= "qcom,arm-cortex-acc",
 	.cpu_init	= msm_cpu_init,
 	.cpu_prepare	= msm_cpu_prepare,
 	.cpu_boot	= msm_cpu_boot,
 	.cpu_postboot	= msm_cpu_postboot,
 #ifdef CONFIG_HOTPLUG_CPU
-	.cpu_die        = msm_wfi_cpu_die,
+	.cpu_die	= msm_wfi_cpu_die,
 #endif
-	.cpu_suspend       = msm_pm_collapse,
+	.cpu_suspend	= msm_pm_collapse,
 };
-CPU_METHOD_OF_DECLARE(msm_cortex_a_ops, &msm_cortex_a_ops);
-
-static const struct cpu_operations msm8994_cortex_a_ops = {
-	.name		= "qcom,8994-arm-cortex-acc",
-	.cpu_init	= msm_cpu_init,
-	.cpu_prepare	= msm_cpu_prepare,
-	.cpu_boot	= msm8994_cpu_boot,
-	.cpu_postboot	= msm_cpu_postboot,
-#ifdef CONFIG_HOTPLUG_CPU
-	.cpu_die        = msm_wfi_cpu_die,
-#endif
-	.cpu_suspend       = msm_pm_collapse,
-};
-CPU_METHOD_OF_DECLARE(msm8994_cortex_a_ops, &msm8994_cortex_a_ops);

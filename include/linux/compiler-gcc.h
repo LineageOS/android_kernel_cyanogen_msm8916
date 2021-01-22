@@ -68,6 +68,16 @@
 #define __weak				__attribute__((weak))
 
 /*
+ * https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#Common-Function-Attributes
+ */
+
+#if __has_attribute(__no_reorder__)
+#define __noreorder			__attribute__((no_reorder))
+#else
+#define __noreorder
+#endif
+
+/*
  * it doesn't make sense on ARM (currently the only user of __naked) to trace
  * naked functions because then mcount is called without stack and frame pointer
  * being set up and there is no chance to restore the lr register to the value
@@ -106,12 +116,6 @@
 # error Sorry, your compiler is too old - please upgrade it.
 #endif
 
-#if GCC_VERSION < 30300
-# define __used			__attribute__((__unused__))
-#else
-# define __used			__attribute__((__used__))
-#endif
-
 #ifdef CONFIG_GCOV_KERNEL
 # if GCC_VERSION < 30400
 #   error "GCOV profiling support for gcc versions below 3.4 not included"
@@ -131,7 +135,12 @@
 # endif
 #endif
 
-#define __used			__attribute__((__used__))
+/*
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-used-function-attribute
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html#index-used-variable-attribute
+ */
+#define __used                          __attribute__((__used__))
+
 #define __compiler_offsetof(a, b)					\
 	__builtin_offsetof(a, b)
 
@@ -181,11 +190,15 @@
 
 #endif /* GCC_VERSION >= 40500 */
 
-#if GCC_VERSION >= 40600
 /*
- * Tell the optimizer that something else uses this function or variable.
+ * Optional: not supported by clang
+ *
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-externally_005fvisible-function-attribute
  */
-#define __visible	__attribute__((externally_visible))
+#if __has_attribute(__externally_visible__)
+# define __visible                      __attribute__((__externally_visible__))
+#else
+# define __visible
 #endif
 
 /*

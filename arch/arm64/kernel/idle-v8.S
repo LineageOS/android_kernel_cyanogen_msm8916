@@ -61,4 +61,4 @@ msm_pm_boot_vector:
 
 	.globl msm_pc_debug_counters_phys
 msm_pc_debug_counters_phys:
-	.long 0x0
+	.quad 0x0

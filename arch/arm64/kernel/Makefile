@@ -15,7 +15,7 @@ CFLAGS_REMOVE_return_address.o = -pg
 arm64-obj-y		:= cputable.o debug-monitors.o entry.o irq.o fpsimd.o	\
 			   entry-fpsimd.o process.o ptrace.o setup.o signal.o	\
 			   sys.o stacktrace.o time.o traps.o io.o vdso.o	\
-			   hyp-stub.o psci.o cpu_ops.o insn.o opcodes.o		\
+			   hyp-stub.o idle-v8.o cpu_pwr_ctl.o msm_cpu_ops.o psci.o cpu_ops.o insn.o opcodes.o		\
 			   return_address.o
 
 arm64-obj-$(CONFIG_COMPAT)		+= sys32.o kuser32.o signal32.o		\

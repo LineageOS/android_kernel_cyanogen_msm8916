@@ -307,9 +307,6 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
  * Mark functions that are referenced only in inline assembly as __used so
  * the code is emitted even though it appears to be unreferenced.
  */
-#ifndef __used
-# define __used			/* unimplemented */
-#endif
 
 #ifndef __maybe_unused
 # define __maybe_unused		/* unimplemented */
@@ -365,10 +362,6 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 /* Simple shorthand for a section definition */
 #ifndef __section
 # define __section(S) __attribute__ ((__section__(#S)))
-#endif
-
-#ifndef __visible
-#define __visible
 #endif
 
 /* Are two types/vars the same type (ignoring qualifiers)? */

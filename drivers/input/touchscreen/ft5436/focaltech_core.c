@@ -1771,7 +1771,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	fts_i2c_client = client;
 	fts_input_dev = input_dev;
 
-	fts_get_upgrade_array();
+	//fts_get_upgrade_array();
 #if 0
 	err = request_threaded_irq(client->irq, NULL, fts_ts_interrupt,
 				pdata->irqflags | IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
@@ -1855,8 +1855,8 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	dev_dbg(&client->dev, "touch threshold = %d\n", reg_value * 4);
 
-	fts_update_fw_ver(data);
-	fts_update_fw_vendor_id(data);
+	//fts_update_fw_ver(data);
+	//fts_update_fw_vendor_id(data);
 
 	FTS_STORE_TS_INFO(data->ts_info, data->family_id, data->pdata->name,
 			data->pdata->num_max_touches, data->pdata->group_id,
@@ -1899,6 +1899,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	#endif 
 	
 //Start:Reqxxx,liuyang3.wt,ADD,20160521, for glove mode switch.
+#if FTS_GLOVE_SURPORT
     fts_glove_switch_proc= proc_create(FTS_GLOVE_SWITCH_PROC_FILE, 0666, NULL, &glove_switch_proc_ops);
     if (fts_glove_switch_proc == NULL)
     {
@@ -1908,6 +1909,7 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
     {
         pr_info("create proc entry %s success", FTS_GLOVE_SWITCH_PROC_FILE);
     }
+#endif
 //End:Reqxxx,liuyang3.wt,ADD,20160521, for glove mode switch.	
 	
 #if defined(CONFIG_FB)
