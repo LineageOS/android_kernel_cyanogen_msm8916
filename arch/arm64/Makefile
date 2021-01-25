@@ -75,7 +75,7 @@ head-y		+= arch/arm64/kernel/sys32.o
 head-y		+= arch/arm64/kernel/head.o
 head-y		+= arch/arm64/kernel/idle-v8.o
 
-head-y		+= arch/arm64/kernel/vdso/vdso.o
+head-y		+= arch/arm64/kernel/vdso-wrap.o
 
 head-y		+= arch/arm64/mm/cache.o
 head-y		+= arch/arm64/mm/proc.o
