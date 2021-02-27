@@ -127,7 +127,8 @@ static int get_index_all_cpufreq_stat(struct all_cpufreq_stats *all_stat,
 	return -1;
 }
 
-void acct_update_power(struct task_struct *task, cputime_t cputime) {
+void acct_update_power(struct task_struct *task, cputime_t cputime)
+{
 	struct cpufreq_power_stats *powerstats;
 	struct cpufreq_stats *stats;
 	unsigned int cpu_num, curr;
@@ -330,6 +331,7 @@ static void cpufreq_allstats_free(void)
 		kfree(all_stat);
 		per_cpu(all_cpufreq_stats, cpu) = NULL;
 	}
+
 	if (all_freq_table) {
 		kfree(all_freq_table->freq_table);
 		kfree(all_freq_table);
@@ -514,10 +516,8 @@ static void create_all_freq_table(void)
 static void free_all_freq_table(void)
 {
 	if (all_freq_table) {
-		if (all_freq_table->freq_table) {
-			kfree(all_freq_table->freq_table);
-			all_freq_table->freq_table = NULL;
-		}
+		kfree(all_freq_table->freq_table);
+		all_freq_table->freq_table = NULL;
 		kfree(all_freq_table);
 		all_freq_table = NULL;
 	}

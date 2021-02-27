@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -64,6 +64,7 @@ when           who        what, where, why
 #include "wlan_qct_dxe.h"
 #include "wlan_qct_dxe_i.h"
 #include "wlan_qct_pal_device.h"
+#include "vos_api.h"
 
 /*----------------------------------------------------------------------------
  * Local Definitions
@@ -1714,7 +1715,7 @@ void dxeRXResourceAvailableTimerExpHandler
       if (NULL != dxeCtxt)
          dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
 
-      wpalWlanReload();
+      wpalWlanReload(VOS_DXE_FAILURE);
 
       if (NULL != usrData)
          dxeStartSSRTimer((WLANDXE_CtrlBlkType *)usrData);
@@ -2414,7 +2415,7 @@ static wpt_status dxeRXFrameReady
             HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_ERROR,
                      "RX successive empty interrupt, Could not find invalidated DESC reload driver");
             dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-            wpalWlanReload();
+            wpalWlanReload(VOS_DXE_FAILURE);
             dxeStartSSRTimer(dxeCtxt);
          }
       }
@@ -2743,7 +2744,7 @@ pull_frames:
          if (eWLAN_PAL_STATUS_SUCCESS != dxeErrHandler(channelCb, chHighStat))
          {
             dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-            wpalWlanReload();
+            wpalWlanReload(VOS_DXE_FAILURE);
             dxeStartSSRTimer(dxeCtxt);
          }
       }
@@ -2798,7 +2799,7 @@ pull_frames:
                          dxeErrHandler(channelCb, chLowStat))
          {
             dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-            wpalWlanReload();
+            wpalWlanReload(VOS_DXE_FAILURE);
             dxeStartSSRTimer(dxeCtxt);
          }
       }
@@ -2850,7 +2851,7 @@ pull_frames:
                             dxeErrHandler(channelCb, chLogRxStat))
             {
                dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-               wpalWlanReload();
+               wpalWlanReload(VOS_DXE_FAILURE);
                dxeStartSSRTimer(dxeCtxt);
             }
 
@@ -2904,7 +2905,7 @@ pull_frames:
                             dxeErrHandler(channelCb, chLogRxFwStat))
             {
                dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-               wpalWlanReload();
+               wpalWlanReload(VOS_DXE_FAILURE);
                dxeStartSSRTimer(dxeCtxt);
             }
 
@@ -3213,8 +3214,16 @@ static void dxeRXISR
       return;         
    }
 
-   wpalReadRegister(WLANDXE_INT_SRC_RAW_ADDRESS,
+   status = wpalReadRegister(WLANDXE_INT_SRC_RAW_ADDRESS,
                                   &intSrc);
+   if(eWLAN_PAL_STATUS_SUCCESS != status)
+   {
+      status = wpalEnableInterrupt(DXE_INTERRUPT_RX_READY);
+      if(eWLAN_PAL_STATUS_SUCCESS != status)
+          HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_ERROR,
+                   "dxeISR enable rx ready interrupt fail");
+      return;
+   }
    /* Note: intSrc which holds the INT_SRC_RAW_ADDRESS reg value
       While debugging crash dump convert to power of 2 for channel type */
    DXTRACE(dxeTrace(intSrc, TRACE_RXINT_STATE, TRACE_WLANDXE_VAR_DISABLE));
@@ -3447,7 +3456,7 @@ static wpt_status dxeTXPushFrame
 
       if(wpalIsArpPkt(palPacket))
       {
-         HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_ERROR,
+         HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_INFO_HIGH,
                   "%s :ARP packet", __func__);
       }
 
@@ -3704,7 +3713,7 @@ static wpt_status dxeTXCompFrame
 
          if(wpalIsArpPkt(currentCtrlBlk->xfrFrame))
          {
-             HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_ERROR,
+             HDXE_MSG(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_INFO_HIGH,
                       "%s :ARP packet DMA-ed ", __func__);
              wpalUpdateTXArpFWdeliveredStats();
          }
@@ -4102,7 +4111,7 @@ void dxeTXEventHandler
                          dxeErrHandler(channelCb, chStat))
          {
             dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-            wpalWlanReload();
+            wpalWlanReload(VOS_DXE_FAILURE);
             dxeStartSSRTimer(dxeCtxt);
          }
          bEnableISR = 1;
@@ -4159,7 +4168,7 @@ void dxeTXEventHandler
                          dxeErrHandler(channelCb, chStat))
          {
              dxeCtxt->driverReloadInProcessing = eWLAN_PAL_TRUE;
-             wpalWlanReload();
+             wpalWlanReload(VOS_DXE_FAILURE);
              dxeStartSSRTimer(dxeCtxt);
          }
          bEnableISR = 1;
@@ -4817,7 +4826,8 @@ void *WLANDXE_Open
     * Init State is
     *    Clear TX Enable
     *    RING EMPTY STATE */
-   smsmInitState = wpalNotifySmsm(WPAL_SMSM_WLAN_TX_ENABLE,
+   smsmInitState = wpalNotifySmsm(WPAL_SMSM_WLAN_TX_ENABLE |
+                                  WPAL_SMSM_WLAN_TX_RINGS_EMPTY,
                                   WPAL_SMSM_WLAN_TX_RINGS_EMPTY);
    if(0 != smsmInitState)
    {

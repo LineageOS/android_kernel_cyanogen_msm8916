@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1109,6 +1109,14 @@ REG_TABLE_ENTRY g_registry_table[] =
                  CFG_LFR_MAWC_FEATURE_ENABLED_MAX,
                  NotifyIsMAWCIniFeatureEnabled, 0 ),
 
+   /* flag to turn ON/OFF Motion assistance for Legacy Fast Roaming */
+   REG_VARIABLE( CFG_PER_BSSID_BLACKLIST_TIMEOUT_NAME, WLAN_PARAM_Integer,
+                 hdd_config_t, bssid_blacklist_timeout,
+                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                 CFG_PER_BSSID_BLACKLIST_TIMEOUT_DEFAULT,
+                 CFG_PER_BSSID_BLACKLIST_TIMEOUT_MIN,
+                 CFG_PER_BSSID_BLACKLIST_TIMEOUT_MAX ),
+
 #endif // FEATURE_WLAN_LFR
 
 #if  defined (WLAN_FEATURE_VOWIFI_11R) || defined (FEATURE_WLAN_ESE) || defined(FEATURE_WLAN_LFR)
@@ -1374,6 +1382,13 @@ REG_TABLE_ENTRY g_registry_table[] =
                  CFG_REORDER_TIME_VO_DEFAULT,
                  CFG_REORDER_TIME_VO_MIN,
                  CFG_REORDER_TIME_VO_MAX ),
+
+   REG_VARIABLE( CFG_ENABLE_PN_REPLAY_NAME , WLAN_PARAM_Integer,
+                 hdd_config_t, enablePNReplay,
+                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                 CFG_ENABLE_PN_REPLAY_DEFAULT,
+                 CFG_ENABLE_PN_REPLAY_MIN,
+                 CFG_ENABLE_PN_REPLAY_MAX ),
 
    REG_VARIABLE_STRING( CFG_WOWL_PATTERN_NAME, WLAN_PARAM_String,
                         hdd_config_t, wowlPattern,
@@ -3585,13 +3600,6 @@ REG_VARIABLE( CFG_EXTSCAN_ENABLE, WLAN_PARAM_Integer,
                  CFG_OPTIMIZE_CA_EVENT_DISABLE,
                  CFG_OPTIMIZE_CA_EVENT_ENABLE ),
 
-   REG_VARIABLE(CFG_FWR_MEM_DUMP_NAME, WLAN_PARAM_Integer,
-                 hdd_config_t,enableFwrMemDump,
-                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
-                 CFG_FWR_MEM_DUMP_DEF,
-                 CFG_FWR_MEM_DUMP_MIN,
-                 CFG_FWR_MEM_DUMP_MAX),
-
    REG_VARIABLE( CFG_ACTIVE_PASSIVE_CHAN_CONV_NAME, WLAN_PARAM_Integer,
                  hdd_config_t, gActivePassiveChCon,
                  VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -3945,6 +3953,14 @@ REG_VARIABLE( CFG_EXTSCAN_ENABLE, WLAN_PARAM_Integer,
                CFG_STA_AUTH_RETRIES_FOR_CODE17_MIN,
                CFG_STA_AUTH_RETRIES_FOR_CODE17_MAX ),
 
+  REG_VARIABLE( CFG_INDOOR_CHANNEL_SUPPORT_NAME, WLAN_PARAM_Integer,
+               hdd_config_t, indoor_channel_support,
+               VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+               CFG_INDOOR_CHANNEL_SUPPORT_DEFAULT,
+               CFG_INDOOR_CHANNEL_SUPPORT_MIN,
+               CFG_INDOOR_CHANNEL_SUPPORT_MAX),
+
+
   REG_VARIABLE( CFG_TRIGGER_NULLFRAME_BEFORE_HB_NAME, WLAN_PARAM_Integer,
                 hdd_config_t, trigger_nullframe_before_hb,
                 VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -3984,6 +4000,62 @@ REG_VARIABLE( CFG_EXTSCAN_ENABLE, WLAN_PARAM_Integer,
                 CFG_ENABLE_POWERSAVE_OFFLOAD_DEFAULT,
                 CFG_ENABLE_POWERSAVE_OFFLOAD_MIN,
                 CFG_ENABLE_POWERSAVE_OFFLOAD_MAX),
+
+  REG_VARIABLE(CFG_BTC_2M_DYN_LONG_WLAN_LEN_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, btc_dyn_wlan_len,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_WLAN_LEN_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_WLAN_LEN_MIN,
+                CFG_BTC_2M_DYN_LONG_WLAN_LEN_MAX),
+
+  REG_VARIABLE(CFG_BTC_2M_DYN_LONG_BT_LEN_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, btc_dyn_bt_len,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_BT_LEN_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_BT_LEN_MIN,
+                CFG_BTC_2M_DYN_LONG_BT_LEN_MAX),
+
+  REG_VARIABLE(CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, btc_dyn_bt_ext_len,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_MIN,
+                CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_MAX),
+
+  REG_VARIABLE(CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, btc_dyn_num_bt_ext,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_DEFAULT,
+                CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_MIN,
+                CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_MAX),
+
+  REG_VARIABLE(CFG_FORCE_RSNE_OVERRIDE_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, force_rsne_override,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_FORCE_RSNE_OVERRIDE_DEFAULT,
+                CFG_FORCE_RSNE_OVERRIDE_MIN,
+                CFG_FORCE_RSNE_OVERRIDE_MAX),
+
+  REG_VARIABLE_STRING(CFG_ENABLE_DEFAULT_SAP, WLAN_PARAM_String,
+                      hdd_config_t, enabledefaultSAP,
+                      VAR_FLAGS_NONE,
+                      (void *)CFG_ENABLE_DEFAULT_SAP_DEFAULT),
+
+#ifdef WLAN_FEATURE_SAE
+  REG_VARIABLE(CFG_IS_SAE_ENABLED_NAME, WLAN_PARAM_Integer,
+               hdd_config_t, is_sae_enabled,
+               VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+               CFG_IS_SAE_ENABLED_DEFAULT,
+               CFG_IS_SAE_ENABLED_MIN,
+               CFG_IS_SAE_ENABLED_MAX),
+
+  REG_VARIABLE(CFG_ENABLE_SAE_FOR_SAP_NAME, WLAN_PARAM_Integer,
+               hdd_config_t, enable_sae_for_sap,
+               VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+               CFG_ENABLE_SAE_FOR_SAP_DEFAULT,
+               CFG_ENABLE_SAE_FOR_SAP_MIN,
+               CFG_ENABLE_SAE_FOR_SAP_MAX),
+#endif
 };
 
 /*
@@ -4200,6 +4272,28 @@ config_exit:
    return vos_status;
 }
 
+#ifdef WLAN_FEATURE_SAE
+static void hdd_cfg_print_sae(hdd_context_t *hdd_ctx)
+{
+   hddLog(LOG2, "Name = [%s] value = [%u]", CFG_IS_SAE_ENABLED_NAME,
+          hdd_ctx->cfg_ini->is_sae_enabled);
+}
+
+static void hdd_cfg_print_sae_sap(hdd_context_t *hdd_ctx)
+{
+   hddLog(LOG2, "Name = [%s] value = [%u]",
+          CFG_ENABLE_SAE_FOR_SAP_NAME,
+          hdd_ctx->cfg_ini->enable_sae_for_sap);
+}
+#else
+static void hdd_cfg_print_sae(hdd_context_t *hdd_ctx)
+{
+}
+
+static void hdd_cfg_print_sae_sap(hdd_context_t *hdd_ctx)
+{
+}
+#endif
 
 static void print_hdd_cfg(hdd_context_t *pHddCtx)
 {
@@ -4652,6 +4746,17 @@ static void print_hdd_cfg(hdd_context_t *pHddCtx)
             "Name = [%s] Value = [%u] ",
             CFG_ENABLE_POWERSAVE_OFFLOAD_NAME,
             pHddCtx->cfg_ini->enable_power_save_offload);
+
+    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
+            "Name = [%s] Value = [%u] ",
+            CFG_FORCE_RSNE_OVERRIDE_NAME,
+            pHddCtx->cfg_ini->force_rsne_override);
+    VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO_HIGH,
+            "Name = [%s] Value = [%s] ",
+            CFG_ENABLE_DEFAULT_SAP,
+            pHddCtx->cfg_ini->enabledefaultSAP);
+    hdd_cfg_print_sae(pHddCtx);
+    hdd_cfg_print_sae_sap(pHddCtx);
 }
 
 
@@ -4811,6 +4916,7 @@ static VOS_STATUS hdd_apply_cfg_ini( hdd_context_t *pHddCtx, tCfgIniEntry* iniTa
    {
       hddLog(LOGE, "%s: MAX_CFG_INI_ITEMS too small, must be at least %ld",
              __func__, cRegTableEntries);
+      VOS_ASSERT(1);
    }
 
    for ( idx = 0; idx < cRegTableEntries; idx++, pRegEntry++ )
@@ -6349,6 +6455,43 @@ v_BOOL_t hdd_update_config_dat( hdd_context_t *pHddCtx )
       fStatus = FALSE;
       hddLog(LOGE, "Couldn't pass WNI_CFG_ENABLE_POWERSAVE_OFFLOAD to CCM");
    }
+
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_BTC_2M_DYN_LONG_WLAN_LEN,
+                   pConfig->btc_dyn_wlan_len, NULL,
+                   eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Couldn't pass WNI_CFG_BTC_2M_DYN_LONG_WLAN_LEN to CCM");
+   }
+
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_BTC_2M_DYN_LONG_BT_LEN,
+                   pConfig->btc_dyn_bt_len, NULL,
+                   eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Couldn't pass WNI_CFG_BTC_2M_DYN_LONG_BT_LEN to CCM");
+   }
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_BTC_2M_DYN_LONG_BT_EXT_LEN,
+                   pConfig->btc_dyn_bt_ext_len, NULL,
+                   eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Couldn't pass WNI_CFG_BTC_2M_DYN_LONG_BT_EXT_LEN to CCM");
+   }
+   if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_BTC_2M_DYN_LONG_NUM_BT_EXT,
+                   pConfig->btc_dyn_num_bt_ext, NULL,
+                   eANI_BOOLEAN_FALSE)
+       ==eHAL_STATUS_FAILURE)
+   {
+      fStatus = FALSE;
+      hddLog(LOGE, "Couldn't pass WNI_CFG_BTC_2M_DYN_LONG_NUM_BT_EXT to CCM");
+   }
+
+
+
    return fStatus;
 }
 
@@ -6676,6 +6819,9 @@ VOS_STATUS hdd_set_sme_config( hdd_context_t *pHddCtx )
        true) != VOS_STATUS_SUCCESS)
        vos_mem_set(smeConfig->csrConfig.agg_btc_sco_oui, VENDOR_AP_OUI_SIZE, 0);
 
+   /* Disable aggrigation if value is 0 or 1 (CFG_NUM_BUFF_BTC_SCO_INVALID) */
+   if (pHddCtx->cfg_ini->num_buff_aggr_btc_sco == CFG_NUM_BUFF_BTC_SCO_INVALID)
+       pHddCtx->cfg_ini->num_buff_aggr_btc_sco = CFG_NUM_BUFF_BTC_SCO_MIN;
    smeConfig->csrConfig.num_ba_buff_btc_sco =
                         pHddCtx->cfg_ini->num_buff_aggr_btc_sco;
    smeConfig->csrConfig.num_ba_buff =

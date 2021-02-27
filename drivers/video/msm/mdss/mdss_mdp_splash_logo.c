@@ -479,7 +479,7 @@ static int mdss_mdp_display_splash_image(struct msm_fb_data_type *mfd)
 		goto end;
 	}
 
-	memcpy(sinfo->splash_buffer, splash_bgr888_image, image_len);
+	//memcpy(sinfo->splash_buffer, splash_bgr888_image, image_len);
 
 	rc = mdss_mdp_splash_iommu_attach(mfd);
 	if (rc)

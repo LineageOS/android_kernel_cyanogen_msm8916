@@ -281,7 +281,10 @@ static void __schBeaconProcessNoSession(tpAniSirGlobal pMac, tpSchBeaconStruct p
     //If station(STA/BT-STA/BT-AP/IBSS) mode, Always save the beacon in the scan results, if atleast one session is active
     //schBeaconProcessNoSession will be called only when there is atleast one session active, so not checking 
     //it again here.
-    limCheckAndAddBssDescription(pMac, pBeacon, pRxPacketInfo, eANI_BOOLEAN_FALSE, eANI_BOOLEAN_FALSE);
+    if (WDA_GET_OFFLOADSCANLEARN(pRxPacketInfo) || pMac->fScanOffload)
+        limCheckAndAddBssDescription(pMac, pBeacon, pRxPacketInfo,
+                                     eANI_BOOLEAN_FALSE, eANI_BOOLEAN_FALSE);
+
     return;  
 }
 
@@ -378,6 +381,11 @@ static void __schBeaconProcessForSession( tpAniSirGlobal      pMac,
                                          "Ignoring beacon!"),
                           psessionEntry->currentOperChannel, pBeacon->channelNumber);)
            goto fail;
+        }
+
+        if (psessionEntry->gLimSpecMgmt.dfs_channel_csa) {
+           limFrameTransmissionControl(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
+           psessionEntry->gLimSpecMgmt.dfs_channel_csa = false;
         }
 
         if(RF_CHAN_14 >= psessionEntry->currentOperChannel)
@@ -755,10 +763,6 @@ void schBeaconProcess(tpAniSirGlobal pMac, tANI_U8* pRxPacketInfo, tpPESession p
             limParseBeaconForTim(pMac, (tANI_U8 *) pRxPacketInfo, psessionEntry);
 
         return;
-    }
-    if (beaconStruct.ssidPresent)
-    {
-        beaconStruct.ssId.ssId[beaconStruct.ssId.length] = 0;
     }
 
     /*

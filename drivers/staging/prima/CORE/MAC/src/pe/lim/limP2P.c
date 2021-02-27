@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2016-2017, 2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -695,8 +695,6 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
            limLog( pMac, LOGE, "Unable to change link state");
        }
 
-       pMac->lim.gLimSystemInScanLearnMode = 0;
-       pMac->lim.gLimHalScanState = eLIM_HAL_IDLE_SCAN_STATE;
        SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
     }
 
@@ -744,7 +742,7 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
 void limSendSmeMgmtFrameInd(
                     tpAniSirGlobal pMac, tANI_U16 sessionId,
                     tANI_U8 *pRxPacketInfo, tpPESession psessionEntry,
-                    tANI_S8 rxRssi)
+                    tANI_S8 rxRssi, enum rxmgmt_flags rx_flags)
 {
     tpSirSmeMgmtFrameInd  pSirSmeMgmtFrame = NULL;
     tANI_U16              length;
@@ -774,6 +772,7 @@ void limSendSmeMgmtFrameInd(
     pSirSmeMgmtFrame->sessionId = sessionId;
     pSirSmeMgmtFrame->frameType = frameType;
     pSirSmeMgmtFrame->rxRssi = rxRssi;
+    pSirSmeMgmtFrame->rx_flags = rx_flags;
 
     if (( IS_5G_BAND(rfBand)))
     {

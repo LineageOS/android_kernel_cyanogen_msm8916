@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -70,7 +70,22 @@ tANI_U8 csrRSNOui[][ CSR_RSN_OUI_SIZE ] = {
     { 0x00, 0x40, 0x96, 0x00 }, // CCKM
     { 0x00, 0x0F, 0xAC, 0x06 },  // BIP (encryption type) or RSN-PSK-SHA256 (authentication type)
     /* RSN-8021X-SHA256 (authentication type) */
-    { 0x00, 0x0F, 0xAC, 0x05 }
+    { 0x00, 0x0F, 0xAC, 0x05 },
+#ifdef WLAN_FEATURE_SAE
+#define ENUM_SAE 9
+    /* SAE */
+    {0x00, 0x0F, 0xAC, 0x08},
+#define ENUM_FT_SAE 10
+    /* FT SAE */
+    {0x00, 0x0F, 0xAC, 0x09},
+#else
+    {0x00, 0x00, 0x00, 0x00},
+    {0x00, 0x00, 0x00, 0x00},
+ #endif
+    /* define new oui here */
+#define ENUM_OWE 11
+    /* OWE https://tools.ietf.org/html/rfc8110 */
+    {0x00, 0x0F, 0xAC, 0x12},
 };
 
 #ifdef FEATURE_WLAN_WAPI
@@ -1306,6 +1321,7 @@ get_eRoamCmdStatus_str(eRoamCmdStatus val)
         CASE_RETURN_STR(eCSR_ROAM_LOST_LINK_PARAMS_IND);
         CASE_RETURN_STR(eCSR_ROAM_ECSA_BCN_TX_IND);
         CASE_RETURN_STR(eCSR_ROAM_ECSA_CHAN_CHANGE_RSP);
+        CASE_RETURN_STR(eCSR_ROAM_SAE_COMPUTE);
     default:
         return "unknown";
     }
@@ -1584,6 +1600,31 @@ tANI_BOOLEAN csrIsStaSessionConnected( tpAniSirGlobal pMac )
 
     return( fRc );
 }
+
+tANI_BOOLEAN csrIsP2pGoSessionConnected( tpAniSirGlobal pMac )
+{
+    tANI_U32 i;
+    tCsrRoamSession *pSession = NULL;
+
+    for( i = 0; i < CSR_ROAM_SESSION_MAX; i++ )
+    {
+        if(CSR_IS_SESSION_VALID( pMac, i) &&
+           !csrIsConnStateDisconnected(pMac, i))
+        {
+            pSession = CSR_GET_SESSION(pMac, i);
+
+            if (NULL != pSession->pCurRoamProfile)
+            {
+                if (pSession->pCurRoamProfile->csrPersona == VOS_P2P_GO_MODE) {
+                    return eANI_BOOLEAN_TRUE;
+                }
+            }
+        }
+    }
+
+    return eANI_BOOLEAN_FALSE;
+}
+
 
 tANI_BOOLEAN csrIsP2pSessionConnected( tpAniSirGlobal pMac )
 {
@@ -2820,7 +2861,14 @@ tANI_BOOLEAN csrIsProfileRSN( tCsrRoamProfile *pProfile )
         case eCSR_AUTH_TYPE_RSN_PSK_SHA256:
         case eCSR_AUTH_TYPE_RSN_8021X_SHA256:
 #endif
-            fRSNProfile = TRUE;
+            fRSNProfile = true;
+            break;
+        case eCSR_AUTH_TYPE_SAE:
+            fRSNProfile = true;
+            break;
+
+        case eCSR_AUTH_TYPE_OWE:
+            fRSNProfile = true;
             break;
 
         default:
@@ -3566,6 +3614,42 @@ static tANI_BOOLEAN csrIsAuthRSN8021xSha256(tpAniSirGlobal pMac,
 }
 #endif
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * csr_is_auth_wpa_sae() - check whether oui is SAE
+ * @mac: Global MAC context
+ * @all_suites: pointer to all supported akm suites
+ * @suite_count: all supported akm suites count
+ * @oui: Oui needs to be matched
+ *
+ * Return: True if OUI is SAE, false otherwise
+ */
+static bool csr_is_auth_wpa_sae(tpAniSirGlobal mac,
+                                uint8_t all_suites[][CSR_RSN_OUI_SIZE],
+                                uint8_t suite_count, uint8_t oui[])
+{
+        return csrIsOuiMatch(mac, all_suites, suite_count, csrRSNOui[ENUM_SAE],
+                             oui);
+}
+#endif
+
+/**
+ * csr_is_auth_wpa_sae() - check whether oui is OWE
+ * @mac: Global MAC context
+ * @all_suites: pointer to all supported akm suites
+ * @suite_count: all supported akm suites count
+ * @oui: Oui needs to be matched
+ *
+ * Return: True if OUI is SAE, false otherwise
+ */
+static bool csr_is_auth_wpa_owe(tpAniSirGlobal mac,
+                                uint8_t all_suites[][CSR_RSN_OUI_SIZE],
+                                uint8_t suite_count, uint8_t oui[])
+{
+    return csrIsOuiMatch
+            (mac, all_suites, suite_count, csrRSNOui[ENUM_OWE], oui);
+}
+
 static tANI_BOOLEAN csrIsAuthWpa( tpAniSirGlobal pMac, tANI_U8 AllSuites[][CSR_WPA_OUI_SIZE],
                                 tANI_U8 cAllSuites,
                                 tANI_U8 Oui[] )
@@ -3683,6 +3767,75 @@ tANI_U8 csrGetOUIIndexFromCipher( eCsrEncryptionType enType )
         return OUIIndex;
 }
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * csr_check_sae_auth() - update negotiated auth if matches to SAE auth type
+ * @mac_ctx: pointer to mac context
+ * @authsuites: auth suites
+ * @c_auth_suites: auth suites count
+ * @authentication: authentication
+ * @auth_type: authentication type list
+ * @index: current counter
+ * @neg_authtype: pointer to negotiated auth
+ *
+ * Return: None
+ */
+static void csr_check_sae_auth(tpAniSirGlobal mac_ctx,
+                               uint8_t authsuites[][CSR_RSN_OUI_SIZE],
+                               uint8_t c_auth_suites,
+                               uint8_t authentication[],
+                               tCsrAuthList *auth_type,
+                               uint8_t index, eCsrAuthType *neg_authtype)
+{
+        if ((*neg_authtype == eCSR_AUTH_TYPE_UNKNOWN) &&
+            csr_is_auth_wpa_sae(mac_ctx, authsuites, c_auth_suites,
+                                authentication)) {
+                if (eCSR_AUTH_TYPE_SAE == auth_type->authType[index])
+                        *neg_authtype = eCSR_AUTH_TYPE_SAE;
+                if (eCSR_AUTH_TYPE_OPEN_SYSTEM == auth_type->authType[index])
+                        *neg_authtype = eCSR_AUTH_TYPE_OPEN_SYSTEM;
+        }
+        VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+                  FL("negotiated auth type is %d"), *neg_authtype);
+}
+#else
+static void csr_check_sae_auth(tpAniSirGlobal mac_ctx,
+                               uint8_t authsuites[][CSR_RSN_OUI_SIZE],
+                               uint8_t c_auth_suites,
+                               uint8_t authentication[],
+                               tCsrAuthList *auth_type,
+                               uint8_t index, eCsrAuthType *neg_authtype)
+{
+}
+#endif
+
+bool csr_is_pmkid_found_for_peer(tpAniSirGlobal mac,
+                                tCsrRoamSession *session,
+                                tSirMacAddr peer_mac_addr,
+                                uint8_t *pmkid, uint16_t pmkid_count)
+{
+    uint32_t i, index;
+    uint8_t *session_pmkid;
+    tPmkidCacheInfo pmkid_cache;
+
+    vos_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
+    vos_mem_copy(pmkid_cache.BSSID, peer_mac_addr, VOS_MAC_ADDR_SIZE);
+
+    if (!csr_lookup_pmkid_using_bssid(mac, session, &pmkid_cache, &index))
+        return false;
+    session_pmkid = &session->PmkidCacheInfo[index].PMKID[0];
+        for (i = 0; i < pmkid_count; i++) {
+            if (vos_mem_compare(pmkid + (i * CSR_RSN_PMKID_SIZE),
+                session_pmkid, CSR_RSN_PMKID_SIZE))
+                return true;
+            }
+
+    VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_DEBUG,
+            "PMKID in PmkidCacheInfo doesn't match with PMKIDs of peer");
+
+    return false;
+}
+
 tANI_BOOLEAN csrGetRSNInformation( tHalHandle hHal, tCsrAuthList *pAuthType, eCsrEncryptionType enType, tCsrEncryptionList *pMCEncryption,
                                    tDot11fIERSN *pRSNIe,
                            tANI_U8 *UnicastCypher,
@@ -3710,11 +3863,11 @@ tANI_BOOLEAN csrGetRSNInformation( tHalHandle hHal, tCsrAuthList *pAuthType, eCs
             cMulticastCyphers++;
             vos_mem_copy(MulticastCyphers, pRSNIe->gp_cipher_suite, CSR_RSN_OUI_SIZE);
             cUnicastCyphers = (tANI_U8)(pRSNIe->pwise_cipher_suite_count);
-            cAuthSuites = (tANI_U8)(pRSNIe->akm_suite_count);
+            cAuthSuites = (tANI_U8)(pRSNIe->akm_suite_cnt);
             for(i = 0; i < cAuthSuites && i < CSR_RSN_MAX_AUTH_SUITES; i++)
             {
                 vos_mem_copy((void *)&AuthSuites[i],
-                             (void *)&pRSNIe->akm_suites[i],
+                             (void *)&pRSNIe->akm_suite[i],
                              CSR_RSN_OUI_SIZE);
             }
 
@@ -3745,6 +3898,11 @@ tANI_BOOLEAN csrGetRSNInformation( tHalHandle hHal, tCsrAuthList *pAuthType, eCs
             for (i = 0 ; i < pAuthType->numEntries; i++)
             {
                 //Ciphers are supported, Match authentication algorithm and pick first matching authtype.
+
+                /* Set SAE as first preference */
+                csr_check_sae_auth(pMac, AuthSuites, cAuthSuites,
+                                   Authentication, pAuthType, i, &negAuthType);
+
  #ifdef WLAN_FEATURE_VOWIFI_11R
                 /* Changed the AKM suites according to order of preference */
                 if ( csrIsFTAuthRSN( pMac, AuthSuites, cAuthSuites, Authentication ) )
@@ -3790,6 +3948,12 @@ tANI_BOOLEAN csrGetRSNInformation( tHalHandle hHal, tCsrAuthList *pAuthType, eCs
                         negAuthType = eCSR_AUTH_TYPE_RSN_8021X_SHA256;
                 }
 #endif
+                if ((negAuthType == eCSR_AUTH_TYPE_UNKNOWN) &&
+                    csr_is_auth_wpa_owe(pMac, AuthSuites,
+                    cAuthSuites, Authentication)) {
+                         if (eCSR_AUTH_TYPE_OWE == pAuthType->authType[i])
+                              negAuthType = eCSR_AUTH_TYPE_OWE;
+                }
 
                 // The 1st auth type in the APs RSN IE, to match stations connecting
                 // profiles auth type will cause us to exit this loop
@@ -3958,8 +4122,30 @@ tANI_BOOLEAN csrIsRSNMatch( tHalHandle hHal, tCsrAuthList *pAuthType,
     return( fRSNMatch );
 }
 
+bool csr_lookup_pmkid_using_bssid(tpAniSirGlobal mac,
+                    tCsrRoamSession *session,
+                    tPmkidCacheInfo *pmk_cache,
+                    uint32_t *index)
+{
+    uint32_t i;
+    tPmkidCacheInfo *session_pmk;
 
-tANI_BOOLEAN csrLookupPMKID( tpAniSirGlobal pMac, tANI_U32 sessionId, tANI_U8 *pBSSId, tANI_U8 *pPMKId )
+    for (i = 0; i < session->NumPmkidCache; i++) {
+        session_pmk = &session->PmkidCacheInfo[i];
+        if (vos_is_macaddr_equal((v_MACADDR_t *)pmk_cache->BSSID,
+                     (v_MACADDR_t *)session_pmk->BSSID)) {
+            /* match found */
+            *index = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+tANI_BOOLEAN csrLookupPMKID(tpAniSirGlobal pMac, tANI_U32 sessionId,
+                            tPmkidCacheInfo *pmk_cache)
+
 {
     tANI_BOOLEAN fRC = FALSE, fMatchFound = FALSE;
     tANI_U32 Index;
@@ -3979,26 +4165,29 @@ tANI_BOOLEAN csrLookupPMKID( tpAniSirGlobal pMac, tANI_U32 sessionId, tANI_U8 *p
         pSession->fIgnorePMKIDCache = FALSE;
         return fRC;
     }
-    
-    do
-    {
-        for( Index=0; Index < CSR_MAX_PMKID_ALLOWED; Index++ )
-        {
-            if( vos_mem_compare(pBSSId, pSession->PmkidCacheInfo[Index].BSSID, sizeof(tCsrBssid)) )
-            {
-                // match found
-                fMatchFound = TRUE;
-                break;
-            }
-        }
 
-        if( !fMatchFound ) break;
+    /* If not able to find using cache id or ssid_len is not present */
+    fMatchFound = csr_lookup_pmkid_using_bssid(pMac, pSession, pmk_cache,
+                                               &Index);
 
-        vos_mem_copy(pPMKId, pSession->PmkidCacheInfo[Index].PMKID, CSR_RSN_PMKID_SIZE);
+   if (!fMatchFound) {
+       smsLog(pMac, LOG2, "No PMKID Match Found");
+       return false;
+   }
 
-        fRC = TRUE;
-    }
-    while( 0 );
+   if (pSession->PmkidCacheInfo[Index].pmk_len > CSR_RSN_MAX_PMK_LEN) {
+        smsLog(pMac, LOG2, "PMK length %d is invalid",
+               pSession->PmkidCacheInfo[Index].pmk_len);
+        return false;
+   }
+
+   vos_mem_copy(pmk_cache->PMKID, pSession->PmkidCacheInfo[Index].PMKID, CSR_RSN_PMKID_SIZE);
+   vos_mem_copy(pmk_cache->pmk, pSession->PmkidCacheInfo[Index].pmk,
+                pSession->PmkidCacheInfo[Index].pmk_len);
+   pmk_cache->pmk_len = pSession->PmkidCacheInfo[Index].pmk_len;
+
+   fRC = TRUE;
+
     smsLog(pMac, LOG1, "csrLookupPMKID called return match = %d pMac->roam.NumPmkidCache = %d",
         fRC, pSession->NumPmkidCache);
 
@@ -4018,14 +4207,18 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
     tCsrRSNAuthIe *pAuthSuite;
     tCsrRSNCapabilities RSNCapabilities;
     tCsrRSNPMKIe        *pPMK;
-    tANI_U8 PMKId[CSR_RSN_PMKID_SIZE];
+    tPmkidCacheInfo pmkid_cache;
+    uint32_t ret;
 #ifdef WLAN_FEATURE_11W
     tANI_U8 *pGroupMgmtCipherSuite;
 #endif
     tDot11fBeaconIEs *pIesLocal = pIes;
     eCsrAuthType negAuthType = eCSR_AUTH_TYPE_UNKNOWN;
+    tDot11fIERSN rsn_ie = {0};
 
     smsLog(pMac, LOGW, "%s called...", __func__);
+
+    vos_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
 
     do
     {
@@ -4036,7 +4229,21 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
             break;
         }
 
-        // See if the cyphers in the Bss description match with the settings in the profile.
+         /* Use intersection of the RSN cap sent by user space and
+          * the AP, so that only common capability are enabled.
+          */
+         if (pProfile->pRSNReqIE && pProfile->nRSNReqIELength) {
+             ret = dot11fUnpackIeRSN(pMac, pProfile->pRSNReqIE + 2,
+                                     pProfile->nRSNReqIELength -2, &rsn_ie);
+             if (DOT11F_SUCCEEDED(ret)) {
+                 pIesLocal->RSN.RSN_Cap[0] = pIesLocal->RSN.RSN_Cap[0] &
+                                             rsn_ie.RSN_Cap[0];
+                 pIesLocal->RSN.RSN_Cap[1] = pIesLocal->RSN.RSN_Cap[1] &
+                                             rsn_ie.RSN_Cap[1];
+             }
+         }
+
+        /* See if the cyphers in the Bss description match with the settings in the profile */
         fRSNMatch = csrGetRSNInformation( hHal, &pProfile->AuthType, pProfile->negotiatedUCEncryptionType, 
                                             &pProfile->mcEncryptionType, &pIesLocal->RSN,
                                             UnicastCypher, MulticastCypher, AuthSuite, &RSNCapabilities, &negAuthType, NULL );
@@ -4057,12 +4264,12 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
         pAuthSuite->cAuthenticationSuites = 1;
         vos_mem_copy(&pAuthSuite->AuthOui[ 0 ], AuthSuite, sizeof( AuthSuite ));
 
-        // RSN capabilities follows the Auth Suite (two octects)
-        // !!REVIEW - What should STA put in RSN capabilities, currently
-        // just putting back APs capabilities
-        // For one, we shouldn't EVER be sending out "pre-auth supported".  It is an AP only capability
-        // For another, we should use the Management Frame Protection values given by the supplicant
+        /* PreAuthSupported is an AP only capability */
         RSNCapabilities.PreAuthSupported = 0;
+
+        /* Use the Management Frame Protection values given by the supplicant,
+         * if AP and STA both are MFP capable.
+         */
 #ifdef WLAN_FEATURE_11W
         RSNCapabilities.MFPRequired = pProfile->MFPRequired;
         RSNCapabilities.MFPCapable = pProfile->MFPCapable;
@@ -4070,16 +4277,19 @@ tANI_U8 csrConstructRSNIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile 
         *(tANI_U16 *)( &pAuthSuite->AuthOui[ 1 ] ) = *((tANI_U16 *)(&RSNCapabilities));
 
         pPMK = (tCsrRSNPMKIe *)( ((tANI_U8 *)(&pAuthSuite->AuthOui[ 1 ])) + sizeof(tANI_U16) );
+        vos_mem_copy((v_MACADDR_t *)pmkid_cache.BSSID,
+                     (v_MACADDR_t *)pSirBssDesc->bssId, VOS_MAC_ADDR_SIZE);
 
         if (
 #ifdef FEATURE_WLAN_ESE
         (eCSR_AUTH_TYPE_CCKM_RSN != negAuthType) &&
 #endif
-        csrLookupPMKID( pMac, sessionId, pSirBssDesc->bssId, &(PMKId[0]) ) )
+        csrLookupPMKID( pMac, sessionId, &pmkid_cache))
         {
             pPMK->cPMKIDs = 1;
 
-            vos_mem_copy(pPMK->PMKIDList[0].PMKID, PMKId, CSR_RSN_PMKID_SIZE);
+            vos_mem_copy(pPMK->PMKIDList[0].PMKID, pmkid_cache.PMKID,
+                         CSR_RSN_PMKID_SIZE);
         }
         else
         {
@@ -4757,8 +4967,10 @@ tANI_U8 csrRetrieveRsnIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile *
         }
         else 
 #endif
-        if(pProfile->nRSNReqIELength && pProfile->pRSNReqIE)
+        if(pProfile->force_rsne_override &&
+           pProfile->nRSNReqIELength && pProfile->pRSNReqIE)
         {
+            smsLog(pMac, LOGW, "force_rsne_override, copy RSN IE provided by user");
             // If you have one started away, re-use it. 
             if(SIR_MAC_WPA_IE_MAX_LENGTH >= pProfile->nRSNReqIELength)
             {
@@ -4767,7 +4979,9 @@ tANI_U8 csrRetrieveRsnIe( tHalHandle hHal, tANI_U32 sessionId, tCsrRoamProfile *
             }
             else
             {
-                smsLog(pMac, LOGW, "  csrRetrieveRsnIe detect invalid RSN IE length (%d) ", pProfile->nRSNReqIELength);
+                smsLog(pMac, LOGW, "csrRetrieveRsnIe detect invalid RSN IE length (%d)",
+                       pProfile->nRSNReqIELength);
+                break;
             }
         }
         else
@@ -5725,6 +5939,72 @@ static tANI_BOOLEAN csrIsRateSetMatch( tpAniSirGlobal pMac,
 
 }
 
+/**
+ * csr_match_security() - wrapper to check if the security is matching
+ * @mac_ctx: mac context
+ * @filter: scan filter
+ * @bss_desc: BSS Descriptor
+ * @ies_ptr:  Pointer to the IE fields
+ * @neg_auth_type: Negotiated Auth type with the AP
+ * @neg_uc_cipher: Negotiated unicast cipher suite
+ * @neg_mc_cipher: Negotiated multicast cipher
+ *
+ * Return: true if matched else false.
+ */
+#ifdef WLAN_FEATURE_11W
+static inline bool csr_match_security(tpAniSirGlobal pMac,
+        tCsrScanResultFilter *filter, tSirBssDescription *bss_desc,
+        tDot11fBeaconIEs *ies_ptr, eCsrAuthType *neg_auth,
+        eCsrEncryptionType *neg_uc,
+        eCsrEncryptionType *neg_mc)
+{
+
+        if (!filter)
+                return false;
+
+        if (filter->bWPSAssociation || filter->bOSENAssociation)
+                return true;
+
+        if (filter->ignore_pmf_cap)
+                return csrIsSecurityMatch(pMac, &filter->authType,
+                                             &filter->EncryptionType,
+                                             &filter->mcEncryptionType,
+                                             NULL, NULL, NULL,
+                                             bss_desc, ies_ptr, neg_auth,
+                                             neg_uc, neg_mc);
+        else
+                return csrIsSecurityMatch(pMac, &filter->authType,
+                                             &filter->EncryptionType,
+                                             &filter->mcEncryptionType,
+                                             &filter->MFPEnabled,
+                                             &filter->MFPRequired,
+                                             &filter->MFPCapable,
+                                             bss_desc, ies_ptr, neg_auth,
+                                             neg_uc, neg_mc);
+
+}
+#else
+static inline bool csr_match_security(tpAniSirGlobal mac_ctx,
+        tCsrScanResultFilter *filter, tSirBssDescription *bss_desc,
+        tDot11fBeaconIEs *ies_ptr, eCsrAuthType *neg_auth,
+        eCsrEncryptionType *neg_uc,
+        eCsrEncryptionType *neg_mc)
+
+{
+        if (!filter)
+                return false;
+
+        if (filter->bWPSAssociation || filter->bOSENAssociation)
+                return true;
+
+        return csrIsSecurityMatch(mac_ctx, &filter->authType,
+                                  &filter->EncryptionType,
+                                  &filter->mcEncryptionType,
+                                  NULL, NULL, NULL,
+                                  bss_desc, ies_ptr, neg_auth,
+                                  neg_uc, neg_mc);
+}
+#endif
 
 //ppIes can be NULL. If caller want to get the *ppIes allocated by this function, pass in *ppIes = NULL
 tANI_BOOLEAN csrMatchBSS( tHalHandle hHal, tSirBssDescription *pBssDesc, tCsrScanResultFilter *pFilter, 
@@ -5800,25 +6080,7 @@ tANI_BOOLEAN csrMatchBSS( tHalHandle hHal, tSirBssDescription *pBssDesc, tCsrSca
         }
 #endif
         if ( !csrIsPhyModeMatch( pMac, pFilter->phyMode, pBssDesc, NULL, NULL, pIes ) ) break;
-        if ( (!pFilter->bWPSAssociation) && (!pFilter->bOSENAssociation) &&
-#ifdef WLAN_FEATURE_11W
-             !csrIsSecurityMatch( pMac, &pFilter->authType,
-                                  &pFilter->EncryptionType,
-                                  &pFilter->mcEncryptionType,
-                                  &pFilter->MFPEnabled,
-                                  &pFilter->MFPRequired,
-                                  &pFilter->MFPCapable,
-                                  pBssDesc, pIes, pNegAuth,
-                                  pNegUc, pNegMc )
-#else
-             !csrIsSecurityMatch( pMac, &pFilter->authType,
-                                  &pFilter->EncryptionType,
-                                  &pFilter->mcEncryptionType,
-                                  NULL, NULL, NULL,
-                                  pBssDesc, pIes, pNegAuth,
-                                  pNegUc, pNegMc )
-#endif
-                                                   ) break;
+        if ( !csr_match_security(pMac, pFilter, pBssDesc, pIes, pNegAuth, pNegUc, pNegMc)) break;
         if ( !csrIsCapabilitiesMatch( pMac, pFilter->BSSType, pBssDesc ) ) break;
         if ( !csrIsRateSetMatch( pMac, &pIes->SuppRates, &pIes->ExtSuppRates ) ) break;
         //Tush-QoS: validate first if asked for APSD or WMM association

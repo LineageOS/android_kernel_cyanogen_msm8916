@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1119,6 +1119,13 @@ limCleanupMlm(tpAniSirGlobal pMac)
         tx_timer_delete(&pMac->lim.limTimers.gLimFTPreAuthRspTimer);
 #endif
 
+#ifdef WLAN_FEATURE_LFR_MBB
+        tx_timer_deactivate(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer);
+        tx_timer_delete(&pMac->lim.limTimers.glim_pre_auth_mbb_rsp_timer);
+
+        tx_timer_deactivate(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer);
+        tx_timer_delete(&pMac->lim.limTimers.glim_reassoc_mbb_rsp_timer);
+#endif
 
 #if defined(FEATURE_WLAN_ESE) && !defined(FEATURE_WLAN_ESE_UPLOAD)
         // Deactivate and delete TSM
@@ -1140,6 +1147,9 @@ limCleanupMlm(tpAniSirGlobal pMac)
 
         tx_timer_deactivate(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
         tx_timer_delete(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
+
+        tx_timer_deactivate(&pMac->lim.limTimers.sae_auth_timer);
+        tx_timer_delete(&pMac->lim.limTimers.sae_auth_timer);
 
         pMac->lim.gLimTimersCreated = 0;
     }
@@ -2967,10 +2977,11 @@ void lim_handle_ecsa_req(tpAniSirGlobal mac_ctx, struct ecsa_frame_params *ecsa_
    session->gLimChannelSwitch.secondarySubBand = PHY_SINGLE_CHANNEL_CENTERED;
    session->gLimWiderBWChannelSwitch.newChanWidth = 0;
 
-   ch_offset = limGetOffChMaxBwOffsetFromChannel(
-                       mac_ctx->scan.countryCodeCurrent,
-                       ecsa_req->new_channel,
-                       sta_ds->mlmStaContext.vhtCapability);
+   ch_offset =
+       lim_get_channel_width_from_opclass(mac_ctx->scan.countryCodeCurrent,
+                                          ecsa_req->new_channel,
+                                          sta_ds->mlmStaContext.vhtCapability,
+                                          ecsa_req->op_class);
    if (ch_offset == BW80) {
        session->gLimWiderBWChannelSwitch.newChanWidth =
                                   WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
@@ -7021,8 +7032,13 @@ limRestorePreChannelSwitchState(tpAniSirGlobal pMac, tpPESession psessionEntry)
     /* Channel switch should be ready for the next time */
     psessionEntry->gLimSpecMgmt.dot11hChanSwState = eLIM_11H_CHANSW_INIT;
 
-    /* Restore the frame transmission, all the time. */
-    limFrameTransmissionControl(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
+    /* Restore the frame transmission, if switched channel is NON-DFS.
+     * Else tx should be resumed after receiving first beacon on DFS channel
+     */
+    if(!limIsconnectedOnDFSChannel(psessionEntry->currentOperChannel))
+        limFrameTransmissionControl(pMac, eLIM_TX_ALL, eLIM_RESUME_TX);
+    else
+        psessionEntry->gLimSpecMgmt.dfs_channel_csa = true;
 
     /* Free to enter BMPS */
     limSendSmePostChannelSwitchInd(pMac);
@@ -8721,6 +8737,7 @@ eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData)
                 pNode, &pNext );
         pNode = pNext;
         pNext = NULL;
+        tmp_tx_context = NULL;
       }
       else
       {
@@ -8730,7 +8747,7 @@ eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData)
       }
     }
 
-    if (!tmp_tx_context) {
+    if (!pNode) {
         limLog(pMac, LOGE, FL("context is NULL"));
         return eHAL_STATUS_SUCCESS;
     }
@@ -8834,7 +8851,7 @@ tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap) {
  *
  * Update the capability info in Assoc/Reassoc request frames and reset
  * the spectrum management, short preamble, immediate block ack bits
- * if the BSS doesnot support it
+ * and rrm bit mask if the BSS doesnot support it
  *
  * Return: None
  */
@@ -8854,6 +8871,12 @@ void lim_update_caps_info_for_bss(tpAniSirGlobal mac_ctx,
     if (!(bss_caps & LIM_IMMEDIATE_BLOCK_ACK_MASK)) {
           *caps &= (~LIM_IMMEDIATE_BLOCK_ACK_MASK);
           limLog(mac_ctx, LOG1, FL("Clearing Immed Blk Ack:no AP support"));
+    }
+
+    if (!(bss_caps & LIM_RRM_BIT_MASK)) {
+          *caps &= (~LIM_RRM_BIT_MASK);
+          limLog(mac_ctx, LOG1,
+                 FL("Clearing radio measurement :no AP support"));
     }
 }
 #ifdef SAP_AUTH_OFFLOAD
@@ -9044,6 +9067,11 @@ _sap_offload_parse_sta_vht(tpAniSirGlobal pmac,
         tpSirAssocReq assoc_req)
 {
     tpPESession session_entry = limIsApSessionActive(pmac);
+    if (session_entry == NULL)
+    {
+        limLog(pmac, LOGE, FL("Invalid Session Entry"));
+        goto error;
+    }
 
     if (IS_DOT11_MODE_HT(session_entry->dot11mode) &&
             assoc_req->HTCaps.present && assoc_req->wmeInfoPresent)
@@ -9168,7 +9196,11 @@ static void
     tHalBitVal qos_mode;
     tHalBitVal wsm_mode, wme_mode;
     tpPESession session_entry = limIsApSessionActive(pmac);
-
+    if (session_entry == NULL)
+    {
+        limLog(pmac, LOGE, FL("Invalid Session Entry"));
+        return;
+    }
     limGetQosMode(session_entry, &qos_mode);
     sta_ds->qosMode    = eANI_BOOLEAN_FALSE;
     sta_ds->lleEnabled = eANI_BOOLEAN_FALSE;

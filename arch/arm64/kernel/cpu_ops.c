@@ -23,23 +23,16 @@
 #include <linux/string.h>
 
 const struct cpu_operations *cpu_ops[NR_CPUS];
-extern struct cpu_operations *__cpu_method_of_table[];
-extern struct cpu_operations *__cpu_method_of_table_end[];
+extern struct cpu_operations msm_cortex_a_ops;
 
 const struct cpu_operations * __init cpu_get_ops(const char *name)
 {
-	const struct cpu_operations **start = (void *)__cpu_method_of_table;
-	const struct cpu_operations **end = (void *)__cpu_method_of_table_end;
-
-	while (start < end) {
-		if (!strcmp((*start)->name, name))
-			return *start;
-		start++;
-	};
+	if (!strcmp(msm_cortex_a_ops.name, name))
+		return &msm_cortex_a_ops;
 
 	return NULL;
 }
-
+ 
 /*
  * Read a cpu's enable method from the device tree and record it in cpu_ops.
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -169,6 +169,17 @@ WLANSAP_Open
     {
         VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
                  "WLANSAP_Start failed init staInfo_lock");
+        vos_free_context(pvosGCtx, VOS_MODULE_ID_SAP, pSapCtx);
+        return VOS_STATUS_E_FAULT;
+    }
+
+    init_completion(&pSapCtx->ecsa_info.chan_switch_comp);
+
+    if (!VOS_IS_STATUS_SUCCESS(
+         vos_spin_lock_init(&pSapCtx->ecsa_info.ecsa_lock)))
+    {
+        VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_ERROR,
+                 "WLANSAP_Start failed init ecsa_lock");
         vos_free_context(pvosGCtx, VOS_MODULE_ID_SAP, pSapCtx);
         return VOS_STATUS_E_FAULT;
     }
@@ -558,25 +569,20 @@ VOS_STATUS WLANSAP_get_sessionId
 )
 {
     ptSapContext  pSapCtx = NULL;
-    VOS_STATUS status = VOS_STATUS_SUCCESS;
-
     pSapCtx = VOS_GET_SAP_CB(pvosGCtx);
 
     if ( NULL == pSapCtx )
     {
         VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                    "%s: Invalid SAP pointer from pvosGCtx", __func__);
-        status = VOS_STATUS_E_INVAL;
+        return VOS_STATUS_E_INVAL;
     }
 
-    if (pSapCtx->sapsMachine == eSAP_STARTED) {
-       *sessionId = pSapCtx->sessionId;
-        status = VOS_STATUS_SUCCESS;
-     }
-    else
-        status = VOS_STATUS_E_FAILURE;
+    if (pSapCtx->sapsMachine != eSAP_STARTED)
+        return VOS_STATUS_E_FAILURE;
 
-    return status;
+    *sessionId = pSapCtx->sessionId;
+    return VOS_STATUS_SUCCESS;
 }
 /*==========================================================================
   FUNCTION    WLANSAP_StartBss
@@ -1192,6 +1198,8 @@ WLANSAP_ModifyACL
                             MAC_ADDR_ARRAY(pPeerStaMac));
                 } else
                 {
+                    struct tagCsrDelStaParams delStaParams;
+
                     if (staInWhiteList)
                     {
                         //remove it from white list before adding to the white list
@@ -1199,6 +1207,15 @@ WLANSAP_ModifyACL
                                 "Present in white list so first remove from it");
                         sapRemoveMacFromACL(pSapCtx->acceptMacList, &pSapCtx->nAcceptMac, staWLIndex);
                     }
+                    /*
+                     * If we are adding a client to the black list;
+                     * if its connected, send deauth
+                     */
+                    WLANSAP_PopulateDelStaParams(pPeerStaMac,
+                            eSIR_MAC_DEAUTH_LEAVING_BSS_REASON,
+                            SIR_MAC_MGMT_DEAUTH >> 4,
+                            &delStaParams);
+                    WLANSAP_DeauthSta(pSapCtx->pvosGCtx, &delStaParams);
                     VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
                             "... Now add to black list");
                     sapAddMacToACL(pSapCtx->denyMacList, &pSapCtx->nDenyMac, pPeerStaMac);
@@ -2488,6 +2505,41 @@ static bool wlansap_validate_phy_mode(uint32_t phy_mode, uint32_t channel)
   return true;
 }
 
+int wlansap_chk_n_set_chan_change_in_progress(ptSapContext sap_ctx)
+{
+   vos_spin_lock_acquire(&sap_ctx->ecsa_info.ecsa_lock);
+   if (sap_ctx->ecsa_info.channel_switch_in_progress) {
+       vos_spin_lock_release(&sap_ctx->ecsa_info.ecsa_lock);
+       hddLog(LOGE, FL("channel switch already in progress"));
+       return -EALREADY;
+   }
+   sap_ctx->ecsa_info.channel_switch_in_progress = true;
+   vos_spin_lock_release(&sap_ctx->ecsa_info.ecsa_lock);
+
+   return 0;
+}
+
+int wlansap_reset_chan_change_in_progress(ptSapContext sap_ctx)
+{
+   vos_spin_lock_acquire(&sap_ctx->ecsa_info.ecsa_lock);
+   sap_ctx->ecsa_info.channel_switch_in_progress = false;
+   vos_spin_lock_release(&sap_ctx->ecsa_info.ecsa_lock);
+
+   return 0;
+}
+
+bool wlansap_get_change_in_progress(ptSapContext sap_ctx)
+{
+   bool value;
+
+   vos_spin_lock_acquire(&sap_ctx->ecsa_info.ecsa_lock);
+   value = sap_ctx->ecsa_info.channel_switch_in_progress;
+   vos_spin_lock_release(&sap_ctx->ecsa_info.ecsa_lock);
+
+   return value;
+}
+
+
 int wlansap_set_channel_change(v_PVOID_t vos_ctx,
     uint32_t new_channel, bool allow_dfs_chan)
 {
@@ -2520,10 +2572,12 @@ int wlansap_set_channel_change(v_PVOID_t vos_ctx,
         hddLog(LOGE, FL("channel %d already set"), new_channel);
         return -EALREADY;
    }
-   if (sap_ctx->ecsa_info.channel_switch_in_progress) {
-        hddLog(LOGE, FL("channel switch already in progress ignore"));
-        return -EALREADY;
+
+   if(!wlansap_get_change_in_progress(sap_ctx)) {
+       hddLog(LOGE, FL("channel_switch_in_progress should be set before calling channel change"));
+       return -EINVAL;
    }
+
    chan_state = vos_nv_getChannelEnabledState(new_channel);
    if ((chan_state == NV_CHANNEL_DISABLE) ||
        (chan_state == NV_CHANNEL_INVALID)) {
@@ -2543,7 +2597,6 @@ int wlansap_set_channel_change(v_PVOID_t vos_ctx,
    }
 
    sap_ctx->ecsa_info.new_channel = new_channel;
-   sap_ctx->ecsa_info.channel_switch_in_progress = true;
    /*
     * Post the eSAP_CHANNEL_SWITCH_ANNOUNCEMENT_START
     * to SAP state machine to process the channel

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -787,7 +787,7 @@ void hdd_dump_dhcp_pkt(struct sk_buff *skb, int path)
        }
     }
 
-    dev->trans_start = jiffies;
+    netif_trans_update(dev);
 
     return NETDEV_TX_OK;
  }
@@ -1097,7 +1097,7 @@ int __hdd_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
       }
    }
 
-   dev->trans_start = jiffies;
+   netif_trans_update(dev);
 
    return NETDEV_TX_OK;
 }
@@ -1154,9 +1154,7 @@ void __hdd_tx_timeout(struct net_device *dev)
    v_ULONG_t diff_in_jiffies = 0;
    hdd_station_ctx_t *pHddStaCtx = NULL;
 
-   VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,
-      "%s: Transmission timeout occurred jiffies %lu dev->trans_start %lu",
-        __func__,jiffies,dev->trans_start);
+   TX_TIMEOUT_TRACE(dev, VOS_MODULE_ID_HDD_DATA);
 
    if ( NULL == pAdapter )
    {
@@ -2534,6 +2532,12 @@ static void hdd_mon_add_rx_radiotap_hdr (struct sk_buff *skb,
     memcpy(skb_push(skb, rtap_len), &rtap_temp[0], rtap_len);
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0))
+void hdd_fill_last_rx(hdd_adapter_t *adapter)
+{
+    adapter->dev->last_rx = jiffies;
+}
+#endif
 
 VOS_STATUS  hdd_rx_packet_monitor_cbk(v_VOID_t *vosContext,vos_pkt_t *pVosPacket, int conversion)
 {
@@ -2628,7 +2632,7 @@ VOS_STATUS  hdd_rx_packet_monitor_cbk(v_VOID_t *vosContext,vos_pkt_t *pVosPacket
    {
       VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,"%s: Failure returning vos pkt", __func__);
    }
-   pAdapter->dev->last_rx = jiffies;
+   hdd_fill_last_rx(pAdapter);
 
 return status;
 }
@@ -2914,7 +2918,7 @@ VOS_STATUS hdd_rx_packet_cbk( v_VOID_t *vosContext,
       VOS_TRACE( VOS_MODULE_ID_HDD_DATA, VOS_TRACE_LEVEL_ERROR,"%s: Failure returning vos pkt", __func__);
    }
    
-   pAdapter->dev->last_rx = jiffies;
+   hdd_fill_last_rx(pAdapter);
 
    return status;   
 }
@@ -3009,7 +3013,7 @@ void hdd_tx_rx_pkt_cnt_stat_timer_handler( void *phddctx)
                                        cfg_param->txRxThresholdForSplitScan) ||
                     (pAdapter->hdd_stats.hddTxRxStats.pkt_rx_count >
                                        cfg_param->txRxThresholdForSplitScan) ||
-                    pHddCtx->drvr_miracast ||
+                        pHddCtx->drvr_miracast || pHddCtx->is_vowifi_enabled ||
                     (WLAN_HDD_P2P_GO == pAdapter->device_mode))
                 {
                     pAdapter->hdd_stats.hddTxRxStats.pkt_tx_count = 0;
@@ -3066,7 +3070,7 @@ void hdd_tx_rx_pkt_cnt_stat_timer_handler( void *phddctx)
 void hdd_rx_fwd_eapol(v_VOID_t *vosContext, vos_pkt_t *pVosPacket)
 {
    hdd_context_t *pHddCtx = NULL;
-   hdd_adapter_t * pAdapter;
+   hdd_adapter_t * pAdapter = NULL;
    hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
    struct sk_buff *skb = NULL;
    uint8_t proto_type;

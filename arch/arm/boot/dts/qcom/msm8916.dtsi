@@ -118,7 +118,6 @@
 	soc: soc { };
 };
 
-#include "msm8916-coresight.dtsi"
 #include "msm8916-smp2p.dtsi"
 #include "msm8916-pinctrl.dtsi"
 #include "msm8916-camera.dtsi"
@@ -356,7 +355,9 @@
 			<  400000000 2>,
 			<  533333000 3>,
 			<  800000000 4>,
-			<  998400000 5>;
+			<  998400000 5>,
+			< 1094400000 5>,
+			< 1152000000 6>;
 
 		qcom,speed0-bin-v1 =
 			<          0 0>,
@@ -387,7 +388,9 @@
 			<  400000000 2>,
 			<  533333000 3>,
 			<  800000000 4>,
-			<  998400000 5>;
+			<  998400000 5>,
+			< 1094400000 5>,
+			< 1152000000 6>;
 	};
 
 	cpubw: qcom,cpubw {
@@ -594,64 +597,6 @@
 		qcom,client-id = <0x011013ed>;
 	};
 
-	jtag_fuse: jtagfuse@5e01c {
-		compatible = "qcom,jtag-fuse";
-		reg = <0x5e01c 0x8>;
-		reg-names = "fuse-base";
-	};
-
-	jtag_mm0: jtagmm@85c000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x85c000 0x1000>,
-		      <0x850000 0x1000>;
-		reg-names = "etm-base","debug-base";
-
-		clocks = <&clock_rpm clk_qdss_clk>,
-			 <&clock_rpm clk_qdss_a_clk>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU0>;
-	};
-
-	jtag_mm1: jtagmm@85d000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x85d000 0x1000>,
-		      <0x852000 0x1000>;
-		reg-names = "etm-base","debug-base";
-
-		clocks = <&clock_rpm clk_qdss_clk>,
-			 <&clock_rpm clk_qdss_a_clk>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU1>;
-	};
-
-	jtag_mm2: jtagmm@85e000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x85e000 0x1000>,
-		      <0x854000 0x1000>;
-		reg-names = "etm-base","debug-base";
-
-		clocks = <&clock_rpm clk_qdss_clk>,
-			 <&clock_rpm clk_qdss_a_clk>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU2>;
-	};
-
-	jtag_mm3: jtagmm@85f000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x85f000 0x1000>,
-		      <0x856000 0x1000>;
-		reg-names = "etm-base","debug-base";
-
-		clocks = <&clock_rpm clk_qdss_clk>,
-			 <&clock_rpm clk_qdss_a_clk>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU3>;
-	};
-
 	sdhc_1: sdhci@07824000 {
 		compatible = "qcom,sdhci-msm";
 		reg = <0x07824900 0x11c>, <0x07824000 0x800>;
@@ -730,7 +675,7 @@
 		qcom,adsp-state = <0>;
 		qcom,proc-img-to-load = "modem";
 	};
-
+	
 	qcom_crypto: qcrypto@720000 {
 		compatible = "qcom,qcrypto";
 		reg = <0x720000 0x20000>,
@@ -815,22 +760,7 @@
 		status = "disabled";
 		qcom,ce-opp-freq = <100000000>;
 	};
-
-	qcom,wdt@b017000 {
-		compatible = "qcom,msm-watchdog";
-		reg = <0xb017000 0x1000>;
-		reg-names = "wdt-base";
-		interrupts = <0 3 0>, <0 4 0>;
-		qcom,bark-time = <11000>;
-		qcom,pet-time = <10000>;
-		qcom,ipi-ping;
-	};
-
-	qcom,msm-rtb {
-		compatible = "qcom,msm-rtb";
-		qcom,rtb-size = <0x100000>;
-	};
-
+	
 	qcom,smem@86300000 {
 		compatible = "qcom,smem";
 		reg = <0x86300000 0x100000>,
@@ -899,12 +829,6 @@
 		interrupts = <0 29 1>;
 		qcom,rx-ring-size = <32>;
 		qcom,max-rx-mtu = <4096>;
-	};
-
-	qcom_tzlog: tz-log@8600720 {
-		compatible = "qcom,tz-log";
-		reg = <0x08600720 0x1000>;
-		status = "disabled";
 	};
 
 	qcom_rng: qrng@22000 {
@@ -1440,27 +1364,6 @@
                 qcom,bam-consumer-pipe-index = <8>;
                 qcom,bam-producer-pipe-index = <9>;
                 qcom,master-id = <86>;
-
-		lattice,spi-usb@0 {
-			compatible = "lattice,ice40-spi-usb";
-			reg = <0>;
-			spi-max-frequency = <50000000>;
-			spi-cpol = <1>;
-			spi-cpha = <1>;
-			core-vcc-supply = <&pm8916_l2>;
-			spi-vcc-supply = <&pm8916_l5>;
-			qcom,pm-qos-latency = <2>;
-			lattice,reset-gpio = <&msm_gpio 3 0>;
-			lattice,config-done-gpio = <&msm_gpio 1 0>;
-			lattice,vcc-en-gpio = <&msm_gpio 114 0>;
-			lattice,clk-en-gpio = <&msm_gpio 0 0>;
-
-			clocks = <&clock_rpm clk_bb_clk2_pin>;
-			clock-names = "xo";
-			pinctrl-names = "default", "sleep";
-			pinctrl-0 = <&ice40_default>;
-			pinctrl-1 = <&ice40_sleep>;
-		};
         };
 
 	dma_blsp1: qcom,sps-dma@7884000 { /* BLSP1 */

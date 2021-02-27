@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1110,6 +1110,8 @@ PopulateDot11fExtCap(tpAniSirGlobal      pMac,
        }
     }
 
+    p_ext_cap->fils_capability = 0;
+
     if (pDot11f->present)
     {
         /* Need to compute the num_bytes based on bits set */
@@ -1407,7 +1409,7 @@ PopulateDot11fRSN(tpAniSirGlobal  pMac,
                                     pRsnIe->rsnIEdata + idx + 2, //EID, length
                                     pRsnIe->rsnIEdata[ idx + 1 ],
                                     pDot11f );
-        if ( DOT11F_FAILED( status ) )
+        if (!DOT11F_SUCCEEDED(status))
         {
             dot11fLog( pMac, LOGE, FL("Parse failure in PopulateDot11fRS"
                                    "N (0x%08x)."),
@@ -4028,7 +4030,7 @@ sirConvertAddtsReq2Struct(tpAniSirGlobal    pMac,
         if ( addts.num_WMMTCLAS )
         {
             j = (tANI_U8)(pAddTs->numTclas + addts.num_WMMTCLAS);
-            if ( SIR_MAC_TCLASIE_MAXNUM > j ) j = SIR_MAC_TCLASIE_MAXNUM;
+            if ( SIR_MAC_TCLASIE_MAXNUM < j ) j = SIR_MAC_TCLASIE_MAXNUM;
 
             for ( i = pAddTs->numTclas; i < j; ++i )
             {
@@ -4210,7 +4212,7 @@ sirConvertAddtsRsp2Struct(tpAniSirGlobal    pMac,
         if ( addts.num_WMMTCLAS )
         {
             j = (tANI_U8)(pAddTs->numTclas + addts.num_WMMTCLAS);
-            if ( SIR_MAC_TCLASIE_MAXNUM > j ) j = SIR_MAC_TCLASIE_MAXNUM;
+            if ( SIR_MAC_TCLASIE_MAXNUM < j ) j = SIR_MAC_TCLASIE_MAXNUM;
 
             for ( i = pAddTs->numTclas; i < j; ++i )
             {
@@ -5575,17 +5577,17 @@ sap_auth_offload_construct_rsn_opaque( tDot11fIERSN *pdot11f_rsn,
             }
         }
 
-        if (pdot11f_rsn->akm_suite_count)
+        if (pdot11f_rsn->akm_suite_cnt)
         {
-            element_len = sizeof(pdot11f_rsn->akm_suite_count);
-            vos_mem_copy(ptr, &pdot11f_rsn->akm_suite_count, element_len);
+            element_len = sizeof(pdot11f_rsn->akm_suite_cnt);
+            vos_mem_copy(ptr, &pdot11f_rsn->akm_suite_cnt, element_len);
             ptr += element_len;
             data_len += element_len;
-            for (count = 0; count < pdot11f_rsn->akm_suite_count; count++)
+            for (count = 0; count < pdot11f_rsn->akm_suite_cnt; count++)
             {
                 element_len = DOT11F_RSN_OUI_SIZE;
                 vos_mem_copy(ptr,
-                        &pdot11f_rsn->akm_suites[count][0],
+                        &pdot11f_rsn->akm_suite[count][0],
                         element_len);
                 ptr += element_len;
                 data_len += element_len;
@@ -5602,11 +5604,17 @@ sap_auth_offload_construct_rsn_opaque( tDot11fIERSN *pdot11f_rsn,
 }
 
 void
-sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
-        tDot11fIERSNOpaque *pdot11f)
+sap_auth_offload_update_rsn_ie(tpAniSirGlobal pmac,
+			tDot11fIERSNOpaque *pdot11f)
 {
     tDot11fIERSN *pdot11f_rsn;
     pdot11f_rsn = vos_mem_malloc(sizeof(tDot11fIERSN));
+    if (!pdot11f_rsn) {
+           dot11fLog(pmac, LOGE,
+           FL("Memory allocation failes for RSN IE"));
+           return;
+    }
+
     vos_mem_set(pdot11f_rsn, sizeof(tDot11fIERSN), 0);
     /* Assign RSN IE for Software AP Authentication offload security */
     if (pmac->sap_auth_offload && pmac->sap_auth_offload_sec_type)
@@ -5626,8 +5634,8 @@ sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
                 vos_mem_copy(&(pdot11f_rsn->pwise_cipher_suites[0][0]),
                         &sirRSNOui[DOT11F_RSN_CSE_CCMP][0],
                         DOT11F_RSN_OUI_SIZE);
-                pdot11f_rsn->akm_suite_count = 1;
-                vos_mem_copy(&(pdot11f_rsn->akm_suites[0][0]),
+                pdot11f_rsn->akm_suite_cnt = 1;
+                vos_mem_copy(&(pdot11f_rsn->akm_suite[0][0]),
                         &sirRSNOui[DOT11F_RSN_CSE_TKIP][0],
                         DOT11F_RSN_OUI_SIZE);
                 pdot11f_rsn->pmkid_count = 0;
@@ -5641,6 +5649,7 @@ sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
                 break;
         }
     }
+    vos_mem_free(pdot11f_rsn);
 }
 #endif /* SAP_AUTH_OFFLOAD */
 

@@ -22,10 +22,13 @@
 #include <linux/module.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/err.h>
+#include "leds.h"  //add by liuyang
 
 struct gpio_led_data {
 	struct led_classdev cdev;
 	unsigned gpio;
+	unsigned old_brightness; //add by liuyang
+	unsigned blinking_flag; // add by liuyang
 	struct work_struct work;
 	u8 new_level;
 	u8 can_sleep;
@@ -34,6 +37,57 @@ struct gpio_led_data {
 	int (*platform_gpio_blink_set)(unsigned gpio, int state,
 			unsigned long *delay_on, unsigned long *delay_off);
 };
+//Start:reqxxx,liuyang3.wt,ADD, add blink interface.
+//extern void led_stop_software_blink(struct led_classdev *led_cdev);
+//extern void led_blink_set(struct led_classdev *led_cdev,unsigned long *delay_on, unsigned long *delay_off);
+static ssize_t show_blink(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct gpio_led_data *led_dat = container_of(led_cdev, struct gpio_led_data, cdev);
+
+	return snprintf(buf, 10, "%u\n", led_dat->blinking_flag);
+}
+static ssize_t store_blink(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct gpio_led_data *led_dat = container_of(led_cdev, struct gpio_led_data, cdev);
+	unsigned long state, delay_on, delay_off;
+	ssize_t ret = -EINVAL;
+
+	if (led_dat->blinking_flag == 0){
+		led_dat->old_brightness= led_cdev->brightness; //before first blink,save the brightness status.
+	}
+
+	if (strcmp(led_cdev->name, "red") == 0)
+	{
+		delay_on = 50;
+		delay_off = 4000;
+	}else if(strcmp(led_cdev->name, "green") == 0){
+		delay_on = 2000;
+		delay_off = 2000;
+	}else{
+		pr_info("%s is not surport blink!\n", led_cdev->name);
+		return size;
+	}
+
+	ret = kstrtoul(buf, 10, &state);
+	if (ret)
+		return ret;
+	
+	if (state){
+		//pr_info("===>enter store_blink,\n");
+		led_dat->blinking_flag = 1;
+		led_blink_set(led_cdev, &delay_on, &delay_off);
+		//led_blink_set_oneshot(led_cdev, &delay_on, &delay_off,0);
+	}else{
+		led_stop_software_blink(led_cdev);
+		__led_set_brightness(led_cdev, led_dat->old_brightness); //recovey old brightness status.   
+		led_dat->blinking_flag = 0;
+	}
+	return size;
+}
+static DEVICE_ATTR(blink, 0664, show_blink, store_blink);
+//End:reqxxx,liuyang3.wt,ADD, add blink interface.
 
 static void gpio_led_work(struct work_struct *work)
 {
@@ -139,7 +193,16 @@ static int create_gpio_led(const struct gpio_led *template,
 	ret = led_classdev_register(parent, &led_dat->cdev);
 	if (ret < 0)
 		return ret;
-
+//Start:reqxxx,liuyang3.wt,ADD, add blink interface.	
+	if ((strcmp(led_dat->cdev.name, "red") == 0) || (strcmp(led_dat->cdev.name, "green") == 0)) {
+			ret = device_create_file(led_dat->cdev.dev,
+						&dev_attr_blink);
+			if (ret) {
+				pr_err("device_create_file blink fail!\n");
+				return ret;
+			}
+	}	
+//End:reqxxx,liuyang3.wt,ADD, add blink interface. 
 	return 0;
 }
 

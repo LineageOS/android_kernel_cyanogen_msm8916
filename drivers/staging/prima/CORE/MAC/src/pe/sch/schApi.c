@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -315,7 +315,15 @@ tSirRetStatus schSendBeaconReq( tpAniSirGlobal pMac, tANI_U8 *beaconPayload, tAN
   schLog(pMac, LOGE,FL("TimIeOffset:[%d]"),beaconParams->TimIeOffset );
 #endif
 
-  beaconParams->beacon = beaconPayload;
+  if (size >= WDI_BEACON_TEMPLATE_SIZE ||
+      size >= SCH_MAX_BEACON_SIZE) {
+      schLog(pMac, LOGE,FL("beacon size (%d) exceed WDI limit %d or host limit %d"),
+             size, WDI_BEACON_TEMPLATE_SIZE, SCH_MAX_BEACON_SIZE);
+      VOS_ASSERT(0);
+      vos_mem_free(beaconParams);
+      return eSIR_FAILURE;
+  }
+  vos_mem_copy(beaconParams->beacon, beaconPayload, size);
   beaconParams->beaconLength = (tANI_U32) size;
   msgQ.bodyptr = beaconParams;
   msgQ.bodyval = 0;
@@ -456,7 +464,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE1Len && addnIE1Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA1_LEN &&
-                                 (nBytes + addnIE1Len) <= SIR_MAX_PACKET_SIZE)
+                              (nBytes + addnIE1Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                     WNI_CFG_PROBE_RSP_ADDNIE_DATA1, &addIE[0],
@@ -470,7 +478,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE2Len && addnIE2Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA2_LEN &&
-                     (nBytes + addnIE1Len + addnIE2Len) <= SIR_MAX_PACKET_SIZE)
+                 (nBytes + addnIE1Len + addnIE2Len) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA2,
@@ -485,7 +493,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         }
 
         if (addnIE3Len && addnIE3Len <= WNI_CFG_PROBE_RSP_ADDNIE_DATA3_LEN &&
-                     (nBytes + totalAddnIeLen) <= SIR_MAX_PACKET_SIZE)
+                     (nBytes + totalAddnIeLen) <= SCH_MAX_PROBE_RESP_SIZE)
         {
             if ( eSIR_SUCCESS != wlan_cfgGetStr(pMac,
                                      WNI_CFG_PROBE_RSP_ADDNIE_DATA3,
@@ -503,7 +511,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
 
     if (addnIEPresent)
     {
-        if ((nBytes + totalAddnIeLen) <= SIR_MAX_PACKET_SIZE )
+        if ((nBytes + totalAddnIeLen) <= SCH_MAX_PROBE_RESP_SIZE)
             nBytes += totalAddnIeLen;
         else
             addnIEPresent = false; //Dont include the IE.
@@ -571,7 +579,7 @@ tANI_U32 limSendProbeRspTemplateToHal(tpAniSirGlobal pMac,tpPESession psessionEn
         */
 
         sirCopyMacAddr( pprobeRespParams->bssId,  psessionEntry->bssId);
-        pprobeRespParams->pProbeRespTemplate   = pFrame2Hal;
+        vos_mem_copy(pprobeRespParams->probeRespTemplate, pFrame2Hal, nBytes);
         pprobeRespParams->probeRespTemplateLen = nBytes;
         vos_mem_copy(pprobeRespParams->ucProxyProbeReqValidIEBmap,IeBitmap,(sizeof(tANI_U32) * 8));
         msgQ.type     = WDA_UPDATE_PROBE_RSP_TEMPLATE_IND;

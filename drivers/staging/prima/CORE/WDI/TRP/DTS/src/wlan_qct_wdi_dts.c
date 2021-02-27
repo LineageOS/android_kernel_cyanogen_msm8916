@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -856,6 +856,7 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       pRxMetadata->fc = isFcBd;
       pRxMetadata->staId = WDI_RX_BD_GET_STA_ID(pBDHeader);
       pRxMetadata->addr3Idx = WDI_RX_BD_GET_ADDR3_IDX(pBDHeader);
+      pRxMetadata->addr1Idx = WDI_RX_BD_GET_ADDR1_IDX(pBDHeader);
       pRxMetadata->rxChannel = WDI_RX_BD_GET_RX_CHANNEL(pBDHeader);
       pRxMetadata->rfBand = WDI_RX_BD_GET_RFBAND(pBDHeader);
       pRxMetadata->rtsf = WDI_RX_BD_GET_RTSF(pBDHeader);
@@ -1001,16 +1002,10 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
   }
   else
   {
-      wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset);
-      wpalPacketRawTrimHead(pFrame, ucMPDUHOffset);
-
-      /* flow control related */
-      pRxMetadata->fc = isFcBd;
-      pRxMetadata->mclkRxTimestamp = WDI_RX_BD_GET_TIMESTAMP(pBDHeader);
-      pRxMetadata->fcStaTxDisabledBitmap = WDI_RX_FC_BD_GET_STA_TX_DISABLED_BITMAP(pBDHeader);
-      pRxMetadata->fcSTAValidMask = WDI_RX_FC_BD_GET_STA_VALID_MASK(pBDHeader);
-      /* Invoke Rx complete callback */
-      pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);  
+      /* Discard the frame as FC BD not supoorted any more */
+      DTI_TRACE(DTI_TRACE_LEVEL_ERROR, "FC bit is set in BD");
+      wpalPacketFree(pFrame);
+      return eWLAN_PAL_STATUS_SUCCESS;
   }
 
   /* Log the RX Stats */

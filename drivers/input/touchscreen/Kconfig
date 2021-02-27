@@ -1098,6 +1098,19 @@ config TOUCHSCREEN_GT9XX
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 
+config TOUCHSCREEN_FT5436
+        tristate "FocalTech touchscreens"
+        depends on I2C
+        help
+	  Say Y here if you have a ft5436 touchscreen.
+	  Ft5436 controllers are multi touch controllers which can
+	  report 10 touches at a time.
+ 
+          If unsure, say N.
+ 
+          To compile this driver as a module, choose M here: the
+          module will be called ft5x06_ts.
+
 config TOUCHSCREEN_GT9XX_HQ
 	bool "Goodix touchpanel (HQ variant)"
 	depends on I2C

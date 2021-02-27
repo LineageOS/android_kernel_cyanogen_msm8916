@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1275,6 +1275,7 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     struct net_device *dev = wdev->netdev;
 #endif
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR( dev );
+    hdd_adapter_t *pGoAdapter;
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
     hdd_remain_on_chan_ctx_t *pRemainChanCtx = NULL;
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
@@ -1288,6 +1289,7 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     uint8_t home_ch = 0;
 #endif
+    eHalStatus hal_status;
 
     ENTER();
 
@@ -1312,6 +1314,19 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     hddLog(VOS_TRACE_LEVEL_INFO, "%s: device_mode = %d type: %d",
                             __func__, pAdapter->device_mode, type);
 
+    /* When frame to be transmitted is auth mgmt, then trigger
+     * sme_send_mgmt_tx to send auth frame.
+     */
+    if ((WLAN_HDD_INFRA_STATION == pAdapter->device_mode ||
+         WLAN_HDD_SOFTAP == pAdapter->device_mode) &&
+        (type == SIR_MAC_MGMT_FRAME && subType == SIR_MAC_MGMT_AUTH)) {
+         hal_status = sme_send_mgmt_tx(WLAN_HDD_GET_HAL_CTX(pAdapter),
+                                       pAdapter->sessionId, buf, len);
+         if (HAL_STATUS_SUCCESS(hal_status))
+              return 0;
+         else
+              return -EINVAL;
+    }
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
             (subType == SIR_MAC_MGMT_ACTION) &&
@@ -1443,6 +1458,14 @@ int __wlan_hdd_mgmt_tx( struct wiphy *wiphy, struct net_device *dev,
     {
         home_ch = pAdapter->sessionCtx.station.conn_info.operationChannel;
     }
+    else
+    {
+        pGoAdapter = hdd_get_adapter(pHddCtx, WLAN_HDD_P2P_GO);
+        if (pGoAdapter && test_bit(SOFTAP_BSS_STARTED,
+                                   &pGoAdapter->event_flags))
+            home_ch = pGoAdapter->sessionCtx.ap.operatingChannel;
+    }
+
     //If GO adapter exists and operating on same frequency
     //then we will not request remain on channel
     if (ieee80211_frequency_to_channel(chan->center_freq) == home_ch)
@@ -2253,23 +2276,30 @@ wlan_hdd_add_monitor_check(hdd_context_t *hdd_ctx, hdd_adapter_t **adapter,
 	return 0;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
-struct wireless_dev* __wlan_hdd_add_virtual_intf(
-                  struct wiphy *wiphy, const char *name,
-                  enum nl80211_iftype type,
-                  u32 *flags, struct vif_params *params )
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-struct wireless_dev* __wlan_hdd_add_virtual_intf(
-                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
-                  u32 *flags, struct vif_params *params )
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+static struct wireless_dev *
+__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+			    const char *name,
+			    unsigned char name_assign_type,
+			    enum nl80211_iftype type,
+			    u32 *flags,
+			    struct vif_params *params)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-struct net_device* __wlan_hdd_add_virtual_intf(
-                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
-                  u32 *flags, struct vif_params *params )
+static struct net_device *
+__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+			    const char *name,
+			    unsigned char name_assign_type,
+			    enum nl80211_iftype type,
+			    u32 *flags,
+			    struct vif_params *params)
 #else
-int __wlan_hdd_add_virtual_intf( struct wiphy *wiphy, char *name,
-                               enum nl80211_iftype type,
-                               u32 *flags, struct vif_params *params )
+static int
+__wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+			    const char *name,
+			    unsigned char name_assign_type,
+			    enum nl80211_iftype type,
+			    u32 *flags,
+			    struct vif_params *params)
 #endif
 {
     hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
@@ -2369,8 +2399,8 @@ int __wlan_hdd_add_virtual_intf( struct wiphy *wiphy, char *name,
 #endif
     }
 
-    if ((type == NL80211_IFTYPE_P2P_CLIENT) ||
-          (type == NL80211_IFTYPE_P2P_GO))
+    if (type == NL80211_IFTYPE_P2P_CLIENT || type == NL80211_IFTYPE_P2P_GO ||
+        type == NL80211_IFTYPE_AP)
     {
         /* Below function Notifies Mode change and
          * If p2p session is detected then invokes functionality to
@@ -2393,47 +2423,129 @@ return_adapter:
 #endif
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
-struct wireless_dev* wlan_hdd_add_virtual_intf(
-                  struct wiphy *wiphy, const char *name,
-                  enum nl80211_iftype type,
-                  u32 *flags, struct vif_params *params )
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+					       const char *name,
+					       unsigned char name_assign_type,
+					       enum nl80211_iftype type,
+					       struct vif_params *params)
+{
+	struct wireless_dev *wdev;
+
+	vos_ssr_protect(__func__);
+	wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
+					   type, &params->flags, params);
+	vos_ssr_unprotect(__func__);
+
+	return wdev;
+}
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)) || \
+	defined(WITH_BACKPORTS)
+/**
+ * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
+ * @wiphy: wiphy pointer
+ * @name: User-visible name of the interface
+ * @name_assign_type: the name of assign type of the netdev
+ * @nl80211_iftype: (virtual) interface types
+ * @flags: monitor mode configuration flags (not used)
+ * @vif_params: virtual interface parameters (not used)
+ *
+ * Return: the pointer of wireless dev, otherwise ERR_PTR.
+ */
+struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+                                               const char *name,
+                                               unsigned char name_assign_type,
+                                               enum nl80211_iftype type,
+                                               u32 *flags,
+                                               struct vif_params *params)
+{
+        struct wireless_dev *wdev;
+
+        vos_ssr_protect(__func__);
+        wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
+                                           type, flags, params);
+        vos_ssr_unprotect(__func__);
+        return wdev;
+
+}
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0))
+/**
+ * wlan_hdd_add_virtual_intf() - Add virtual interface wrapper
+ * @wiphy: wiphy pointer
+ * @name: User-visible name of the interface
+ * @nl80211_iftype: (virtual) interface types
+ * @flags: monitor mode configuration flags (not used)
+ * @vif_params: virtual interface parameters (not used)
+ *
+ * Return: the pointer of wireless dev, otherwise ERR_PTR.
+ */
+struct wireless_dev *wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+                                               const char *name,
+                                               enum nl80211_iftype type,
+                                               u32 *flags,
+                                               struct vif_params *params)
+{
+        struct wireless_dev *wdev;
+        unsigned char name_assign_type = 0;
+
+        vos_ssr_protect(__func__);
+        wdev = __wlan_hdd_add_virtual_intf(wiphy, name, name_assign_type,
+                                           type, flags, params);
+        vos_ssr_unprotect(__func__);
+        return wdev;
+
+}
+
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 struct wireless_dev* wlan_hdd_add_virtual_intf(
                   struct wiphy *wiphy, char *name, enum nl80211_iftype type,
                   u32 *flags, struct vif_params *params )
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-struct net_device* wlan_hdd_add_virtual_intf(
-                  struct wiphy *wiphy, char *name, enum nl80211_iftype type,
-                  u32 *flags, struct vif_params *params )
-#else
-int wlan_hdd_add_virtual_intf( struct wiphy *wiphy, char *name,
-                               enum nl80211_iftype type,
-                               u32 *flags, struct vif_params *params )
-#endif
 {
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)))
-    struct wireless_dev* wdev;
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-    struct net_device* ndev;
-#else
-    int ret;
-#endif
-    vos_ssr_protect(__func__);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-    wdev = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
-    vos_ssr_unprotect(__func__);
-    return wdev;
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
-    ndev = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
-    vos_ssr_unprotect(__func__);
-    return ndev;
-#else
-    ret  = __wlan_hdd_add_virtual_intf(wiphy, name, type, flags, params);
-    vos_ssr_unprotect(__func__);
-    return ret;
-#endif
+        struct wireless_dev *wdev;
+        unsigned char name_assign_type = 0;
+
+        vos_ssr_protect(__func__);
+        wdev = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name,
+                                           name_assign_type,
+                                           type, flags, params);
+        vos_ssr_unprotect(__func__);
+        return wdev;
+
 }
+
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
+struct net_device* wlan_hdd_add_virtual_intf(struct wiphy *wiphy,
+					     char *name,
+					     enum nl80211_iftype type,
+					     u32 *flags,
+					     struct vif_params *params)
+{
+	struct net_device *ndev;
+	unsigned char name_assign_type = 0;
+
+	vos_ssr_protect(__func__);
+	ndev = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name, name_assign_type,
+                                           type, flags, params);
+        vos_ssr_unprotect(__func__);
+        return wdev;
+
+}
+#else
+int wlan_hdd_add_virtual_intf(struct wiphy *wiphy, char *name,
+			      enum nl80211_iftype type,
+			      u32 *flags, struct vif_params *params)
+{
+	int ret;
+	unsigned char name_assign_type = 0;
+
+	vos_ssr_protect(__func__);
+	ret = __wlan_hdd_add_virtual_intf(wiphy, (const char *)name, name_assign_type,
+                                           type, flags, params);
+        vos_ssr_unprotect(__func__);
+
+        return ret;
+}
+#endif
 
 /**
  * hdd_delete_adapter() - stop and close adapter
@@ -2449,6 +2561,7 @@ hdd_delete_adapter(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
 {
 	wlan_hdd_release_intf_addr(hdd_ctx, adapter->macAddressCurrent.bytes);
 	hdd_stop_adapter(hdd_ctx, adapter, VOS_TRUE);
+	hdd_deinit_adapter(hdd_ctx, adapter, TRUE);
 	hdd_close_adapter(hdd_ctx, adapter, rtnl_held);
 }
 
@@ -2619,12 +2732,54 @@ void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
      return ;
 }
 
+#if defined(WLAN_FEATURE_SAE) && defined(CFG80211_EXTERNAL_AUTH_AP_SUPPORT)
+/**
+ * wlan_hdd_set_rxmgmt_external_auth_flag() - Set the EXTERNAL_AUTH flag
+ * @nl80211_flag: flags to be sent to nl80211 from enum nl80211_rxmgmt_flags
+ *
+ * Set the flag NL80211_RXMGMT_FLAG_EXTERNAL_AUTH if supported.
+ */
+static void
+wlan_hdd_set_rxmgmt_external_auth_flag(enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+    *nl80211_flag |= NL80211_RXMGMT_FLAG_EXTERNAL_AUTH;
+}
+#else
+static void
+wlan_hdd_set_rxmgmt_external_auth_flag(enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+}
+#endif
+
+/**
+ * wlan_hdd_cfg80211_convert_rxmgmt_flags() - Convert RXMGMT value
+ * @nl80211_flag: Flags to be sent to nl80211 from enum nl80211_rxmgmt_flags
+ * @flag: flags set by driver(SME/PE) from enum rxmgmt_flags
+ *
+ * Convert driver internal RXMGMT flag value to nl80211 defined RXMGMT flag
+ * Return: 0 on success, -EINVAL on invalid value
+ */
+static int
+wlan_hdd_cfg80211_convert_rxmgmt_flags(enum rxmgmt_flags flag,
+                                       enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+    int ret = -EINVAL;
+
+    if (flag & RXMGMT_FLAG_EXTERNAL_AUTH) {
+            wlan_hdd_set_rxmgmt_external_auth_flag(nl80211_flag);
+            ret = 0;
+    }
+
+    return ret;
+}
+
 void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
                             tANI_U32 nFrameLength,
                             tANI_U8* pbFrames,
                             tANI_U8 frameType,
                             tANI_U32 rxChan,
-                            tANI_S8 rxRssi)
+                            tANI_S8 rxRssi,
+                            enum rxmgmt_flags rx_flags)
 {
     tANI_U16 freq;
     tANI_U16 extend_time;
@@ -2636,6 +2791,7 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     hdd_context_t *pHddCtx = NULL;
     VOS_STATUS status;
     hdd_remain_on_chan_ctx_t* pRemainChanCtx = NULL;
+    enum nl80211_rxmgmt_flags nl80211_flag = 0;
 
     hddLog(VOS_TRACE_LEVEL_INFO, FL("Frame Type = %d Frame Length = %d"),
                      frameType, nFrameLength);
@@ -2664,6 +2820,7 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     /* Get pAdapter from Destination mac address of the frame */
     if ((type == SIR_MAC_MGMT_FRAME) &&
         (subType != SIR_MAC_MGMT_PROBE_REQ) &&
+        (nFrameLength > WLAN_HDD_80211_FRM_DA_OFFSET + VOS_MAC_ADDR_SIZE) &&
         !vos_is_macaddr_broadcast(
          (v_MACADDR_t *)&pbFrames[WLAN_HDD_80211_FRM_DA_OFFSET]))
     {
@@ -2723,23 +2880,27 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
     if( rxChan <= MAX_NO_OF_2_4_CHANNELS )
     {
         freq = ieee80211_channel_to_frequency( rxChan,
-                IEEE80211_BAND_2GHZ);
+                HDD_NL80211_BAND_2GHZ);
     }
     else
     {
         freq = ieee80211_channel_to_frequency( rxChan,
-                IEEE80211_BAND_5GHZ);
+                HDD_NL80211_BAND_5GHZ);
     }
 
     cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
 
     if ((type == SIR_MAC_MGMT_FRAME) &&
-        (subType == SIR_MAC_MGMT_ACTION))
+        (subType == SIR_MAC_MGMT_ACTION) &&
+        (nFrameLength > WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET + 1))
     {
         if(pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_PUBLIC_ACTION_FRAME)
         {
             // public action frame
-            if((pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+1] == SIR_MAC_ACTION_VENDOR_SPECIFIC) &&
+            if((WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET + SIR_MAC_P2P_OUI_SIZE + 2 <
+                nFrameLength) &&
+               (pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+1] ==
+                SIR_MAC_ACTION_VENDOR_SPECIFIC) &&
                 vos_mem_compare(&pbFrames[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET+2], SIR_MAC_P2P_OUI, SIR_MAC_P2P_OUI_SIZE))
             // P2P action frames
             {
@@ -2911,11 +3072,14 @@ void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
         }
     }
 
+    if (wlan_hdd_cfg80211_convert_rxmgmt_flags(rx_flags, &nl80211_flag))
+        hddLog(LOG1, "Failed to convert RXMGMT flags :0x%x to nl80211 format",
+               rx_flags);
     //Indicate Frame Over Normal Interface
     hddLog( LOG1, FL("Indicate Frame over NL80211 Interface"));
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
     cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
-                     nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED);
+                     nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED | nl80211_flag);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,0))
     cfg80211_rx_mgmt(pAdapter->dev->ieee80211_ptr, freq, rxRssi * 100, pbFrames,
                      nFrameLength, NL80211_RXMGMT_FLAG_ANSWERED, GFP_ATOMIC);

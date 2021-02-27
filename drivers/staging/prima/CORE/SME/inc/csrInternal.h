@@ -1076,6 +1076,7 @@ typedef struct tagCsrRoamStruct
     tANI_U32 deauthRspStatus;
     tANI_BOOLEAN pending_roam_disable;
     vos_spin_lock_t roam_state_lock;
+    tSirMacAddr spoof_mac_addr;
 }tCsrRoamStruct;
 
 
@@ -1238,6 +1239,7 @@ tANI_BOOLEAN csrIsConnStateDisconnectedWds( tpAniSirGlobal pMac, tANI_U32 sessio
 tANI_BOOLEAN csrIsAnySessionInConnectState( tpAniSirGlobal pMac );
 tANI_BOOLEAN csrIsAllSessionDisconnected( tpAniSirGlobal pMac );
 tANI_BOOLEAN csrIsStaSessionConnected( tpAniSirGlobal pMac );
+tANI_BOOLEAN csrIsP2pGoSessionConnected( tpAniSirGlobal pMac );
 tANI_BOOLEAN csrIsP2pSessionConnected( tpAniSirGlobal pMac );
 tANI_BOOLEAN csrIsAnySessionConnected( tpAniSirGlobal pMac );
 tANI_BOOLEAN csrIsInfraConnected( tpAniSirGlobal pMac );

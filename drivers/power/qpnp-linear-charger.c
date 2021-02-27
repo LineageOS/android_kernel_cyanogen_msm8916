@@ -1028,7 +1028,8 @@ static int qpnp_lbc_ibatsafe_set(struct qpnp_lbc_chip *chip, int safe_current)
 }
 
 #define QPNP_LBC_IBATMAX_MIN	90
-#define QPNP_LBC_IBATMAX_MAX	1440
+// 1440 -> 1000 from zb500kl original kernel
+#define QPNP_LBC_IBATMAX_MAX	1000
 /*
  * Set maximum current limit from charger
  * ibat =  System current + charging current
@@ -1214,16 +1215,19 @@ out:
 
 static int get_prop_battery_voltage_now(struct qpnp_lbc_chip *chip)
 {
-	int rc = 0;
-	struct qpnp_vadc_result results;
+	//from orig zb500kl kernel, bug180413 by liyizeng 20160829
+	union power_supply_propval ret = {0,};
+	int last_ocv_uv;
 
-	rc = qpnp_vadc_read(chip->vadc_dev, VBAT_SNS, &results);
-	if (rc) {
-		pr_err("Unable to read vbat rc=%d\n", rc);
-		return 0;
+	if (chip->bms_psy) {
+		chip->bms_psy->get_property(chip->bms_psy,
+				POWER_SUPPLY_PROP_VOLTAGE_OCV, &ret);
+		last_ocv_uv = ret.intval;
+		return last_ocv_uv;
+	} else {
+
 	}
-
-	return results.physical;
+	return 0;
 }
 
 static int get_prop_batt_present(struct qpnp_lbc_chip *chip)

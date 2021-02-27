@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014,2016,2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -58,6 +58,10 @@ static struct ion_heap_desc ion_heap_meta[] = {
 	{
 		.id	= ION_SYSTEM_CONTIG_HEAP_ID,
 		.name	= ION_KMALLOC_HEAP_NAME,
+	},
+	{
+		.id	= ION_SECURE_HEAP_ID,
+		.name	= ION_SECURE_HEAP_NAME,
 	},
 	{
 		.id	= ION_CP_MM_HEAP_ID,
@@ -277,7 +281,7 @@ int ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
 	if (!ION_IS_CACHED(flags))
 		return 0;
 
-	if (flags & ION_FLAG_SECURE)
+	if ((flags & ION_FLAG_SECURE) || (get_secure_vmid(flags) > 0))
 		return 0;
 
 	table = ion_sg_table(client, handle);
@@ -366,6 +370,7 @@ static struct heap_types_info {
 	MAKE_HEAP_TYPE_MAPPING(DMA),
 	MAKE_HEAP_TYPE_MAPPING(SECURE_DMA),
 	MAKE_HEAP_TYPE_MAPPING(REMOVED),
+	MAKE_HEAP_TYPE_MAPPING(SYSTEM_SECURE),
 };
 
 static int msm_ion_get_heap_type_from_dt_node(struct device_node *node,
@@ -644,6 +649,11 @@ out:
 	return ret;
 }
 
+int ion_heap_is_system_secure_heap_type(enum ion_heap_type type)
+{
+	return type == ((enum ion_heap_type) ION_HEAP_TYPE_SYSTEM_SECURE);
+}
+
 int ion_heap_allow_secure_allocation(enum ion_heap_type type)
 {
 	return type == ((enum ion_heap_type) ION_HEAP_TYPE_SECURE_DMA);
@@ -894,6 +904,8 @@ int msm_ion_heap_buffer_zero(struct ion_buffer *buffer)
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long len = sg->length;
+		/* needed to make dma_sync_sg_for_device work: */
+		sg->dma_address = sg_phys(sg);
 
 		for (j = 0; j < len / PAGE_SIZE; j++)
 			pages_mem.pages[npages++] = page + j;
@@ -919,7 +931,9 @@ static struct ion_heap *msm_ion_heap_create(struct ion_platform_heap *heap_data)
 	case ION_HEAP_TYPE_REMOVED:
 		heap = ion_removed_heap_create(heap_data);
 		break;
-
+	case ION_HEAP_TYPE_SYSTEM_SECURE:
+		heap = ion_system_secure_heap_create(heap_data);
+		break;
 	default:
 		heap = ion_heap_create(heap_data);
 	}
@@ -951,9 +965,27 @@ static void msm_ion_heap_destroy(struct ion_heap *heap)
 	case ION_HEAP_TYPE_REMOVED:
 		ion_removed_heap_destroy(heap);
 		break;
+	case ION_HEAP_TYPE_SYSTEM_SECURE:
+		ion_system_secure_heap_destroy(heap);
+		break;
 	default:
 		ion_heap_destroy(heap);
 	}
+}
+
+struct ion_heap *get_ion_heap(int heap_id)
+{
+	int i;
+	struct ion_heap *heap;
+
+	for (i = 0; i < num_heaps; i++) {
+		heap = heaps[i];
+		if (heap->id == heap_id)
+			return heap;
+	}
+
+	pr_err("%s: heap_id %d not found\n", __func__, heap_id);
+	return NULL;
 }
 
 static int msm_ion_probe(struct platform_device *pdev)

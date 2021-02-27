@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -100,9 +100,22 @@
 #endif
 #endif
 
+/*
+ * Max number of supported csa_counters in beacons
+ * and probe responses. Set to the same value as
+ * IEEE80211_MAX_CSA_COUNTERS_NUM
+ */
+#define WLAN_HDD_MAX_NUM_CSA_COUNTERS 2
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)) \
 	|| defined(BACKPORTED_CHANNEL_SWITCH_PRESENT)
 #define CHANNEL_SWITCH_SUPPORTED
+#endif
+
+#if defined(CFG80211_DEL_STA_V2) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)) || \
+	defined(WITH_BACKPORTS)
+#define USE_CFG80211_DEL_STA_V2
 #endif
 
 #define MAX_CHANNEL NUM_2_4GHZ_CHANNELS + NUM_5GHZ_CHANNELS
@@ -115,6 +128,9 @@
 #define NUM_RADIOS  0x1
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
+#define WOWL_PTRN_MAX_SIZE          128
+#define WOWL_PTRN_MASK_MAX_SIZE      16
+#define WOWL_MAX_PTRNS_ALLOWED       16
 
 typedef struct {
    u8 element_id;
@@ -126,6 +142,15 @@ typedef struct {
    u32 age;
 }__attribute__((packed)) qcom_ie_age ;
 #endif
+
+#ifndef WLAN_AKM_SUITE_SAE
+#define WLAN_AKM_SUITE_SAE 0x000FAC08
+#endif
+
+#ifndef WLAN_AKM_SUITE_OWE_1
+#define WLAN_AKM_SUITE_OWE_1 0x000FAC12
+#endif
+
 
 enum qca_nl80211_vendor_subcmds {
     QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -184,9 +209,9 @@ enum qca_nl80211_vendor_subcmds {
 
     /* Get Wifi Specific Info */
     QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_INFO = 61,
-    /* Start Wifi Memory Dump */
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP = 63,
 
+    /* Update Roam Config Parameter */
+    QCA_NL80211_VENDOR_SUBCMD_ROAM = 64,
     /*
      * APIs corresponding to the sub commands 65-68 are deprecated.
      * These sub commands are reserved and not supposed to be used
@@ -196,6 +221,9 @@ enum qca_nl80211_vendor_subcmds {
     /* Wi-Fi Configuration subcommands */
     QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION = 74,
     QCA_NL80211_VENDOR_SUBCMD_GET_WIFI_CONFIGURATION = 75,
+
+    QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET = 76,
+
     QCA_NL80211_VENDOR_SUBCMD_GET_RING_DATA = 77,
 
     QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI = 80,
@@ -214,6 +242,62 @@ enum qca_nl80211_vendor_subcmds {
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_SET = 149,
     /* Get the NUD stats, represented by the enum qca_attr_nud_stats_get */
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET = 150,
+    /*
+     * Event indicating to the user space that the driver has detected an
+     * internal failure. This event carries the information indicating the
+     * reason that triggered this detection. The attributes for this
+     * command are defined in enum qca_wlan_vendor_attr_hang.
+     */
+    QCA_NL80211_VENDOR_SUBCMD_HANG = 157,
+};
+
+enum qca_wlan_vendor_hang_reason {
+	/* Unspecified reason */
+	QCA_WLAN_HANG_REASON_UNSPECIFIED = 0,
+	/* No Map for the MAC entry for the received frame */
+	QCA_WLAN_HANG_RX_HASH_NO_ENTRY_FOUND = 1,
+	/* peer deletion timeout happened */
+	QCA_WLAN_HANG_PEER_DELETION_TIMEDOUT = 2,
+	/* peer unmap timeout */
+	QCA_WLAN_HANG_PEER_UNMAP_TIMEDOUT = 3,
+	/* Scan request timed out */
+	QCA_WLAN_HANG_SCAN_REQ_EXPIRED = 4,
+	/* Consecutive Scan attempt failures */
+	QCA_WLAN_HANG_SCAN_ATTEMPT_FAILURES = 5,
+	/* Unable to get the message buffer */
+	QCA_WLAN_HANG_GET_MSG_BUFF_FAILURE = 6,
+	/* Current command processing is timedout */
+	QCA_WLAN_HANG_ACTIVE_LIST_TIMEOUT = 7,
+	/* Timeout for an ACK from FW for suspend request */
+	QCA_WLAN_HANG_SUSPEND_TIMEOUT = 8,
+	/* Timeout for an ACK from FW for resume request */
+	QCA_WLAN_HANG_RESUME_TIMEOUT = 9,
+	/* Transmission timeout for consecutive data frames */
+	QCA_WLAN_HANG_TRANSMISSIONS_TIMEOUT = 10,
+	/* Timeout for the TX completion status of data frame */
+	QCA_WLAN_HANG_TX_COMPLETE_TIMEOUT = 11,
+	/* DXE failure for tx/Rx, DXE resource unavailability */
+	QCA_WLAN_HANG_DXE_FAILURE = 12,
+	/* WMI pending commands exceed the maximum count */
+	QCA_WLAN_HANG_WMI_EXCEED_MAX_PENDING_CMDS = 13,
+	/* WDI failure for commands, WDI resource unavailability */
+	QCA_WLAN_HANG_WDI_FAILURE = 14,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_hang - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_HANG.
+ */
+enum qca_wlan_vendor_attr_hang {
+	QCA_WLAN_VENDOR_ATTR_HANG_INVALID = 0,
+	/*
+	 * Reason for the Hang - Represented by enum
+	 * qca_wlan_vendor_hang_reason.
+	 */
+	 QCA_WLAN_VENDOR_ATTR_HANG_REASON = 1,
+	 QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST,
+	 QCA_WLAN_VENDOR_ATTR_HANG_MAX =
+		QCA_WLAN_VENDOR_ATTR_HANG_AFTER_LAST - 1,
 };
 
 /**
@@ -407,11 +491,12 @@ enum qca_nl80211_vendor_subcmds_index {
     /*EXT TDLS*/
     QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE_CHANGE_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_NAN_INDEX,
-    QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP_INDEX,
 
     QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_HOTLIST_AP_LOST_INDEX,
     QCA_NL80211_VENDOR_SUBCMD_NUD_STATS_GET_INDEX,
+    QCA_NL80211_VENDOR_SUBCMD_HANG_REASON_INDEX,
+    QCA_NL80211_VENDOR_SUBCMD_LINK_PROPERTIES_INDEX,
 };
 
 /**
@@ -1314,6 +1399,10 @@ enum qca_wlan_vendor_attr_link_properties {
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_RATE_FLAGS = 2,
     /* Unsigned 32bit value for operating frequency */
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_FREQ       = 3,
+    /*  An array of 6 Unsigned 8bit values for the STA MAC address*/
+    QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_MAC_ADDR = 4,
+    /* Unsigned 32bit value for STA flags*/
+    QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_STA_FLAGS  = 5,
 
     /* KEEP LAST */
     QCA_WLAN_VENDOR_ATTR_LINK_PROPERTIES_AFTER_LAST,
@@ -1339,14 +1428,51 @@ enum qca_wlan_vendor_config {
     QCA_WLAN_VENDOR_ATTR_CONFIG_FINE_TIME_MEASUREMENT,
     QCA_WLAN_VENDOR_ATTR_CONFIG_TX_RATE,
     QCA_WLAN_VENDOR_ATTR_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS,
+
+    /* 8-bit unsigned value to trigger QPower: 1-Enable, 0-Disable */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER = 25,
     /* 8-bit unsigned value to set the beacon miss threshold in 2.4 GHz */
     QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_24 = 37,
     /* 8-bit unsigned value to set the beacon miss threshold in 5 GHz */
     QCA_WLAN_VENDOR_ATTR_CONFIG_BEACON_MISS_THRESHOLD_5 = 38,
+
+    /*8-bit unsigned value indicating the driver to use the RSNE as-is from
+     * the connect interface. Exclusively used for the scenarios where the
+     * device is used as a test bed device with special functionality and
+     * not recommended for production. This helps driver to not validate the
+     * RSNE passed from user space and thus allow arbitrary IE data to be
+     * used for testing purposes.
+     * 1-enable, 0-disable.
+     * Applications set/reset this configuration. If not reset, this
+     * parameter remains in use until the driver is unloaded.
+     */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE = 39,
+
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_CONFIG_LAST,
     QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
     QCA_WLAN_VENDOR_ATTR_CONFIG_LAST - 1
+};
+
+/**
+ * enum qca_wlan_vendor_attr_get_logger_features - value for logger
+ *						   supported features
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_INVALID - Invalid
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED - Indicate the supported features
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST - To keep track of the last enum
+ * @QCA_WLAN_VENDOR_ATTR_LOGGER_MAX - max value possible for this type
+ *
+ * enum values are used for NL attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET sub command.
+ */
+enum qca_wlan_vendor_attr_get_logger_features {
+	QCA_WLAN_VENDOR_ATTR_LOGGER_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED = 1,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_LOGGER_MAX =
+		QCA_WLAN_VENDOR_ATTR_LOGGER_AFTER_LAST - 1,
 };
 
 /* Feature defines */
@@ -1373,6 +1499,8 @@ enum qca_wlan_vendor_config {
 #define WIFI_FEATURE_LINK_LAYER_STATS   0x10000  /* Link layer stats */
 
 #define WIFI_FEATURE_RTT3               0x20000  /* RTT3 */
+
+#define WIFI_FEATURE_CONTROL_ROAMING    0x800000  /* Enable/Disable roaming */
 
 /* WIFI CONFIG Parameter defines */
 #define WIFI_CONFIG_SET_AVG_STATS_FACTOR 0x0001  /* Average stats factor */
@@ -1515,6 +1643,204 @@ enum qca_wlan_vendor_attr_offloaded_packets
 };
 #endif
 
+/**
+ * enum wifi_logger_supported_features - values for supported logger features
+ * @WIFI_LOGGER_PER_PACKET_TX_RX_STATUS_SUPPORTED - Per packet statistics
+ * @WIFI_LOGGER_CONNECT_EVENT_SUPPORTED - Logging of Connectivity events
+ * @WIFI_LOGGER_POWER_EVENT_SUPPORTED - Power of driver
+ * @WIFI_LOGGER_WAKE_LOCK_SUPPORTED - Wakelock of driver
+ * @WIFI_LOGGER_WATCHDOG_TIMER_SUPPORTED - monitor FW health
+ */
+enum wifi_logger_supported_features {
+    WIFI_LOGGER_PER_PACKET_TX_RX_STATUS_SUPPORTED = (1 << (1)),
+    WIFI_LOGGER_CONNECT_EVENT_SUPPORTED = (1 << (2)),
+    WIFI_LOGGER_POWER_EVENT_SUPPORTED = (1 << (3)),
+    WIFI_LOGGER_WAKE_LOCK_SUPPORTED = (1 << (4)),
+    WIFI_LOGGER_VERBOSE_SUPPORTED = (1 << (5)),
+    WIFI_LOGGER_WATCHDOG_TIMER_SUPPORTED = (1 << (6)),
+};
+
+/**
+ * enum qca_wlan_vendor_attr_roaming_config_params: Attributes for data used by
+ * QCA_NL80211_VENDOR_SUBCMD_ROAM sub command.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD: Unsigned 32-bit value.
+ *      Represents the different roam sub commands referred by
+ *      enum qca_wlan_vendor_roaming_subcmd.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID: Unsigned 32-bit value.
+ *      Represents the Request ID for the specific set of commands.
+ *      This also helps to map specific set of commands to the respective
+ *      ID / client. e.g., helps to identify the user entity configuring the
+ *      Blacklist BSSID and accordingly clear the respective ones with the
+ *      matching ID.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS: Unsigned
+ *      32-bit value.Represents the number of whitelist SSIDs configured.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST: Nested attribute
+ *      to carry the list of Whitelist SSIDs.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID: SSID (binary attribute,
+ *      0..32 octets). Represents the white list SSID. Whitelist SSIDs
+ *      represent the list of SSIDs to which the firmware/driver can consider
+ *      to roam to.
+ *
+ * The following PARAM_A_BAND_XX attributes are applied to 5GHz BSSIDs when
+ * comparing with a 2.4GHz BSSID. They are not applied when comparing two
+ * 5GHz BSSIDs.The following attributes are set through the Roaming SUBCMD -
+ * QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_EXTSCAN_ROAM_PARAMS.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_THRESHOLD: Signed 32-bit
+ *      value, RSSI threshold above which 5GHz RSSI is favored.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_THRESHOLD: Signed 32-bit
+ *      value, RSSI threshold below which 5GHz RSSI is penalized.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_FACTOR: Unsigned 32-bit
+ *      value, factor by which 5GHz RSSI is boosted.
+ *      boost=(RSSI_measured-5GHz_boost_threshold)*5GHz_boost_factor
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_FACTOR: Unsigned 32-bit
+ *      value, factor by which 5GHz RSSI is penalized.
+ *      penalty=(5GHz_penalty_threshold-RSSI_measured)*5GHz_penalty_factor
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_MAX_BOOST: Unsigned 32-bit
+ *      value, maximum boost that can be applied to a 5GHz RSSI.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_LAZY_ROAM_HISTERESYS: Unsigned 32-bit
+ *      value, boost applied to current BSSID to ensure the currently
+ *      associated BSSID is favored so as to prevent ping-pong situations.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_ALERT_ROAM_RSSI_TRIGGER: Signed 32-bit
+ *      value, RSSI below which "Alert" roam is enabled.
+ *      "Alert" mode roaming - firmware is "urgently" hunting for another BSSID
+ *      because the RSSI is low, or because many successive beacons have been
+ *      lost or other bad link conditions.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE: Unsigned 32-bit
+ *      value. 1-Enable, 0-Disable. Represents "Lazy" mode, where
+ *      firmware is hunting for a better BSSID or white listed SSID even though
+ *      the RSSI of the link is good. The parameters enabling the roaming are
+ *      configured through the PARAM_A_BAND_XX attrbutes.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS: Nested attribute,
+ *      represents the BSSIDs preferred over others while evaluating them
+ *      for the roaming.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_NUM_BSSID: Unsigned
+ *      32-bit value. Represents the number of preferred BSSIDs set.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_BSSID: 6-byte MAC
+ *      address representing the BSSID to be preferred.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_RSSI_MODIFIER: Signed
+ *      32-bit value, representing the modifier to be applied to the RSSI of
+ *      the BSSID for the purpose of comparing it with other roam candidate.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS: Nested attribute,
+ *      represents the BSSIDs to get blacklisted for roaming.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID: Unsigned
+ *      32-bit value, represents the number of blacklisted BSSIDs.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_BSSID: 6-byte MAC
+ *      address representing the Blacklisted BSSID.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_AFTER_LAST: After last
+ * @QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_MAX: Max
+ */
+enum qca_wlan_vendor_attr_roaming_config_params {
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_INVALID = 0,
+
+    QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD = 1,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID = 2,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS = 3,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST = 4,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID = 5,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_THRESHOLD = 6,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_THRESHOLD = 7,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_BOOST_FACTOR = 8,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_PENALTY_FACTOR = 9,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_A_BAND_MAX_BOOST = 10,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_LAZY_ROAM_HISTERESYS = 11,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_ALERT_ROAM_RSSI_TRIGGER = 12,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE = 13,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS = 14,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_NUM_BSSID = 15,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_BSSID = 16,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_RSSI_MODIFIER = 17,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS = 18,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID = 19,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_BSSID = 20,
+
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_MAX =
+    QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_roaming_subcmd: Referred by
+ * QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SSID_WHITE_LIST: Sub command to
+ *      configure the white list SSIDs. These are configured through
+ *      the following attributes.
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_NUM_NETWORKS,
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID_LIST,
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_WHITE_LIST_SSID
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_EXTSCAN_ROAM_PARAMS: Sub command to
+ *      configure the Roam params. These parameters are evaluated on the extscan
+ *      results. Refers the attributes PARAM_A_BAND_XX above to configure the
+ *      params.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_LAZY_ROAM: Sets the Lazy roam. Uses
+ *      the attribute QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_LAZY_ROAM_ENABLE
+ *      to enable/disable Lazy roam.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BSSID_PREFS: Sets the BSSID
+ *      preference. Contains the attribute
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PREFS to set the BSSID
+ *      preference.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BSSID_PARAMS: set bssid params
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BLACKLIST_BSSID: Sets the Blacklist
+ *      BSSIDs. Refers QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS to
+ *      set the same.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_SET: Command to set the
+ *      roam control config to the driver with the attribute
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_CONTROL.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_GET: Command to obtain the
+ *      roam control config from driver with the attribute
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_CONTROL.
+ *      For the get, the attribute for the configuration to be queried shall
+ *      carry any of its acceptable value to the driver. In return, the driver
+ *      shall send the configured values within the same attribute to the user
+ *      space.
+ *
+ * @QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_CLEAR: Command to clear the
+ *      roam control config in the driver with the attribute
+ *      QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_CONTROL.
+ *      The driver shall continue with its default roaming behavior when data
+ *      corresponding to an attribute is cleared.
+ */
+enum qca_wlan_vendor_roaming_subcmd {
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SSID_WHITE_LIST = 1,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_EXTSCAN_ROAM_PARAMS = 2,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_LAZY_ROAM = 3,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BSSID_PREFS = 4,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BSSID_PARAMS = 5,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BLACKLIST_BSSID = 6,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_SET = 7,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_GET = 8,
+    QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_CLEAR = 9,
+};
+
 struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_db( hdd_adapter_t *pAdapter,
                                       tCsrRoamInfo *pRoamInfo
                                       );
@@ -1588,6 +1914,38 @@ void* wlan_hdd_change_country_code_cb(void *pAdapter);
 void hdd_select_cbmode( hdd_adapter_t *pAdapter,v_U8_t operationChannel);
 
 /*
+ * wlan_hdd_restore_channels() Restore the channels which were cached
+ * and disabled in __wlan_hdd_disable_channels api.
+ * @hdd_ctx: Pointer to the HDD context
+ *
+ * @Return: 0 on success, Error code on failure
+ */
+int wlan_hdd_restore_channels(hdd_context_t *pHddCtx);
+
+/*
+ * wlan_hdd_disable_channels() - Cache the the channels
+ * and current state of the channels from the channel list
+ * received in the command and disable the channels on the
+ * wiphy and NV table.
+ * @hdd_ctx: Pointer to hdd context
+ *
+ * @return: 0 on success, Error code on failure
+ */
+int wlan_hdd_disable_channels(hdd_context_t *hdd_ctx);
+
+/*
+ * hdd_check_and_disconnect_sta_on_invalid_channel() - Disconnect STA if it is
+ * on indoor channel
+ * @hdd_ctx: pointer to hdd context
+ *
+ * STA should be disconnected before starting the SAP if it is on indoor
+ * channel.
+ *
+ * Return: void
+ */
+void hdd_check_and_disconnect_sta_on_invalid_channel(hdd_context_t *hdd_ctx);
+
+/*
  * hdd_update_indoor_channel() - enable/disable indoor channel
  * @hdd_ctx: hdd context
  * @disable: whether to enable / disable indoor channel
@@ -1611,8 +1969,7 @@ void hdd_update_indoor_channel(hdd_context_t *hdd_ctx,
  */
 void hdd_modify_indoor_channel_state_flags(
     struct ieee80211_channel *wiphy_chan,
-    v_U32_t rfChannel,
-    bool disable);
+    v_U32_t rfChannel, bool disable, hdd_context_t *hdd_ctx);
 
 
 v_U8_t* wlan_hdd_cfg80211_get_ie_ptr(
@@ -1643,7 +2000,9 @@ void wlan_hdd_cfg80211_oemdata_callback(void *ctx, const tANI_U16 evType,
                                       void *pMsg,  tANI_U32 evLen);
 #endif /* FEATURE_OEM_DATA_SUPPORT */
 
-#if !(defined (SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC))
+#if !(defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(4, 1, 0)) && \
+	!(defined(WITH_BACKPORTS))
 static inline struct sk_buff *
 backported_cfg80211_vendor_event_alloc(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
@@ -1658,25 +2017,14 @@ backported_cfg80211_vendor_event_alloc(struct wiphy *wiphy,
 #endif
 
 /**
- * enum qca_wlan_vendor_attr_memory_dump - values for memory dump attributes
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_INVALID - Invalid
- * @QCA_WLAN_VENDOR_ATTR_REQUEST_ID - Indicate request ID
- * @QCA_WLAN_VENDOR_ATTR_MEMDUMP_SIZE - Indicate size of the memory dump
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST - To keep track of the last enum
- * @QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_MAX - max value possible for this type
+ * wlan_hdd_send_hang_reason_event() - Send hang reason to the userspace
+ * @hdd_ctx: Pointer to hdd context
+ * @reason: cds recovery reason
  *
- * enum values are used for NL attributes for data used by
- * QCA_NL80211_VENDOR_SUBCMD_WIFI_LOGGER_MEMORY_DUMP sub command.
+ * Return: 0 on success or failure reason
  */
-enum qca_wlan_vendor_attr_memory_dump {
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_INVALID = 0,
-    QCA_WLAN_VENDOR_ATTR_REQUEST_ID = 1,
-    QCA_WLAN_VENDOR_ATTR_MEMDUMP_SIZE = 2,
-
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST,
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_MAX =
-    QCA_WLAN_VENDOR_ATTR_MEMORY_DUMP_AFTER_LAST - 1,
-};
+int wlan_hdd_send_hang_reason_event(hdd_context_t *hdd_ctx,
+				    unsigned int reason);
 
 #if defined(CFG80211_DISCONNECTED_V2) || \
 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
@@ -1697,12 +2045,19 @@ static inline void wlan_hdd_cfg80211_indicate_disconnect(struct net_device *dev,
 }
 #endif
 
-struct cfg80211_bss* wlan_hdd_cfg80211_update_bss_list(
-   hdd_adapter_t *pAdapter, tSirMacAddr bssid);
+/*
+ * wlan_hdd_cfg80211_unlink_bss :to inform nl80211
+ * interface that BSS might have been lost.
+ * @pAdapter: adapter
+ * @bssid: bssid which might have been lost
+ *
+ * Return: void
+ */
+void wlan_hdd_cfg80211_unlink_bss(hdd_adapter_t *pAdapter, tSirMacAddr bssid);
 
 struct cfg80211_bss *wlan_hdd_cfg80211_inform_bss_frame(hdd_adapter_t *pAdapter,
 		tSirBssDescription *bss_desc);
-#ifdef CFG80211_DEL_STA_V2
+#ifdef USE_CFG80211_DEL_STA_V2
 int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
                                   struct net_device *dev,
                                   struct station_del_parameters *param);
@@ -1719,4 +2074,54 @@ int wlan_hdd_cfg80211_del_station(struct wiphy *wiphy,
 int wlan_hdd_cfg80211_update_apies(hdd_adapter_t *pHostapdAdapter);
 int wlan_hdd_try_disconnect(hdd_adapter_t *pAdapter);
 void wlan_hdd_sap_get_sta_rssi(hdd_adapter_t *adapter, uint8_t staid, s8 *rssi);
+
+/*
+ *wlan_hdd_send_sta_authorized_event: Function to send station authorized
+ *event to user space in case of SAP
+ *@pAdapter: Pointer to the adapter
+ *@pHddCtx:  HDD Context
+ *@mac_addr: MAC address of the STA for whic the Authorized event needs to
+ *           be sent
+ *This api is used to send station authorized event to user space
+ */
+VOS_STATUS wlan_hdd_send_sta_authorized_event(hdd_adapter_t *adapter,
+                                              hdd_context_t *hdd_ctx,
+                                              const v_MACADDR_t *mac_addr);
+
+/**
+ * wlan_hdd_disconnect() - hdd disconnect api
+ * @pAdapter: Pointer to adapter
+ * @reason: Disconnect reason code
+ *
+ * This function is used to issue a disconnect request to SME
+ *
+ * Return: 0 for success, non-zero for failure
+ */
+int wlan_hdd_disconnect(hdd_adapter_t *pAdapter, u16 reason);
+
+#if defined(CFG80211_SCAN_RANDOM_MAC_ADDR) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+/**
+ * wlan_hdd_cfg80211_scan_randomization_init() - Enable NL80211 scan randomize
+ * @wiphy: Pointer to wiphy structure
+ *
+ * This function is used to enable NL80211 scan randomization feature when
+ * ini: gEnableMacAddrSpoof is set to MAC_ADDR_SPOOFING_FW_HOST_ENABLE and
+ * cfg80211 supports scan randomization.
+ *
+ * Return: None
+ */
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy);
+#else
+static inline
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy)
+{
+}
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+#define nla_parse(a, b, c, d, e) nla_parse(a, b, c, d, e, NULL)
+#define cfg80211_sched_scan_results(a) cfg80211_sched_scan_results(a, 0)
+#endif
+
 #endif

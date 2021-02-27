@@ -189,6 +189,19 @@ config LZO_COMPRESS
 config LZO_DECOMPRESS
 	tristate
 
+config LZ4_COMPRESS
+	tristate
+
+config LZ4HC_COMPRESS
+	tristate
+
+config LZ4_DECOMPRESS
+	tristate
+
+config LZ4K
+	bool "LZ4K compression"
+	default n
+
 source "lib/xz/Kconfig"
 
 #

@@ -314,12 +314,14 @@ static int audio_open(struct inode *inode, struct file *file)
 	}
 
 	snprintf(name, sizeof(name), "msm_alac_%04x", audio->ac->session);
+	#ifdef CONFIG_DEBUG_FS
 	audio->dentry = debugfs_create_file(name, S_IFREG | S_IRUGO,
 					    NULL, (void *)audio,
 					    &audio_alac_debug_fops);
 
 	if (IS_ERR_OR_NULL(audio->dentry))
 		pr_debug("debugfs_create_file failed\n");
+	#endif
 	pr_debug("%s:alacdec success mode[%d]session[%d]\n", __func__,
 						audio->feedback,
 						audio->ac->session);

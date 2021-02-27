@@ -17,8 +17,8 @@ endif
 
 dwc3-y					+= dwc3_otg.o
 
-ifneq ($(CONFIG_DEBUG_FS),)
-	dwc3-y				+= debugfs.o
+ifneq ($(filter y,$(CONFIG_USB_DWC3_GADGET) $(CONFIG_USB_DWC3_DUAL_ROLE)),)
+	dwc3-$(CONFIG_DEBUG_FS)		+= debugfs.o
 endif
 
 ##

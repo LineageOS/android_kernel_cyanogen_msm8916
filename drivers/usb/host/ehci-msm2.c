@@ -1155,7 +1155,7 @@ static int ehci_debugfs_init(struct msm_hcd *mhcd)
 }
 #endif
 
-static const struct ehci_driver_overrides ehci_msm2_overrides __initdata = {
+static const struct ehci_driver_overrides ehci_msm2_overrides __initconst = {
 	.reset			= msm_ehci_reset,
 	.extra_priv_size	= sizeof(struct msm_hcd),
 };

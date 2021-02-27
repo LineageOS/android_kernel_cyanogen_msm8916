@@ -120,6 +120,22 @@ const EID_EXT_CAP           	     =  127;
 const EID_OPERATING_MODE             =  199;
 const EID_WIDER_BW_CHANNEL_SWITCH_ANN=  194;
 const EID_VENDOR_SPECIFIC            = 221;
+/**
+ * Extended Element ID
+ *
+ * As part of IEEE-802.11-2016 spec, extended element ID is introduced(9.4.2.1)
+ * Elements are defined to have a common general format consisting of a 1 octet
+ * Element ID field, a 1 octet Length field, an optional 1 octet Element ID
+ * Extension field, and a variable-length element-specific Information field.
+ * Each element is identified by the contents of the Element ID and, when
+ * present, Element ID Extension fields as defined in this standard. An Extended
+ * Element ID is a combination of an Element ID and an Element ID Extension for
+ * those elements that have a defined Element ID Extension. The Length field
+ * specifies the number of octets following the Length field. The presence of
+ * the Element ID Extension field is determined by the Element ID field having
+ * value of 255
+ */
+const EID_EXTN_ID_ELEMENT            = 255;
 
 const SIR_MAC_PROP_EXT_RATES_TYPE    =   0;
 const SIR_MAC_PROP_AP_NAME_TYPE      =   1;
@@ -1362,7 +1378,7 @@ IE TPCReport (EID_TPC_REPORT)             // 7.3.2.18
 
 IE SuppChannels (EID_SUPPORTED_CHANNELS)  // 7.2.3.19
 {
-    bands[2][1..48];
+    bands[2][0..48];
 }
 
 IE SuppOperatingClasses (EID_SUPPORTED_OPER_CLASSES)
@@ -1402,8 +1418,8 @@ IE RSN (EID_RSN)                          // 7.3.2.25
 {
     // The version is 2 octets, and we only support version 1.
     version, 2 MUSTBE 1;
-    // The next four octets will be the Group Cipher Suite
-    gp_cipher_suite[4];
+    // The next four octets will be the Optional Group Cipher Suite
+    OPTIONAL gp_cipher_suite[4];
     // The IE *may* stop here; if there's any more, we should see two more
     // octets giving the number of Pairwise Cipher Suites
     OPTIONAL pwise_cipher_suite_count, 2;
@@ -1412,10 +1428,10 @@ IE RSN (EID_RSN)                          // 7.3.2.25
     // to 61.  However, that seems needlessly wasteful of space.
     pwise_cipher_suites[4][0..4] COUNTIS pwise_cipher_suite_count;
     // Optional count of AKM suite selectors
-    OPTIONAL akm_suite_count, 2;
+    OPTIONAL akm_suite_cnt, 2;
     // Again, I see nothing in the Standard explicitly limiting the number of
     // AKM suite selectors other than the maximum size of an IE.
-    akm_suites[4][0..4] COUNTIS akm_suite_count;
+    akm_suite[4][0..4] COUNTIS akm_suite_cnt;
     OPTIONAL RSN_Cap[2];
     // Finally, the IE may contain zero or more PMKIDs:
     OPTIONAL pmkid_count, 2;
@@ -1425,7 +1441,7 @@ IE RSN (EID_RSN)                          // 7.3.2.25
 
 IE RSNOpaque (EID_RSN)                    // 7.3.2.25
 {
-    data[ 6..253 ];
+    data[ 0..253 ];
 }
 
 IE WAPI (EID_WAPI)                          // 7.3.2.25
@@ -2738,7 +2754,7 @@ IE WiderBWChanSwitchAnn (EID_WIDER_BW_CHANNEL_SWITCH_ANN)
 
 IE ExtCap (EID_EXT_CAP)
 {
-   bytes[1..9];
+   bytes[1..15];
 }
 
 IE HTCaps (EID_HT_CAPABILITIES)
@@ -2890,6 +2906,11 @@ CONTAINERIE RICDataDesc
   OPTIE  WMMSchedule;
 }
 
+IE dh_parameter_element (EID_EXTN_ID_ELEMENT) OUI ( 0x20 )
+{
+  group[2];
+  public_key[0..255];
+}
 /////////////////////////////////////////////////////////////////////////////
 //                                MULTIIEs                                 //
 /////////////////////////////////////////////////////////////////////////////
@@ -3539,6 +3560,7 @@ FRAME AssocRequest                        // 7.2.3.4
     OPTIE  QOSCapsStation;
     OPTIE  RRMEnabledCap;
     OPTIE  MobilityDomain;
+    OPTIE  dh_parameter_element;
     OPTIE  WPAOpaque;
     OPTIE  HTCaps;
     OPTIE  WMMCaps;

@@ -84,9 +84,6 @@
 #define WMM_TRACE_LEVEL_INFO_LOW   VOS_TRACE_LEVEL_INFO_LOW
 #endif
 
-
-#define WLAN_HDD_MAX_DSCP 0x3f
-
 // DHCP Port number
 #define DHCP_SOURCE_PORT 0x4400
 #define DHCP_DESTINATION_PORT 0x4300
@@ -936,6 +933,9 @@ static eHalStatus hdd_wmm_sme_callback (tHalHandle hHal,
          hdd_wmm_notify_app(pQosContext);
       }
 
+#ifdef FEATURE_WLAN_ESE
+      hdd_wmm_disable_inactivity_timer(pQosContext);
+#endif
       /* Setting up QoS Failed, QoS context can be released.
        * SME is releasing this flow information and if HDD doen't release this context,
        * next time if application uses the same handle to set-up QoS, HDD (as it has
@@ -1173,6 +1173,9 @@ static eHalStatus hdd_wmm_sme_callback (tHalHandle hHal,
          hdd_wmm_notify_app(pQosContext);
       }
 
+#ifdef FEATURE_WLAN_ESE
+      hdd_wmm_disable_inactivity_timer(pQosContext);
+#endif
       // we are done with this flow
       hdd_wmm_free_context(pQosContext);
       break;
@@ -1224,6 +1227,9 @@ static eHalStatus hdd_wmm_sme_callback (tHalHandle hHal,
          hdd_wmm_notify_app(pQosContext);
       }
 
+#ifdef FEATURE_WLAN_ESE
+      hdd_wmm_disable_inactivity_timer(pQosContext);
+#endif
       // we are done with this flow
       hdd_wmm_free_context(pQosContext);
       break;
@@ -1703,7 +1709,7 @@ VOS_STATUS hdd_wmm_init ( hdd_adapter_t *pAdapter )
              "%s: Entered", __func__);
 
    // DSCP to User Priority Lookup Table
-   for (dscp = 0; dscp <= WLAN_HDD_MAX_DSCP; dscp++)
+   for (dscp = 0; dscp <= WLAN_MAX_DSCP; dscp++)
    {
       hddWmmDscpToUpMap[dscp] = SME_QOS_WMM_UP_BE;
    }
